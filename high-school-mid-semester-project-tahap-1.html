@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Perencanaan Proyek Mid-Semester Python</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        :root {
+            /* Palette sunrise terang */
+            --bg: #fff7ed;
+            --bg-soft: #fffbeb;
+            --accent: #f59e0b;
+            --accent-soft: rgba(245, 158, 11, 0.1);
+            --accent-strong: #f97316;
+            --text-main: #111827;
+            --text-soft: #4b5563;
+            --card: #ffffff;
+            --danger: #ef4444;
+            --success: #16a34a;
+            --radius-xl: 24px;
+            --shadow-soft: 0 18px 45px rgba(248, 171, 74, 0.35);
+            --transition-fast: 0.2s ease-out;
+            --transition-med: 0.35s ease-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                sans-serif;
+            background:
+                radial-gradient(circle at top, #ffedd5 0, #fff7ed 45%, #fefce8 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .deck {
+            position: relative;
+            width: 100%;
+            max-width: 1120px;
+            background: linear-gradient(135deg, #fffdf5, #fffbeb 40%, #ffedd5 100%);
+            border-radius: 32px;
+            padding: 20px 20px 18px;
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            border: 1px solid rgba(248, 187, 89, 0.5);
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(28px);
+            opacity: 0.45;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .floating-shape.blue {
+            width: 260px;
+            height: 260px;
+            background: #facc15;
+            top: -80px;
+            right: -60px;
+            animation: float1 14s infinite alternate ease-in-out;
+        }
+
+        .floating-shape.orange {
+            width: 200px;
+            height: 200px;
+            background: #fb923c;
+            bottom: -60px;
+            left: -40px;
+            animation: float2 18s infinite alternate ease-in-out;
+        }
+
+        @keyframes float1 {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(-40px, 35px, 0);
+            }
+        }
+
+        @keyframes float2 {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(50px, -25px, 0);
+            }
+        }
+
+        header.deck-header {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding: 4px 4px 10px;
+            border-bottom: 1px solid rgba(248, 187, 89, 0.8);
+            gap: 12px;
+        }
+
+        .title-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .title-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 252, 235, 0.95);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-soft);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+        }
+
+        .title-pill-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 16px rgba(34, 197, 94, 0.9);
+        }
+
+        .main-title {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1f2933;
+        }
+
+        .main-title span.badge {
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(234, 179, 8, 0.9);
+            color: #92400e;
+            background: rgba(254, 243, 199, 0.95);
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--text-soft);
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pill {
+            border-radius: 999px;
+            padding: 4px 8px;
+            background: rgba(255, 247, 237, 0.9);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+        }
+
+        .progress-bar {
+            position: relative;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(254, 215, 170, 0.9);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            position: absolute;
+            inset: 0;
+            width: 0%;
+            background: linear-gradient(90deg, #fbbf24, #f97316);
+            transition: width var(--transition-med);
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            margin-top: 14px;
+            display: flex;
+            gap: 14px;
+            min-height: 420px;
+        }
+
+        .sidebar {
+            width: 230px;
+            background: radial-gradient(circle at top left, #fffbeb, #fefce8);
+            border-radius: var(--radius-xl);
+            padding: 14px 12px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-soft);
+        }
+
+        .slide-indicator {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+        }
+
+        .slide-indicator small {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-soft);
+        }
+
+        .sidebar-main {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .sidebar-text {
+            font-size: 12px;
+            color: var(--text-soft);
+            line-height: 1.5;
+        }
+
+        .sidebar-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .sidebar-tag {
+            font-size: 10px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            color: var(--text-soft);
+            background: rgba(255, 251, 235, 0.9);
+        }
+
+        .sidebar-hint {
+            margin-top: auto;
+            font-size: 11px;
+            color: var(--text-soft);
+            border-top: 1px dashed rgba(248, 187, 89, 0.7);
+            padding-top: 6px;
+        }
+
+        .sidebar-hint span {
+            color: var(--accent-strong);
+            font-weight: 600;
+        }
+
+        .slides-wrapper {
+            flex: 1;
+            background: radial-gradient(circle at top, #fff7ed, #fffbeb 55%, #fefce8);
+            border-radius: var(--radius-xl);
+            border: 1px solid rgba(248, 187, 89, 0.7);
+            padding: 16px 18px 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            display: none;
+            opacity: 0;
+            transform: translateX(10px) translateY(4px);
+            transition: opacity var(--transition-med), transform var(--transition-med);
+            position: absolute;
+            inset: 16px 18px 52px 18px;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            display: block;
+            opacity: 1;
+            transform: translateX(0) translateY(0);
+        }
+
+        .slide h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1f2933;
+        }
+
+        .slide h2 .emoji {
+            font-size: 22px;
+        }
+
+        .slide .subtitle-slide {
+            font-size: 13px;
+            color: var(--text-soft);
+            margin-bottom: 14px;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .pill-chip {
+            font-size: 11px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: rgba(255, 251, 235, 0.95);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-soft);
+        }
+
+        .pill-chip span.dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--accent);
+        }
+
+        .slide section {
+            margin-bottom: 14px;
+        }
+
+        .slide section h3 {
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: #1f2937;
+        }
+
+        .slide p {
+            font-size: 13px;
+            color: var(--text-soft);
+            line-height: 1.6;
+        }
+
+        .list {
+            margin-top: 4px;
+            padding-left: 18px;
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .list li {
+            margin-bottom: 4px;
+        }
+
+        .card {
+            border-radius: 16px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            padding: 10px 12px;
+            background: var(--card);
+            margin-top: 4px;
+            box-shadow: 0 8px 18px rgba(248, 171, 74, 0.18);
+        }
+
+        .two-cols {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+            gap: 10px;
+        }
+
+        .mini-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .mini-table th,
+        .mini-table td {
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            padding: 4px 6px;
+            text-align: left;
+        }
+
+        .mini-table th {
+            background: #fef3c7;
+            font-weight: 600;
+            color: #92400e;
+        }
+
+        .badge-soft {
+            display: inline-flex;
+            font-size: 11px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(254, 243, 199, 0.95);
+            color: #92400e;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+        }
+
+        .checklist {
+            list-style: none;
+            margin-top: 6px;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .checklist input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            background: transparent;
+            accent-color: var(--accent);
+        }
+
+        .quiz-wrapper {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+            gap: 12px;
+        }
+
+        .quiz-question {
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed rgba(248, 187, 89, 0.8);
+        }
+
+        .quiz-question:last-child {
+            border-bottom: none;
+        }
+
+        .quiz-question-title {
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #1f2937;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .quiz-option {
+            font-size: 12px;
+            padding: 5px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            cursor: pointer;
+            background: rgba(255, 251, 235, 0.95);
+            transition: background var(--transition-fast), border-color var(--transition-fast),
+                transform 0.08s ease-out;
+            color: var(--text-soft);
+        }
+
+        .quiz-option:hover {
+            transform: translateY(-1px);
+            border-color: rgba(234, 179, 8, 1);
+            background: #fef3c7;
+        }
+
+        .quiz-option.correct {
+            border-color: rgba(22, 163, 74, 0.95);
+            background: rgba(187, 247, 208, 0.9);
+            color: #166534;
+        }
+
+        .quiz-option.wrong {
+            border-color: rgba(239, 68, 68, 0.95);
+            background: rgba(254, 202, 202, 0.9);
+            color: #b91c1c;
+        }
+
+        .quiz-feedback {
+            font-size: 12px;
+            margin-top: 4px;
+            color: var(--text-soft);
+        }
+
+        .footer-nav {
+            position: absolute;
+            inset-inline: 18px;
+            bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 2;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            background: rgba(255, 251, 235, 0.98);
+            padding: 6px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: background var(--transition-fast), transform 0.1s ease-out,
+                box-shadow 0.1s ease-out, border-color 0.1s ease-out;
+        }
+
+        .btn span.icon {
+            font-size: 14px;
+        }
+
+        .btn.primary {
+            border-color: rgba(234, 179, 8, 1);
+            background: linear-gradient(135deg, #fde68a, #fbbf24);
+            color: #78350f;
+            font-weight: 600;
+            box-shadow: 0 12px 22px rgba(248, 187, 89, 0.75);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(248, 171, 74, 0.6);
+            background: #fffbeb;
+        }
+
+        .btn.primary:hover {
+            box-shadow: 0 16px 30px rgba(248, 187, 89, 0.9);
+        }
+
+        .slide-dots {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: var(--text-soft);
+        }
+
+        .slide-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            cursor: pointer;
+            opacity: 0.6;
+            transition: background var(--transition-fast), opacity var(--transition-fast),
+                transform 0.1s ease-out, border-color var(--transition-fast);
+            background: rgba(255, 251, 235, 0.9);
+        }
+
+        .slide-dot.active {
+            background: var(--accent-strong);
+            border-color: var(--accent-strong);
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        .slide-counter-text {
+            font-size: 11px;
+            color: var(--text-soft);
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                flex-direction: column;
+                min-height: 0;
+            }
+
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 6px 12px;
+                align-items: center;
+            }
+
+            .sidebar-main {
+                font-size: 13px;
+            }
+
+            .sidebar-hint {
+                margin-top: 0;
+                border-top: none;
+            }
+
+            .slides-wrapper {
+                min-height: 420px;
+            }
+
+            .slide {
+                inset: 12px 10px 60px 10px;
+            }
+
+            .quiz-wrapper {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="deck" data-total-slides="9">
+        <div class="floating-shape blue"></div>
+        <div class="floating-shape orange"></div>
+
+        <header class="deck-header">
+            <div class="title-block">
+                <div class="title-pill">
+                    <span class="title-pill-dot"></span>
+                    High School (SMA)
+                </div>
+                <div class="main-title">
+                    Proyek Mid-Semester Python
+                    <span class="badge">Tahap 1 – Perencanaan</span>
+                </div>
+                <p class="subtitle">
+                    Siswa merancang <strong>aplikasi Python berbasis teks</strong> dengan
+                    <strong>tema finansial: pengelolaan keuangan sederhana</strong>.
+                </p>
+            </div>
+            <div class="meta">
+                
+                <div class="meta-row" style="width: 180px;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div>
+                    <div class="sidebar-section-title">Slide Saat Ini</div>
+                    <div class="slide-indicator">
+                        <span id="sidebarSlideNumber">1</span><small>/ 9</small>
+                    </div>
+                </div>
+                <div class="sidebar-main" id="sidebarMain">
+                    Pengantar Proyek Mid-Semester
+                </div>
+                <p class="sidebar-text" id="sidebarText">
+                    Siswa mengenal gambaran besar proyek Python bertema finansial dan empat tahap yang akan mereka jalani.
+                </p>
+                <div class="sidebar-tags">
+                    <span class="sidebar-tag">Python</span>
+                    <span class="sidebar-tag">Project-Based</span>
+                    <span class="sidebar-tag">Financial Literacy</span>
+                </div>
+                <p class="sidebar-hint">
+                    Gunakan <span>←</span> dan <span>→</span> di keyboard, atau tombol <span>Prev</span> &amp;
+                    <span>Next</span>.
+                </p>
+            </aside>
+
+            <!-- Slides -->
+            <main class="slides-wrapper">
+                <!-- Slide 1: Cover & 4 Tahap -->
+                <article class="slide active" data-side-main="Pengantar Proyek Mid-Semester"
+                    data-side-text="Empat tahap proyek: perencanaan, skeleton kode, implementasi & debugging, finalisasi & presentasi.">
+                    <h2><span class="emoji">🐍</span> Selamat Datang di Proyek Mid-Semester Python</h2>
+                    <p class="subtitle-slide">
+                        Dalam empat sesi ke depan, kamu akan membangun <strong>aplikasi berbasis teks bertema finansial</strong> di
+                        <strong>Google Colab</strong>
+                        menggunakan Python untuk mengelola keuangan sederhana.
+                    </p>
+
+                    <section>
+                        <div class="pill-row">
+                            <span class="pill-chip"><span class="dot"></span> Fungsi & Struktur Data</span>
+                            <span class="pill-chip"><span class="dot"></span> Kondisi & Perulangan</span>
+                            <span class="pill-chip"><span class="dot"></span> Analisis Data Keuangan</span>
+                        </div>
+                    </section>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Kompetensi yang Dilatih</h3>
+                            <ul class="list">
+                                <li>Menggabungkan sintaks dasar Python dalam satu proyek utuh.</li>
+                                <li>Menerapkan <strong>decomposition</strong> dan <strong>perancangan algoritma</strong>.
+                                </li>
+                                <li>Melatih pemikiran logis, literasi finansial, dan pemecahan masalah nyata.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Empat Tahap Proyek</h3>
+                            <div class="card">
+                                <ol class="list">
+                                    <li><strong>Tahap 1:</strong> Perencanaan proyek & pseudocode.</li>
+                                    <li><strong>Tahap 2:</strong> Pembuatan kerangka program (skeleton coding).</li>
+                                    <li><strong>Tahap 3:</strong> Implementasi logika, efisiensi & debugging.</li>
+                                    <li><strong>Tahap 4:</strong> Finalisasi, presentasi & pengumpulan proyek.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <p class="badge-soft">
+                            Catatan: Proyek ini dibuat secara <strong>individual</strong> dan harus merupakan hasil
+                            pemikiranmu sendiri, dengan tema <strong>pengelolaan keuangan</strong>.
+                        </p>
+                    </section>
+                </article>
+
+                <!-- Slide 2: Tema Proyek Finansial -->
+                <article class="slide" data-side-main="Tema Proyek Finansial"
+                    data-side-text="Semua proyek wajib bertema finansial: pengelolaan uang, transaksi, atau laporan keuangan sederhana.">
+                    <h2><span class="emoji">💰</span> Tema Besar: Pengelolaan Keuangan Sederhana</h2>
+                    <p class="subtitle-slide">
+                        Proyek mid-semester ini <strong>wajib bertema finansial</strong>, yaitu bagaimana menggunakan Python
+                        untuk membantu mengelola uang, transaksi, atau laporan keuangan sederhana.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Contoh Ide Proyek</h3>
+                            <ul class="list">
+                                <li><strong>Aplikasi kasir sederhana</strong> untuk kantin/sebuah toko kecil.</li>
+                                <li><strong>Pencatat uang saku</strong> harian atau bulanan.</li>
+                                <li><strong>Catatan pemasukan & pengeluaran</strong> pribadi.</li>
+                                <li><strong>Tracker tabungan</strong> untuk mencapai target tertentu.</li>
+                            </ul>
+                            <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                Kamu boleh mengembangkan ide sendiri, selama masih terkait <strong>pengelolaan keuangan</strong>.
+                            </p>
+                        </div>
+                        <div>
+                            <h3>Karakteristik Aplikasi</h3>
+                            <div class="card">
+                                <ul class="list">
+                                    <li>Berbasis teks (menggunakan <code>input()</code> dan <code>print()</code>).</li>
+                                    <li>Menggunakan <strong>list</strong> dan <strong>dictionary</strong> untuk data transaksi.</li>
+                                    <li>Memiliki menu utama dan beberapa fitur keuangan.</li>
+                                    <li>Mampu menampilkan ringkasan / laporan keuangan sederhana.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <p style="font-size:13px;">
+                            <strong>Tugas di Worksheet:</strong> Tuliskan tema aplikasi keuangan yang akan kamu buat, misalnya:
+                            <em>“Aplikasi Catatan Uang Saku Harian”</em> atau <em>“Kasir Sederhana Warung Makan”</em>.
+                        </p>
+                    </section>
+                </article>
+
+                <!-- Slide 3: Tujuan Tahap 1 -->
+                <article class="slide" data-side-main="Tujuan Tahap 1"
+                    data-side-text="Fokus tahap 1: memahami masalah finansial, pengguna, fitur inti, dan rancangan alur.">
+                    <h2><span class="emoji">🧱</span> Apa yang Harus Selesai di Tahap 1?</h2>
+                    <p class="subtitle-slide">
+                        Tahap 1 adalah tentang <strong>merencanakan</strong>, belum menulis kode. Di sini kamu
+                        menyusun fondasi proyek keuanganmu.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Capaian Tahap 1</h3>
+                            <ul class="list">
+                                <li>Menentukan konsep dan tema aplikasi keuangan.</li>
+                                <li>Menjelaskan masalah finansial dan kebutuhan pengguna.</li>
+                                <li>Menentukan fitur-fitur inti yang akan dikembangkan.</li>
+                                <li>Menentukan struktur data awal (list & dictionary).</li>
+                                <li>Menyusun pseudocode alur program.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Output yang Diharapkan</h3>
+                            <div class="card">
+                                <ul class="list">
+                                    <li>Worksheet Tahap 1 terisi lengkap.</li>
+                                    <li>Masalah & pengguna proyek finansial tertulis jelas.</li>
+                                    <li>Daftar fitur inti sudah ditentukan.</li>
+                                    <li>Sketsa alur program (pseudocode) selesai.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 4: Decomposition -->
+                <article class="slide" data-side-main="Decomposition Masalah"
+                    data-side-text="Siswa memecah masalah keuangan menjadi beberapa sub-tugas dan fitur kecil.">
+                    <h2><span class="emoji">🧩</span> Memecah Masalah (Decomposition)</h2>
+                    <p class="subtitle-slide">
+                        Masalah keuangan yang besar akan lebih mudah diselesaikan jika kamu memecahnya menjadi beberapa bagian kecil.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Contoh Decomposition – Aplikasi Kasir</h3>
+                            <ul class="list">
+                                <li>Menyiapkan data menu (nama, harga).</li>
+                                <li>Menampilkan menu ke pengguna.</li>
+                                <li>Menerima pesanan (input berulang).</li>
+                                <li>Menghitung total, diskon, PPN.</li>
+                                <li>Menyimpan transaksi ke dalam list.</li>
+                                <li>Menampilkan ringkasan / struk.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Aktivitas di Worksheet</h3>
+                            <div class="card">
+                                <p style="font-size:13px;">
+                                    Tuliskan minimal <strong>5–7 langkah/sub-masalah</strong> dari aplikasi keuangan yang kamu rancang:
+                                </p>
+                                <ul class="list">
+                                    <li>Langkah 1: _________________________</li>
+                                    <li>Langkah 2: _________________________</li>
+                                    <li>...</li>
+                                </ul>
+                                <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                    Decomposition ini nantinya akan menjadi dasar penyusunan pseudocode.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 5: Struktur Data List & Dictionary -->
+                <article class="slide" data-side-main="Struktur Data Proyek"
+                    data-side-text="Siswa merencanakan bagaimana data keuangan akan disimpan dengan list dan dictionary.">
+                    <h2><span class="emoji">📦</span> Merancang Struktur Data (List & Dictionary)</h2>
+                    <p class="subtitle-slide">
+                        Sebelum coding, tentukan dulu data keuangan apa yang akan disimpan dan dalam bentuk apa.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Contoh – Catatan Keuangan Pribadi</h3>
+                            <p>Setiap transaksi bisa disimpan dalam <strong>dictionary</strong>, lalu dikumpulkan dalam
+                                <strong>list</strong>.
+                            </p>
+                            <div class="card">
+                                <pre style="font-size:12px;white-space:pre-wrap;">
+transaksi = [
+  {"tanggal": "2025-02-10",
+   "jenis": "pengeluaran",
+   "kategori": "makan",
+   "nominal": 20000},
+  {"tanggal": "2025-02-10",
+   "jenis": "pemasukan",
+   "kategori": "uang saku",
+   "nominal": 50000}
+]
+                                </pre>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Tugas di Worksheet</h3>
+                            <ul class="list">
+                                <li>Tentukan data apa saja yang perlu disimpan (tanggal, jenis, nominal, dsb.).</li>
+                                <li>Tentukan mana yang jadi <strong>list</strong> dan mana yang jadi
+                                    <strong>dictionary</strong>.
+                                </li>
+                                <li>Tulis contoh struktur datanya (minimal 1 contoh).</li>
+                            </ul>
+                            <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                Hal ini akan sangat membantu saat kamu mulai membuat fungsi di sesi berikutnya.
+                            </p>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 6: Flowchart vs Pseudocode -->
+                <article class="slide" data-side-main="Flowchart & Pseudocode"
+                    data-side-text="Siswa memahami pilihan representasi algoritma sebelum menulis kode Python.">
+                    <h2><span class="emoji">🔀</span> Flowchart atau Pseudocode?</h2>
+                    <p class="subtitle-slide">
+                        Kamu boleh memilih: merancang alur program dengan <strong>flowchart</strong> atau
+                        <strong>pseudocode</strong>.
+                    </p>
+
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Pseudocode</h3>
+                            <p>
+                                Pseudocode menuliskan langkah-langkah dengan <strong>bahasa campuran
+                                    Indonesia–Inggris</strong> yang mirip kode, tapi tidak harus mengikuti sintaks
+                                Python 100%.
+                            </p>
+                        </div>
+                        <div>
+                            <div class="card">
+                                <pre style="font-size:12px;white-space:pre-wrap;">
+BEGIN
+    WHILE True:
+        Tampilkan menu
+        Input pilihan
+
+        IF pilihan == 1 THEN
+            proses_transaksi()
+        ELSE IF pilihan == 2 THEN
+            tampilkan_laporan()
+        ELSE IF pilihan == 3 THEN
+            BREAK
+        ELSE
+            Tampilkan "Input tidak valid"
+    END WHILE
+END
+                                </pre>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 7: Instruksi Pseudocode -->
+                <article class="slide" data-side-main="Instruksi Pseudocode"
+                    data-side-text="Siswa menulis pseudocode dengan struktur input–proses–output dan loop menu utama.">
+                    <h2><span class="emoji">🧾</span> Menulis Pseudocode Alur Program</h2>
+                    <p class="subtitle-slide">
+                        Pastikan struktur program keuanganmu sudah terlihat jelas sebelum diubah ke
+                        Python.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Kata Kunci yang Disarankan</h3>
+                            <ul class="list">
+                                <li><code>BEGIN</code> / <code>END</code></li>
+                                <li><code>INPUT</code>, <code>OUTPUT</code></li>
+                                <li><code>IF / ELSE IF / ELSE</code></li>
+                                <li><code>WHILE</code>, <code>FOR EACH</code></li>
+                                <li><code>CALL</code> (untuk memanggil fungsi)</li>
+                            </ul>
+                            <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                Fokus pada <strong>alur logika</strong>, bukan detail sintaks Python.
+                            </p>
+                        </div>
+                        <div>
+                            <h3>Kerangka Pseudocode Utama</h3>
+                            <div class="card">
+                                <pre style="font-size:12px;white-space:pre-wrap;">
+MAIN PROGRAM:
+    Inisialisasi data keuangan (list, dictionary)
+    WHILE True:
+        Tampilkan menu
+        INPUT pilihan user
+
+        IF pilihan == 1 THEN
+            CALL fitur_1_mencatat_transaksi()
+        ELSE IF pilihan == 2 THEN
+            CALL fitur_2_menampilkan_ringkasan()
+        ELSE IF pilihan == 3 THEN
+            BREAK
+        ELSE
+            OUTPUT "Pilihan tidak valid"
+    END WHILE
+                                </pre>
+                                <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                    Tugas: di worksheet, lengkapi kerangka ini dengan nama fitur yang sesuai dengan ide aplikasi keuanganmu.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 8: Checklist -->
+                <article class="slide" data-side-main="Checklist Tahap 1"
+                    data-side-text="Siswa menandai apa saja yang sudah selesai sebelum masuk Tahap 2 (coding).">
+                    <h2><span class="emoji">✅</span> Checklist Sesi 21 – Tahap 1</h2>
+                    <p class="subtitle-slide">
+                        Gunakan checklist ini untuk mengecek apakah kamu siap lanjut ke Tahap 2 (kerangka program di
+                        Google Colab).
+                    </p>
+
+                    <section class="card">
+                        <h3>Sudahkah Kamu…?</h3>
+                        <ul class="checklist">
+                            <li><input type="checkbox" /> Menentukan satu ide aplikasi bertema finansial / pengelolaan keuangan.
+                            </li>
+                            <li><input type="checkbox" /> Menulis deskripsi masalah dan pengguna aplikasi.</li>
+                            <li><input type="checkbox" /> Menentukan minimal tiga fitur inti aplikasi keuangan.</li>
+                            <li><input type="checkbox" /> Merancang struktur data (list & dictionary) yang akan
+                                digunakan.</li>
+                            <li><input type="checkbox" /> Menyusun decomposition (langkah-langkah utama program).</li>
+                            <li><input type="checkbox" /> Membuat flowchart atau pseudocode alur program.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <p style="font-size:12px;color:var(--text-soft);margin-top:6px;">
+                            Jika ada yang belum dicentang, kamu bisa menyelesaikannya sebagai tugas rumah sebelum
+                            Sesi 22.
+                        </p>
+                    </section>
+                </article>
+
+                <!-- Slide 9: Mini Quiz -->
+                <article class="slide" data-side-main="Mini Quiz Tahap 1"
+                    data-side-text="Kuis singkat untuk mengecek pemahaman tentang perencanaan proyek Python bertema finansial.">
+                    <h2><span class="emoji">❓</span> Mini Quiz – Perencanaan Proyek Keuangan</h2>
+                    <p class="subtitle-slide">
+                        Klik salah satu jawaban. Hijau = benar, merah = perlu dicek lagi.
+                    </p>
+
+                    <section class="quiz-wrapper">
+                        <div>
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    1. Apa tujuan utama melakukan <strong>decomposition</strong> pada aplikasi keuangan?
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="true">
+                                        Memecah masalah besar menjadi bagian kecil yang lebih mudah diimplementasikan
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Membuat kode Python lebih panjang
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Menghapus semua fitur yang tidak penting
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Mengganti semua variabel menjadi satu nama
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    2. Manakah contoh penggunaan <strong>list of dictionary</strong> yang paling tepat dalam
+                                    aplikasi finansial?
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="false">
+                                        <code>nilai = 80</code>
+                                    </div>
+                                    <div class="quiz-option" data-correct="true">
+                                        Menyimpan banyak transaksi keuangan, setiap transaksi berupa dictionary
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Menyimpan satu angka saja
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Menyimpan satu string saja
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    3. Mengapa penting menulis flowchart atau pseudocode sebelum membuat aplikasi keuangan?
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="true">
+                                        Agar alur logika program jelas dan mengurangi kebingungan saat menulis kode
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Agar bisa langsung meng-copy ke internet
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Agar program bisa berjalan tanpa dijalankan
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Agar tidak perlu memahami masalah
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    4. Dalam proyek ini, struktur <strong>menu utama</strong> sebaiknya menggunakan…
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="true">
+                                        Loop (WHILE) yang terus menampilkan menu sampai user memilih keluar
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Hanya satu kali input tanpa bisa mengulang
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Kode tanpa input apa pun
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Random choice tanpa menu
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    5. Manakah pernyataan yang paling tepat tentang <strong>Tujuan Tahap 1</strong>?
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="false">
+                                        Langsung menyelesaikan semua kode program
+                                    </div>
+                                    <div class="quiz-option" data-correct="true">
+                                        Menyusun rencana lengkap proyek keuangan (masalah, fitur, data, alur) sebelum mulai
+                                        coding
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Menghafalkan semua fungsi Python
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Mencari kode jadi di internet
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="quiz-feedback">
+                                Guru dapat menambahkan soal lain sesuai kebutuhan kelas.
+                            </p>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Footer nav -->
+                <div class="footer-nav">
+                    <div class="slide-dots" id="slideDots"></div>
+                    <div class="slide-counter-text" id="slideCounterText">Slide 1 dari 9</div>
+                    <div class="nav-buttons">
+                        <button class="btn" type="button" data-nav="prev">
+                            <span class="icon">←</span> Prev
+                        </button>
+                        <button class="btn primary" type="button" data-nav="next">
+                            Next <span class="icon">→</span>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const slides = Array.from(document.querySelectorAll(".slide"));
+            const totalSlides = slides.length;
+            let currentSlide = 0;
+
+            const sidebarNumber = document.getElementById("sidebarSlideNumber");
+            const sidebarMain = document.getElementById("sidebarMain");
+            const sidebarText = document.getElementById("sidebarText");
+            const progressFill = document.getElementById("progressFill");
+            const slideDotsContainer = document.getElementById("slideDots");
+            const slideCounterText = document.getElementById("slideCounterText");
+            const prevBtn = document.querySelector('button[data-nav="prev"]');
+            const nextBtn = document.querySelector('button[data-nav="next"]');
+
+            // Create dots
+            const dots = slides.map((_, idx) => {
+                const dot = document.createElement("div");
+                dot.className = "slide-dot" + (idx === 0 ? " active" : "");
+                dot.dataset.index = String(idx);
+                slideDotsContainer.appendChild(dot);
+                return dot;
+            });
+
+            function updateSidebar(idx) {
+                const slide = slides[idx];
+                const main = slide.getAttribute("data-side-main") || "";
+                const text = slide.getAttribute("data-side-text") || "";
+                sidebarNumber.textContent = String(idx + 1);
+                sidebarMain.textContent = main;
+                sidebarText.textContent = text;
+                slideCounterText.textContent = `Slide ${idx + 1} dari ${totalSlides}`;
+            }
+
+            function updateProgress(idx) {
+                const progress = ((idx + 1) / totalSlides) * 100;
+                progressFill.style.width = progress + "%";
+            }
+
+            function updateDots(idx) {
+                dots.forEach((dot, i) => {
+                    if (i === idx) {
+                        dot.classList.add("active");
+                    } else {
+                        dot.classList.remove("active");
+                    }
+                });
+            }
+
+            function showSlide(idx) {
+                if (idx < 0 || idx >= totalSlides) return;
+                slides[currentSlide].classList.remove("active");
+                slides[idx].classList.add("active");
+                currentSlide = idx;
+                updateSidebar(idx);
+                updateProgress(idx);
+                updateDots(idx);
+            }
+
+            // Initial
+            updateSidebar(0);
+            updateProgress(0);
+
+            // Navigation buttons
+            prevBtn.addEventListener("click", () => {
+                const target = currentSlide - 1;
+                if (target >= 0) {
+                    showSlide(target);
+                }
+            });
+
+            nextBtn.addEventListener("click", () => {
+                const target = currentSlide + 1;
+                if (target < totalSlides) {
+                    showSlide(target);
+                }
+            });
+
+            // Keyboard navigation
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "ArrowLeft") {
+                    const target = currentSlide - 1;
+                    if (target >= 0) showSlide(target);
+                } else if (e.key === "ArrowRight") {
+                    const target = currentSlide + 1;
+                    if (target < totalSlides) showSlide(target);
+                }
+            });
+
+            // Dot navigation
+            dots.forEach((dot) => {
+                dot.addEventListener("click", () => {
+                    const idx = Number(dot.dataset.index || "0");
+                    showSlide(idx);
+                });
+            });
+
+            // Quiz interaction
+            const quizOptions = Array.from(document.querySelectorAll(".quiz-option"));
+            quizOptions.forEach((option) => {
+                option.addEventListener("click", () => {
+                    const question = option.closest(".quiz-question");
+                    if (!question) return;
+                    const siblings = Array.from(
+                        question.querySelectorAll(".quiz-option")
+                    );
+                    siblings.forEach((s) => {
+                        s.classList.remove("correct", "wrong");
+                    });
+                    const isCorrect = option.dataset.correct === "true";
+                    option.classList.add(isCorrect ? "correct" : "wrong");
+                });
+            });
+        })();
+    </script>
+</body>
+
+</html>
