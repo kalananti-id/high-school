@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Sesi 24 – Proyek Mid-Semester Python Tahap 4</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        :root {
+            /* Sunrise theme – sama seperti Tahap 1–3 */
+            --bg: #fff7ed;
+            --bg-soft: #fffbeb;
+            --accent: #f59e0b;
+            --accent-soft: rgba(245, 158, 11, 0.1);
+            --accent-strong: #f97316;
+            --text-main: #111827;
+            --text-soft: #4b5563;
+            --card: #ffffff;
+            --danger: #ef4444;
+            --success: #16a34a;
+            --radius-xl: 24px;
+            --shadow-soft: 0 18px 45px rgba(248, 171, 74, 0.35);
+            --transition-fast: 0.2s ease-out;
+            --transition-med: 0.35s ease-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                sans-serif;
+            background:
+                radial-gradient(circle at top, #ffedd5 0, #fff7ed 45%, #fefce8 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .deck {
+            position: relative;
+            width: 100%;
+            max-width: 1120px;
+            background: linear-gradient(135deg, #fffdf5, #fffbeb 40%, #ffedd5 100%);
+            border-radius: 32px;
+            padding: 20px 20px 18px;
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            border: 1px solid rgba(248, 187, 89, 0.5);
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(28px);
+            opacity: 0.45;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .floating-shape.blue {
+            width: 260px;
+            height: 260px;
+            background: #facc15;
+            top: -80px;
+            right: -60px;
+            animation: float1 14s infinite alternate ease-in-out;
+        }
+
+        .floating-shape.orange {
+            width: 200px;
+            height: 200px;
+            background: #fb923c;
+            bottom: -60px;
+            left: -40px;
+            animation: float2 18s infinite alternate ease-in-out;
+        }
+
+        @keyframes float1 {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(-40px, 35px, 0);
+            }
+        }
+
+        @keyframes float2 {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(50px, -25px, 0);
+            }
+        }
+
+        header.deck-header {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding: 4px 4px 10px;
+            border-bottom: 1px solid rgba(248, 187, 89, 0.8);
+            gap: 12px;
+        }
+
+        .title-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .title-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 252, 235, 0.95);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-soft);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+        }
+
+        .title-pill-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 16px rgba(34, 197, 94, 0.9);
+        }
+
+        .main-title {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1f2933;
+        }
+
+        .main-title span.badge {
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(234, 179, 8, 0.9);
+            color: #92400e;
+            background: rgba(254, 243, 199, 0.95);
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--text-soft);
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pill {
+            border-radius: 999px;
+            padding: 4px 8px;
+            background: rgba(255, 247, 237, 0.9);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+        }
+
+        .progress-bar {
+            position: relative;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(254, 215, 170, 0.9);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            position: absolute;
+            inset: 0;
+            width: 0%;
+            background: linear-gradient(90deg, #fbbf24, #f97316);
+            transition: width var(--transition-med);
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            margin-top: 14px;
+            display: flex;
+            gap: 14px;
+            min-height: 420px;
+        }
+
+        .sidebar {
+            width: 230px;
+            background: radial-gradient(circle at top left, #fffbeb, #fefce8);
+            border-radius: var(--radius-xl);
+            padding: 14px 12px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-soft);
+        }
+
+        .slide-indicator {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+        }
+
+        .slide-indicator small {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-soft);
+        }
+
+        .sidebar-main {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .sidebar-text {
+            font-size: 12px;
+            color: var(--text-soft);
+            line-height: 1.5;
+        }
+
+        .sidebar-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .sidebar-tag {
+            font-size: 10px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            color: var(--text-soft);
+            background: rgba(255, 251, 235, 0.9);
+        }
+
+        .sidebar-hint {
+            margin-top: auto;
+            font-size: 11px;
+            color: var(--text-soft);
+            border-top: 1px dashed rgba(248, 187, 89, 0.7);
+            padding-top: 6px;
+        }
+
+        .sidebar-hint span {
+            color: var(--accent-strong);
+            font-weight: 600;
+        }
+
+        .slides-wrapper {
+            flex: 1;
+            background: radial-gradient(circle at top, #fff7ed, #fffbeb 55%, #fefce8);
+            border-radius: var(--radius-xl);
+            border: 1px solid rgba(248, 187, 89, 0.7);
+            padding: 16px 18px 14px;
+            position: relative;
+            overflow: hidden;
+            min-height: 420px;
+        }
+
+        .slide {
+            display: none;
+            opacity: 0;
+            transform: translateX(10px) translateY(4px);
+            transition: opacity var(--transition-med), transform var(--transition-med);
+            position: absolute;
+            inset: 16px 18px 52px 18px;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            display: block;
+            opacity: 1;
+            transform: translateX(0) translateY(0);
+        }
+
+        .slide h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1f2933;
+        }
+
+        .slide h2 .emoji {
+            font-size: 22px;
+        }
+
+        .slide .subtitle-slide {
+            font-size: 13px;
+            color: var(--text-soft);
+            margin-bottom: 14px;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .pill-chip {
+            font-size: 11px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: rgba(255, 251, 235, 0.95);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-soft);
+        }
+
+        .pill-chip span.dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--accent);
+        }
+
+        .slide section {
+            margin-bottom: 14px;
+        }
+
+        .slide section h3 {
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: #1f2937;
+        }
+
+        .slide p {
+            font-size: 13px;
+            color: var(--text-soft);
+            line-height: 1.6;
+        }
+
+        .list {
+            margin-top: 4px;
+            padding-left: 18px;
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .list li {
+            margin-bottom: 4px;
+        }
+
+        .card {
+            border-radius: 16px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            padding: 10px 12px;
+            background: var(--card);
+            margin-top: 4px;
+            box-shadow: 0 8px 18px rgba(248, 171, 74, 0.18);
+        }
+
+        .two-cols {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+            gap: 10px;
+        }
+
+        .badge-soft {
+            display: inline-flex;
+            font-size: 11px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(254, 243, 199, 0.95);
+            color: #92400e;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+        }
+
+        .checklist {
+            list-style: none;
+            margin-top: 6px;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .checklist input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            background: transparent;
+            accent-color: var(--accent);
+        }
+
+        .footer-nav {
+            position: absolute;
+            inset-inline: 18px;
+            bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 2;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            background: rgba(255, 251, 235, 0.98);
+            padding: 6px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: background var(--transition-fast), transform 0.1s ease-out,
+                box-shadow 0.1s ease-out, border-color 0.1s ease-out;
+        }
+
+        .btn span.icon {
+            font-size: 14px;
+        }
+
+        .btn.primary {
+            border-color: rgba(234, 179, 8, 1);
+            background: linear-gradient(135deg, #fde68a, #fbbf24);
+            color: #78350f;
+            font-weight: 600;
+            box-shadow: 0 12px 22px rgba(248, 187, 89, 0.75);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(248, 171, 74, 0.6);
+            background: #fffbeb;
+        }
+
+        .btn.primary:hover {
+            box-shadow: 0 16px 30px rgba(248, 187, 89, 0.9);
+        }
+
+        .slide-dots {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: var(--text-soft);
+        }
+
+        .slide-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            cursor: pointer;
+            opacity: 0.6;
+            transition: background var(--transition-fast), opacity var(--transition-fast),
+                transform 0.1s ease-out, border-color var(--transition-fast);
+            background: rgba(255, 251, 235, 0.9);
+        }
+
+        .slide-dot.active {
+            background: var(--accent-strong);
+            border-color: var(--accent-strong);
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        .slide-counter-text {
+            font-size: 11px;
+            color: var(--text-soft);
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                flex-direction: column;
+                min-height: 0;
+            }
+
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 6px 12px;
+                align-items: center;
+            }
+
+            .sidebar-main {
+                font-size: 13px;
+            }
+
+            .sidebar-hint {
+                margin-top: 0;
+                border-top: none;
+            }
+
+            .slides-wrapper {
+                min-height: 420px;
+            }
+
+            .slide {
+                inset: 12px 10px 60px 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="deck" data-total-slides="8">
+        <div class="floating-shape blue"></div>
+        <div class="floating-shape orange"></div>
+
+        <header class="deck-header">
+            <div class="title-block">
+                <div class="title-pill">
+                    <span class="title-pill-dot"></span>
+                    Sesi 24 • High School (SMA)
+                </div>
+                <div class="main-title">
+                    Proyek Mid-Semester Python
+                    <span class="badge">Tahap 4 – Finalisasi, Dokumentasi & Presentasi</span>
+                </div>
+                <p class="subtitle">
+                    Menyempurnakan aplikasi keuangan, mendokumentasikan proyek, mempresentasikan hasil, dan
+                    mengunggah ke LMS.
+                </p>
+            </div>
+            <div class="meta">
+                <div class="meta-row">
+                    <span>Mode</span>
+                    <span class="pill">Interactive Slides • HTML</span>
+                </div>
+                <div class="meta-row">
+                    <span>Durasi</span>
+                    <span class="pill">± 60–90 menit</span>
+                </div>
+                <div class="meta-row" style="width: 180px;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div>
+                    <div class="sidebar-section-title">Slide Saat Ini</div>
+                    <div class="slide-indicator">
+                        <span id="sidebarSlideNumber">1</span><small>/ 8</small>
+                    </div>
+                </div>
+                <div class="sidebar-main" id="sidebarMain">
+                    Instruksi Tahap 4
+                </div>
+                <p class="sidebar-text" id="sidebarText">
+                    Menyelesaikan proyek melalui finalisasi, dokumentasi, presentasi, dan pengumpulan di LMS.
+                </p>
+                <div class="sidebar-tags">
+                    <span class="sidebar-tag">Finalisasi</span>
+                    <span class="sidebar-tag">Dokumentasi</span>
+                    <span class="sidebar-tag">Presentasi</span>
+                </div>
+                <p class="sidebar-hint">
+                    Gunakan <span>←</span> dan <span>→</span> di keyboard, atau tombol <span>Prev</span> &amp;
+                    <span>Next</span>.
+                </p>
+            </aside>
+
+            <!-- Slides -->
+            <main class="slides-wrapper">
+                <!-- Slide 1: Instruksi Tahap 4 -->
+                <article class="slide active" data-side-main="Instruksi Tahap 4"
+                    data-side-text="Tahap terakhir: finalisasi program, dokumentasi, presentasi, dan upload LMS.">
+                    <h2><span class="emoji">✨</span> Instruksi Tahap 4</h2>
+                    <p class="subtitle-slide">
+                        Pada Tahap 3, kamu sudah mengimplementasikan logika program Python sepenuhnya:
+                        pengolahan data keuangan, penggunaan kondisi dan perulangan, serta debugging.
+                        Programmu sekarang sudah <strong>berjalan</strong>.
+                    </p>
+
+                    <section>
+                        <h3>Apa yang kamu lakukan di Tahap 4?</h3>
+                        <div class="card">
+                            <ul class="list">
+                                <li>Menyempurnakan tampilan output & fitur aplikasi.</li>
+                                <li>Menyusun dokumentasi proyek (alur program, fitur, screenshot, cuplikan kode).</li>
+                                <li>Mempresentasikan aplikasi secara lisan dengan runtut dan percaya diri.</li>
+                                <li>Mengunggah file proyek dan deskripsi aplikasi ke LMS.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section>
+                        <p class="badge-soft">
+                            Tahap 4 adalah saat kamu menunjukkan <strong>hasil akhir</strong> dan proses berpikir
+                            komputasionalmu.
+                        </p>
+                    </section>
+                </article>
+
+                <!-- Slide 2: Peta Tahap 1–4 -->
+                <article class="slide" data-side-main="Peta Tahap 1–4"
+                    data-side-text="Melihat perjalanan proyek dari perencanaan sampai presentasi.">
+                    <h2><span class="emoji">🧭</span> Peta Perjalanan Proyek</h2>
+                    <p class="subtitle-slide">
+                        Sebelum finalisasi, ingat kembali apa yang sudah kamu capai di setiap tahap.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Tahap 1 – Perencanaan</h3>
+                            <ul class="list">
+                                <li>Memilih tema aplikasi keuangan.</li>
+                                <li>Menjelaskan masalah & kebutuhan pengguna.</li>
+                                <li>Menentukan fitur inti dan struktur data.</li>
+                                <li>Menyusun pseudocode / flowchart.</li>
+                            </ul>
+
+                            <h3>Tahap 2 – Kerangka Program</h3>
+                            <ul class="list">
+                                <li>Membuat menu utama dan struktur loop.</li>
+                                <li>Mendefinisikan fungsi dasar.</li>
+                                <li>Menginisialisasi list/dict transaksi.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Tahap 3 – Implementasi & Debugging</h3>
+                            <ul class="list">
+                                <li>Mengisi logika di dalam fungsi.</li>
+                                <li>Mengolah data transaksi (total, saldo, kategori).</li>
+                                <li>Menggunakan kondisi & perulangan secara efektif.</li>
+                                <li>Mencari dan memperbaiki error (syntax, runtime, logical).</li>
+                            </ul>
+
+                            <h3>Tahap 4 – Hari Ini</h3>
+                            <ul class="list">
+                                <li>Finalisasi tampilan & logika.</li>
+                                <li>Menyusun dokumentasi & deskripsi proyek.</li>
+                                <li>Presentasi di kelas.</li>
+                                <li>Upload proyek ke LMS.</li>
+                            </ul>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 3: Finalisasi Program -->
+                <article class="slide" data-side-main="Finalisasi Program"
+                    data-side-text="Merapikan tampilan output, logika, dan komentar sebelum presentasi.">
+                    <h2><span class="emoji">🛠️</span> Finalisasi Tampilan & Logika</h2>
+                    <p class="subtitle-slide">
+                        Proyek yang baik bukan hanya “jalan”, tetapi juga <strong>rapi</strong> dan
+                        <strong>mudah dibaca</strong>.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Yang Perlu Dicek</h3>
+                            <ul class="list">
+                                <li>Menu utama jelas, tidak membingungkan.</li>
+                                <li>Teks <code>print()</code> rapi dan tidak terpotong.</li>
+                                <li>Laporan keuangan tidak menampilkan nilai aneh (misalnya saldo negatif tanpa
+                                    alasan).</li>
+                                <li>Tidak ada kode testing yang ikut tampil saat presentasi.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Catatan di Worksheet</h3>
+                            <div class="card">
+                                <p style="font-size:13px;">
+                                    Gunakan bagian <em>Finalisasi Program</em> di worksheet untuk menuliskan:
+                                </p>
+                                <ul class="list">
+                                    <li>Perbaikan tampilan output yang kamu lakukan.</li>
+                                    <li>Perbaikan logika perhitungan atau fitur.</li>
+                                    <li>Bagian kode yang kamu tambahkan komentar.</li>
+                                </ul>
+                                <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                    Ini membantu kamu mengingat apa saja yang sudah disempurnakan.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 4: Dokumentasi Proyek -->
+                <article class="slide" data-side-main="Dokumentasi Proyek"
+                    data-side-text="Mengisi template dokumentasi sesuai worksheet Tahap 4.">
+                    <h2><span class="emoji">📄</span> Menyusun Dokumentasi Proyek</h2>
+                    <p class="subtitle-slide">
+                        Dokumentasi yang baik akan memudahkan orang lain memahami aplikasi yang kamu buat.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Isi Dokumentasi</h3>
+                            <div class="card">
+                                <ul class="list">
+                                    <li>Judul & tema aplikasi.</li>
+                                    <li>Masalah yang ingin diselesaikan.</li>
+                                    <li>Pengguna utama aplikasi.</li>
+                                    <li>Fitur-fitur utama.</li>
+                                    <li>Alur kerja program.</li>
+                                    <li>Struktur data & logika utama.</li>
+                                    <li>Cuplikan kode penting.</li>
+                                    <li>Screenshot program berjalan.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Tips Menulis</h3>
+                            <div class="card">
+                                <ul class="list">
+                                    <li>Tulis dengan kalimat sederhana dan jelas.</li>
+                                    <li>Pastikan yang kamu tulis sesuai dengan fitur yang benar-benar ada.</li>
+                                    <li>Gunakan bullet point jika perlu.</li>
+                                    <li>Jangan memasukkan data sensitif (misalnya nomor rekening asli).</li>
+                                </ul>
+                                <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                    Dokumentasi ini akan kamu unggah ke LMS bersama proyekmu.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 5: Template & Contoh Deskripsi -->
+                <article class="slide" data-side-main="Template Deskripsi Proyek"
+                    data-side-text="Menggunakan template Tujuan, Fitur, Alur, dan Hal yang Dipelajari.">
+                    <h2><span class="emoji">📝</span> Template & Contoh Deskripsi Proyek</h2>
+                    <p class="subtitle-slide">
+                        Saat mengunggah tugas di LMS, kamu harus mengisi kolom
+                        <strong>Deskripsi Proyek</strong>. Gunakan template berikut.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Template Deskripsi</h3>
+                            <div class="card" style="font-size:12px;">
+                                <p><strong>Tujuan Aplikasi:</strong><br>
+                                    Jelaskan mengapa aplikasi ini dibuat dan masalah apa yang diselesaikan.</p>
+                                <p><strong>Fitur Utama:</strong><br>
+                                    Sebutkan 3–4 fitur yang paling penting.</p>
+                                <p><strong>Alur Kerja Program:</strong><br>
+                                    Jelaskan secara singkat urutan penggunaan aplikasi.</p>
+                                <p><strong>Hal yang Saya Pelajari:</strong><br>
+                                    Tuliskan 2–3 hal yang kamu pelajari dari proyek ini.</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Contoh Singkat</h3>
+                            <div class="card" style="font-size:12px;">
+                                <p><strong>Tujuan Aplikasi:</strong><br>
+                                    Membantu pengguna mencatat pemasukan dan pengeluaran harian agar dapat memantau
+                                    saldo dan pola pengeluaran.</p>
+                                <p><strong>Fitur Utama:</strong><br>
+                                    • Mencatat transaksi dengan kategori<br>
+                                    • Menghitung total pemasukan, pengeluaran, dan saldo<br>
+                                    • Menampilkan ringkasan keuangan yang rapi</p>
+                                <p><strong>Alur Kerja Program:</strong><br>
+                                    Pengguna memilih menu, menambahkan transaksi, kemudian melihat ringkasan saldo dan
+                                    total pengeluaran.</p>
+                                <p><strong>Hal yang Saya Pelajari:</strong><br>
+                                    Cara menggunakan list/dict untuk menyimpan data, membuat menu dengan
+                                    <code>while True</code>, dan melakukan debugging ketika hasil perhitungan salah.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 6: Contoh SmartKasirX -->
+                <article class="slide" data-side-main="Contoh SmartKasirX"
+                    data-side-text="Contoh konkret deskripsi proyek untuk aplikasi kasir sederhana.">
+                    <h2><span class="emoji">🧾</span> Contoh Deskripsi – SmartKasirX</h2>
+                    <p class="subtitle-slide">
+                        Berikut contoh bagaimana menjelaskan proyek bertema kasir sederhana.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Deskripsi dalam Bentuk Langkah</h3>
+                            <div class="card" style="font-size:12px;">
+                                <p><strong>1. Tujuan Aplikasi</strong></p>
+                                <ul class="list">
+                                    <li>Membantu penjual kecil atau kantin menghitung total belanja dengan cepat.</li>
+                                    <li>Mengurangi kesalahan hitung pada transaksi manual.</li>
+                                    <li>Menyediakan laporan sederhana: total pendapatan & jumlah transaksi.</li>
+                                </ul>
+
+                                <p><strong>2. Fitur Utama</strong></p>
+                                <ul class="list">
+                                    <li>Menampilkan daftar menu dan harga.</li>
+                                    <li>Menerima pesanan, menghitung total, pajak, dan diskon.</li>
+                                    <li>Menyimpan transaksi ke dalam list sebagai riwayat.</li>
+                                    <li>Menampilkan laporan harian.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Alur & Pembelajaran</h3>
+                            <div class="card" style="font-size:12px;">
+                                <p><strong>3. Alur Kerja Program</strong></p>
+                                <ul class="list">
+                                    <li>Program menampilkan menu utama (Transaksi Baru / Laporan / Keluar).</li>
+                                    <li>Pengguna memilih Transaksi Baru dan memasukkan item + jumlah.</li>
+                                    <li>Aplikasi menghitung subtotal, pajak, dan total pembayaran.</li>
+                                    <li>Transaksi disimpan sebagai dictionary di list <code>riwayat_transaksi</code>.
+                                    </li>
+                                    <li>Pada menu Laporan, aplikasi menghitung total pendapatan dan jumlah
+                                        transaksi.</li>
+                                </ul>
+                                <p><strong>4. Hal yang Saya Pelajari</strong></p>
+                                <ul class="list">
+                                    <li>Menggunakan list of dictionary untuk menyimpan banyak transaksi.</li>
+                                    <li>Membuat menu berbasis teks dengan <code>while True</code>.</li>
+                                    <li>Debugging ketika total tidak sesuai atau loop tidak berhenti.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 7: Upload ke LMS -->
+                <article class="slide" data-side-main="Upload ke LMS"
+                    data-side-text="Langkah-langkah mengunggah proyek akhir dan mengisi deskripsi di LMS.">
+                    <h2><span class="emoji">📤</span> Upload Proyek Akhir ke LMS</h2>
+                    <p class="subtitle-slide">
+                        Ikuti langkah berikut agar pengumpulanmu lengkap dan bisa dinilai guru.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Langkah Pengumpulan</h3>
+                            <div class="card">
+                                <ol class="list">
+                                    <li>Buka LMS dan cari tugas
+                                        <strong>“Pengumpulan Proyek Mid-Semester – Tahap 4”</strong>.
+                                    </li>
+                                    <li>Pastikan program di Google Colab dapat berjalan tanpa error.</li>
+                                    <li>Salin link Colab dengan akses <em>Anyone with the link → Viewer</em>.</li>
+                                    <li>Siapkan dokumen dokumentasi (PDF / Docs) beserta screenshot program.</li>
+                                    <li>Unggah:
+                                        <ul class="list">
+                                            <li>Link Colab di kolom yang disediakan.</li>
+                                            <li>File dokumentasi proyek.</li>
+                                            <li>Screenshot (boleh di dalam dokumen).</li>
+                                        </ul>
+                                    </li>
+                                    <li>Isi kolom <strong>Deskripsi Proyek</strong> memakai template yang sudah
+                                        kamu tulis di worksheet.</li>
+                                    <li>Cek sekali lagi sebelum klik <strong>Submit</strong>.</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Checklist Upload</h3>
+                            <div class="card">
+                                <ul class="checklist">
+                                    <li><input type="checkbox" /> Link Colab aktif & dapat dibuka.</li>
+                                    <li><input type="checkbox" /> Dokumentasi proyek sudah terunggah.</li>
+                                    <li><input type="checkbox" /> Screenshot program jelas.</li>
+                                    <li><input type="checkbox" /> Deskripsi proyek di LMS sudah terisi.</li>
+                                    <li><input type="checkbox" /> Nama file & judul proyek sudah benar.</li>
+                                </ul>
+                                <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                    Checklist ini sama seperti yang ada di worksheet Tahap 4.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 8: Presentasi & Refleksi -->
+                <article class="slide" data-side-main="Presentasi & Refleksi"
+                    data-side-text="Menyiapkan presentasi dan merefleksikan proses belajar.">
+                    <h2><span class="emoji">🎤</span> Presentasi & Refleksi Akhir</h2>
+                    <p class="subtitle-slide">
+                        Presentasi adalah kesempatanmu menunjukkan hasil kerja dan cara berpikirmu.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Hal yang Perlu Dijelaskan</h3>
+                            <div class="card">
+                                <ul class="list">
+                                    <li>Judul & tujuan aplikasi.</li>
+                                    <li>Masalah yang ingin diselesaikan.</li>
+                                    <li>Fitur utama yang berhasil dibuat.</li>
+                                    <li>Alur kerja program & struktur menu.</li>
+                                    <li>Contoh perhitungan / demo singkat.</li>
+                                    <li>Satu atau dua error yang pernah kamu temui dan cara memperbaikinya.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Refleksi Pribadi</h3>
+                            <div class="card" style="font-size:12px;">
+                                <p>Tuliskan di worksheet atau buku catatanmu:</p>
+                                <ul class="list">
+                                    <li>Bagian terbaik dari aplikasi yang kamu buat.</li>
+                                    <li>Bagian yang ingin kamu tingkatkan ke depan.</li>
+                                    <li>Pelajaran terpenting dari proyek ini
+                                        (misalnya tentang logika, debugging, atau manajemen waktu).</li>
+                                </ul>
+                                <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                    Refleksi ini membantu kamu melihat perkembanganmu sebagai programmer.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Footer nav -->
+                <div class="footer-nav">
+                    <div class="slide-dots" id="slideDots"></div>
+                    <div class="slide-counter-text" id="slideCounterText">Slide 1 dari 8</div>
+                    <div class="nav-buttons">
+                        <button class="btn" type="button" data-nav="prev">
+                            <span class="icon">←</span> Prev
+                        </button>
+                        <button class="btn primary" type="button" data-nav="next">
+                            Next <span class="icon">→</span>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const slides = Array.from(document.querySelectorAll(".slide"));
+            const totalSlides = slides.length;
+            let currentSlide = 0;
+
+            const sidebarNumber = document.getElementById("sidebarSlideNumber");
+            const sidebarMain = document.getElementById("sidebarMain");
+            const sidebarText = document.getElementById("sidebarText");
+            const progressFill = document.getElementById("progressFill");
+            const slideDotsContainer = document.getElementById("slideDots");
+            const slideCounterText = document.getElementById("slideCounterText");
+            const prevBtn = document.querySelector('button[data-nav="prev"]');
+            const nextBtn = document.querySelector('button[data-nav="next"]');
+
+            // Create dots
+            const dots = slides.map((_, idx) => {
+                const dot = document.createElement("div");
+                dot.className = "slide-dot" + (idx === 0 ? " active" : "");
+                dot.dataset.index = String(idx);
+                slideDotsContainer.appendChild(dot);
+                return dot;
+            });
+
+            function updateSidebar(idx) {
+                const slide = slides[idx];
+                const main = slide.getAttribute("data-side-main") || "";
+                const text = slide.getAttribute("data-side-text") || "";
+                sidebarNumber.textContent = String(idx + 1);
+                sidebarMain.textContent = main;
+                sidebarText.textContent = text;
+                slideCounterText.textContent = `Slide ${idx + 1} dari ${totalSlides}`;
+            }
+
+            function updateProgress(idx) {
+                const progress = ((idx + 1) / totalSlides) * 100;
+                progressFill.style.width = progress + "%";
+            }
+
+            function updateDots(idx) {
+                dots.forEach((dot, i) => {
+                    if (i === idx) {
+                        dot.classList.add("active");
+                    } else {
+                        dot.classList.remove("active");
+                    }
+                });
+            }
+
+            function showSlide(idx) {
+                if (idx < 0 || idx >= totalSlides) return;
+                slides[currentSlide].classList.remove("active");
+                slides[idx].classList.add("active");
+                currentSlide = idx;
+                updateSidebar(idx);
+                updateProgress(idx);
+                updateDots(idx);
+            }
+
+            // Initial
+            updateSidebar(0);
+            updateProgress(0);
+
+            // Navigation buttons
+            prevBtn.addEventListener("click", () => {
+                const target = currentSlide - 1;
+                if (target >= 0) showSlide(target);
+            });
+
+            nextBtn.addEventListener("click", () => {
+                const target = currentSlide + 1;
+                if (target < totalSlides) showSlide(target);
+            });
+
+            // Keyboard navigation
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "ArrowLeft") {
+                    const target = currentSlide - 1;
+                    if (target >= 0) showSlide(target);
+                } else if (e.key === "ArrowRight") {
+                    const target = currentSlide + 1;
+                    if (target < totalSlides) showSlide(target);
+                }
+            });
+
+            // Dot navigation
+            dots.forEach((dot) => {
+                dot.addEventListener("click", () => {
+                    const idx = Number(dot.dataset.index || "0");
+                    showSlide(idx);
+                });
+            });
+        })();
+    </script>
+</body>
+
+</html>
