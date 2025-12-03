@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Sesi 23 – Proyek Mid-Semester Python Tahap 3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        :root {
+            /* Palette sunrise terang – sama dengan Tahap 1 & 2 */
+            --bg: #fff7ed;
+            --bg-soft: #fffbeb;
+            --accent: #f59e0b;
+            --accent-soft: rgba(245, 158, 11, 0.1);
+            --accent-strong: #f97316;
+            --text-main: #111827;
+            --text-soft: #4b5563;
+            --card: #ffffff;
+            --danger: #ef4444;
+            --success: #16a34a;
+            --radius-xl: 24px;
+            --shadow-soft: 0 18px 45px rgba(248, 171, 74, 0.35);
+            --transition-fast: 0.2s ease-out;
+            --transition-med: 0.35s ease-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                sans-serif;
+            background:
+                radial-gradient(circle at top, #ffedd5 0, #fff7ed 45%, #fefce8 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .deck {
+            position: relative;
+            width: 100%;
+            max-width: 1120px;
+            background: linear-gradient(135deg, #fffdf5, #fffbeb 40%, #ffedd5 100%);
+            border-radius: 32px;
+            padding: 20px 20px 18px;
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            border: 1px solid rgba(248, 187, 89, 0.5);
+        }
+
+        .floating-shape {
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(28px);
+            opacity: 0.45;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .floating-shape.blue {
+            width: 260px;
+            height: 260px;
+            background: #facc15;
+            top: -80px;
+            right: -60px;
+            animation: float1 14s infinite alternate ease-in-out;
+        }
+
+        .floating-shape.orange {
+            width: 200px;
+            height: 200px;
+            background: #fb923c;
+            bottom: -60px;
+            left: -40px;
+            animation: float2 18s infinite alternate ease-in-out;
+        }
+
+        @keyframes float1 {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(-40px, 35px, 0);
+            }
+        }
+
+        @keyframes float2 {
+            0% {
+                transform: translate3d(0, 0, 0);
+            }
+
+            100% {
+                transform: translate3d(50px, -25px, 0);
+            }
+        }
+
+        header.deck-header {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding: 4px 4px 10px;
+            border-bottom: 1px solid rgba(248, 187, 89, 0.8);
+            gap: 12px;
+        }
+
+        .title-block {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .title-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 252, 235, 0.95);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-soft);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+        }
+
+        .title-pill-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 16px rgba(34, 197, 94, 0.9);
+        }
+
+        .main-title {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1f2933;
+        }
+
+        .main-title span.badge {
+            font-size: 11px;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(234, 179, 8, 0.9);
+            color: #92400e;
+            background: rgba(254, 243, 199, 0.95);
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            font-size: 11px;
+            color: var(--text-soft);
+        }
+
+        .meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pill {
+            border-radius: 999px;
+            padding: 4px 8px;
+            background: rgba(255, 247, 237, 0.9);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+        }
+
+        .progress-bar {
+            position: relative;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(254, 215, 170, 0.9);
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            position: absolute;
+            inset: 0;
+            width: 0%;
+            background: linear-gradient(90deg, #fbbf24, #f97316);
+            transition: width var(--transition-med);
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            margin-top: 14px;
+            display: flex;
+            gap: 14px;
+            min-height: 420px;
+        }
+
+        .sidebar {
+            width: 230px;
+            background: radial-gradient(circle at top left, #fffbeb, #fefce8);
+            border-radius: var(--radius-xl);
+            padding: 14px 12px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar-section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-soft);
+        }
+
+        .slide-indicator {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: baseline;
+            gap: 3px;
+        }
+
+        .slide-indicator small {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-soft);
+        }
+
+        .sidebar-main {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .sidebar-text {
+            font-size: 12px;
+            color: var(--text-soft);
+            line-height: 1.5;
+        }
+
+        .sidebar-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .sidebar-tag {
+            font-size: 10px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            color: var(--text-soft);
+            background: rgba(255, 251, 235, 0.9);
+        }
+
+        .sidebar-hint {
+            margin-top: auto;
+            font-size: 11px;
+            color: var(--text-soft);
+            border-top: 1px dashed rgba(248, 187, 89, 0.7);
+            padding-top: 6px;
+        }
+
+        .sidebar-hint span {
+            color: var(--accent-strong);
+            font-weight: 600;
+        }
+
+        .slides-wrapper {
+            flex: 1;
+            background: radial-gradient(circle at top, #fff7ed, #fffbeb 55%, #fefce8);
+            border-radius: var(--radius-xl);
+            border: 1px solid rgba(248, 187, 89, 0.7);
+            padding: 16px 18px 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slide {
+            display: none;
+            opacity: 0;
+            transform: translateX(10px) translateY(4px);
+            transition: opacity var(--transition-med), transform var(--transition-med);
+            position: absolute;
+            inset: 16px 18px 52px 18px;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            display: block;
+            opacity: 1;
+            transform: translateX(0) translateY(0);
+        }
+
+        .slide h2 {
+            font-size: 20px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #1f2933;
+        }
+
+        .slide h2 .emoji {
+            font-size: 22px;
+        }
+
+        .slide .subtitle-slide {
+            font-size: 13px;
+            color: var(--text-soft);
+            margin-bottom: 14px;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .pill-chip {
+            font-size: 11px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: rgba(255, 251, 235, 0.95);
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-soft);
+        }
+
+        .pill-chip span.dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--accent);
+        }
+
+        .slide section {
+            margin-bottom: 14px;
+        }
+
+        .slide section h3 {
+            font-size: 15px;
+            margin-bottom: 4px;
+            color: #1f2937;
+        }
+
+        .slide p {
+            font-size: 13px;
+            color: var(--text-soft);
+            line-height: 1.6;
+        }
+
+        .list {
+            margin-top: 4px;
+            padding-left: 18px;
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .list li {
+            margin-bottom: 4px;
+        }
+
+        .card {
+            border-radius: 16px;
+            border: 1px solid rgba(248, 187, 89, 0.8);
+            padding: 10px 12px;
+            background: var(--card);
+            margin-top: 4px;
+            box-shadow: 0 8px 18px rgba(248, 171, 74, 0.18);
+        }
+
+        .two-cols {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+            gap: 10px;
+        }
+
+        .badge-soft {
+            display: inline-flex;
+            font-size: 11px;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(254, 243, 199, 0.95);
+            color: #92400e;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+        }
+
+        .checklist {
+            list-style: none;
+            margin-top: 6px;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--text-soft);
+        }
+
+        .checklist input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            background: transparent;
+            accent-color: var(--accent);
+        }
+
+        .quiz-wrapper {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+            gap: 12px;
+        }
+
+        .quiz-question {
+            margin-bottom: 8px;
+            padding-bottom: 6px;
+            border-bottom: 1px dashed rgba(248, 187, 89, 0.8);
+        }
+
+        .quiz-question:last-child {
+            border-bottom: none;
+        }
+
+        .quiz-question-title {
+            font-size: 13px;
+            margin-bottom: 6px;
+            color: #1f2937;
+        }
+
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .quiz-option {
+            font-size: 12px;
+            padding: 5px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            cursor: pointer;
+            background: rgba(255, 251, 235, 0.95);
+            transition: background var(--transition-fast), border-color var(--transition-fast),
+                transform 0.08s ease-out;
+            color: var(--text-soft);
+        }
+
+        .quiz-option:hover {
+            transform: translateY(-1px);
+            border-color: rgba(234, 179, 8, 1);
+            background: #fef3c7;
+        }
+
+        .quiz-option.correct {
+            border-color: rgba(22, 163, 74, 0.95);
+            background: rgba(187, 247, 208, 0.9);
+            color: #166534;
+        }
+
+        .quiz-option.wrong {
+            border-color: rgba(239, 68, 68, 0.95);
+            background: rgba(254, 202, 202, 0.9);
+            color: #b91c1c;
+        }
+
+        .quiz-feedback {
+            font-size: 12px;
+            margin-top: 4px;
+            color: var(--text-soft);
+        }
+
+        .footer-nav {
+            position: absolute;
+            inset-inline: 18px;
+            bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 2;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            background: rgba(255, 251, 235, 0.98);
+            padding: 6px 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: background var(--transition-fast), transform 0.1s ease-out,
+                box-shadow 0.1s ease-out, border-color 0.1s ease-out;
+        }
+
+        .btn span.icon {
+            font-size: 14px;
+        }
+
+        .btn.primary {
+            border-color: rgba(234, 179, 8, 1);
+            background: linear-gradient(135deg, #fde68a, #fbbf24);
+            color: #78350f;
+            font-weight: 600;
+            box-shadow: 0 12px 22px rgba(248, 187, 89, 0.75);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(248, 171, 74, 0.6);
+            background: #fffbeb;
+        }
+
+        .btn.primary:hover {
+            box-shadow: 0 16px 30px rgba(248, 187, 89, 0.9);
+        }
+
+        .slide-dots {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 10px;
+            color: var(--text-soft);
+        }
+
+        .slide-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(248, 187, 89, 0.9);
+            cursor: pointer;
+            opacity: 0.6;
+            transition: background var(--transition-fast), opacity var(--transition-fast),
+                transform 0.1s ease-out, border-color var(--transition-fast);
+            background: rgba(255, 251, 235, 0.9);
+        }
+
+        .slide-dot.active {
+            background: var(--accent-strong);
+            border-color: var(--accent-strong);
+            opacity: 1;
+            transform: scale(1.2);
+        }
+
+        .slide-counter-text {
+            font-size: 11px;
+            color: var(--text-soft);
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                flex-direction: column;
+                min-height: 0;
+            }
+
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 6px 12px;
+                align-items: center;
+            }
+
+            .sidebar-main {
+                font-size: 13px;
+            }
+
+            .sidebar-hint {
+                margin-top: 0;
+                border-top: none;
+            }
+
+            .slides-wrapper {
+                min-height: 420px;
+            }
+
+            .slide {
+                inset: 12px 10px 60px 10px;
+            }
+
+            .quiz-wrapper {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="deck" data-total-slides="8">
+        <div class="floating-shape blue"></div>
+        <div class="floating-shape orange"></div>
+
+        <header class="deck-header">
+            <div class="title-block">
+                <div class="title-pill">
+                    <span class="title-pill-dot"></span>
+                    Sesi 23 • High School (SMA)
+                </div>
+                <div class="main-title">
+                    Proyek Mid-Semester Python
+                    <span class="badge">Tahap 3 – Implementasi Logika & Debugging</span>
+                </div>
+                <p class="subtitle">
+                    Siswa mengembangkan <strong>fitur lengkap</strong> aplikasi keuangan,
+                    memproses data dengan list & dictionary, dan memperbaiki error yang muncul.
+                </p>
+            </div>
+            <div class="meta">
+                <div class="meta-row">
+                    <span>Mode</span>
+                    <span class="pill">Interactive Slides • HTML</span>
+                </div>
+                <div class="meta-row">
+                    <span>Durasi</span>
+                    <span class="pill">± 60–90 menit</span>
+                </div>
+                <div class="meta-row" style="width: 180px;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div>
+                    <div class="sidebar-section-title">Slide Saat Ini</div>
+                    <div class="slide-indicator">
+                        <span id="sidebarSlideNumber">1</span><small>/ 8</small>
+                    </div>
+                </div>
+                <div class="sidebar-main" id="sidebarMain">
+                    Recap Tahap 2 & Fokus Tahap 3
+                </div>
+                <p class="sidebar-text" id="sidebarText">
+                    Dari kerangka program ke implementasi logika lengkap dan debugging sistematis.
+                </p>
+                <div class="sidebar-tags">
+                    <span class="sidebar-tag">Implementasi</span>
+                    <span class="sidebar-tag">Debugging</span>
+                    <span class="sidebar-tag">Financial App</span>
+                </div>
+                <p class="sidebar-hint">
+                    Gunakan <span>←</span> dan <span>→</span> di keyboard, atau tombol <span>Prev</span> &amp;
+                    <span>Next</span>.
+                </p>
+            </aside>
+
+            <!-- Slides -->
+            <main class="slides-wrapper">
+                <!-- Slide 1: Recap Tahap 2 & Peta Tahap -->
+                <article class="slide active" data-side-main="Recap Tahap 2 & Fokus Tahap 3"
+                    data-side-text="Kerangka program sudah jadi, saatnya mengisi logika dan memperbaiki error.">
+                    <h2><span class="emoji">🧠</span> Dari Skeleton Code ke Program yang Hidup</h2>
+                    <p class="subtitle-slide">
+                        Di Tahap 2, kamu sudah membuat <strong>kerangka program</strong>:
+                        menu utama, fungsi dasar, dan inisialisasi data.  
+                        Di Tahap 3, kamu akan <strong>menghidupkan</strong> kerangka itu dengan logika lengkap,
+                        pengolahan data, dan debugging.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Recap Tahap 2</h3>
+                            <ul class="list">
+                                <li>Kerangka aplikasi keuangan sudah dibuat di Google Colab.</li>
+                                <li>Menu utama dan loop <code>while True</code> sudah tersedia.</li>
+                                <li>Fungsi-fungsi inti sudah didefinisikan, walaupun belum lengkap.</li>
+                                <li>Struktur data list/dictionary untuk transaksi sudah disiapkan.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Fokus Tahap 3</h3>
+                            <div class="card">
+                                <ul class="list">
+                                    <li>Mengisi logika di dalam fungsi-fungsi utama.</li>
+                                    <li>Memproses data transaksi (total, saldo, kategori, dsb.).</li>
+                                    <li>Menggunakan kondisi & loop secara efektif.</li>
+                                    <li>Mencari dan memperbaiki error (syntax, runtime, logical).</li>
+                                    <li>Melakukan optimasi sederhana dan memberi komentar kode.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <p class="badge-soft">
+                            Tujuan hari ini: programmu belum harus “cantik”, tapi sudah <strong>berfungsi lengkap</strong>.
+                        </p>
+                    </section>
+                </article>
+
+                <!-- Slide 2: Implementasi Logika Fitur Utama -->
+                <article class="slide" data-side-main="Implementasi Fitur Utama"
+                    data-side-text="Mengembangkan fitur yang sebelumnya baru kerangka menjadi benar-benar berjalan.">
+                    <h2><span class="emoji">🧩</span> Mengisi Logika Fitur Utama</h2>
+                    <p class="subtitle-slide">
+                        Sekarang saatnya mengubah rencana di Tahap 1 & 2 menjadi <strong>kode yang benar-benar
+                            bekerja</strong>.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Dari Rencana ke Kode</h3>
+                            <ul class="list">
+                                <li>Tinjau kembali daftar fitur di worksheet Tahap 3.</li>
+                                <li>Pilih dulu fitur inti: misalnya <em>catat transaksi</em> dan <em>ringkasan keuangan</em>.
+                                </li>
+                                <li>Isi bagian dalam fungsi sesuai langkah-langkah yang sudah kamu tulis.</li>
+                                <li>Gunakan komentar untuk menandai langkah penting dalam fungsi.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Contoh – Fitur Ringkasan</h3>
+                            <div class="card">
+<pre style="font-size:12px;white-space:pre-wrap;">
+def tampilkan_ringkasan(transaksi):
+    print("=== Ringkasan Keuangan ===")
+    total_pemasukan = 0
+    total_pengeluaran = 0
+
+    for t in transaksi:
+        if t["jenis"] == "pemasukan":
+            total_pemasukan += t["nominal"]
+        elif t["jenis"] == "pengeluaran":
+            total_pengeluaran += t["nominal"]
+
+    saldo = total_pemasukan - total_pengeluaran
+
+    print("Total pemasukan :", total_pemasukan)
+    print("Total pengeluaran:", total_pengeluaran)
+    print("Saldo akhir      :", saldo, "\n")
+</pre>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 3: Pengolahan Data -->
+                <article class="slide" data-side-main="Pengolahan Data"
+                    data-side-text="Bagaimana list & dictionary dipakai untuk menghitung dan menganalisis data keuangan.">
+                    <h2><span class="emoji">📊</span> Mengolah Data Keuangan</h2>
+                    <p class="subtitle-slide">
+                        Inti aplikasi keuangan ada pada cara kamu <strong>memproses data transaksi</strong>.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Pertanyaan Panduan</h3>
+                            <ul class="list">
+                                <li>Bagaimana cara menghitung total pengeluaran?</li>
+                                <li>Bagaimana cara mencari kategori dengan pengeluaran terbesar?</li>
+                                <li>Bagaimana cara menghitung saldo akhir?</li>
+                                <li>Apakah kamu membutuhkan ringkasan per kategori atau per tanggal?</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Contoh Pengolahan Data</h3>
+                            <div class="card">
+<pre style="font-size:12px;white-space:pre-wrap;">
+def total_per_jenis(transaksi, jenis):
+    return sum(
+        t["nominal"] 
+        for t in transaksi 
+        if t["jenis"] == jenis
+    )
+
+def total_per_kategori(transaksi, kategori_target):
+    return sum(
+        t["nominal"]
+        for t in transaksi
+        if t["kategori"] == kategori_target
+    )
+</pre>
+                            </div>
+                            <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                Kamu bisa menuliskannya di worksheet bagian <em>Pengolahan Data</em> lalu mengubahnya
+                                menjadi kode seperti ini.
+                            </p>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 4: Kondisi & Perulangan -->
+                <article class="slide" data-side-main="Kondisi & Perulangan"
+                    data-side-text="Menandai bagian mana di program yang memakai if/elif/else dan loop, dan alasannya.">
+                    <h2><span class="emoji">🔁</span> Kondisi & Perulangan dalam Aplikasi</h2>
+                    <p class="subtitle-slide">
+                        Di worksheet Tahap 3, kamu diminta menyebutkan di mana kamu memakai
+                        <strong>percabangan</strong> dan <strong>perulangan</strong>.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Percabangan (if/elif/else)</h3>
+                            <ul class="list">
+                                <li>Validasi input menu pengguna.</li>
+                                <li>Memisahkan pemasukan dan pengeluaran.</li>
+                                <li>Memberi peringatan jika pengeluaran terlalu besar.</li>
+                                <li>Menentukan pesan khusus berdasarkan saldo.</li>
+                            </ul>
+                            <div class="card">
+<pre style="font-size:12px;white-space:pre-wrap;">
+if saldo < 0:
+    print("Saldo kamu minus, hati-hati ya!")
+elif saldo < 50000:
+    print("Saldo mulai menipis.")
+else:
+    print("Saldo aman 😄")
+</pre>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Perulangan (while/for)</h3>
+                            <ul class="list">
+                                <li><code>while True</code> untuk menampilkan menu terus-menerus.</li>
+                                <li><code>for</code> untuk menghitung total dari semua transaksi.</li>
+                                <li>Loop tambahan untuk menampilkan riwayat transaksi.</li>
+                            </ul>
+                            <div class="card">
+<pre style="font-size:12px;white-space:pre-wrap;">
+while True:
+    tampilkan_menu()
+    pilihan = input("Pilih menu: ")
+
+    if pilihan == "1":
+        catat_transaksi(transaksi)
+    elif pilihan == "2":
+        tampilkan_ringkasan(transaksi)
+    elif pilihan == "3":
+        break
+    else:
+        print("Input tidak valid, coba lagi.\n")
+</pre>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 5: Debugging – Jenis Error -->
+                <article class="slide" data-side-main="Debugging: Jenis Error"
+                    data-side-text="Mengenali jenis error yang sering muncul saat mengerjakan Tahap 3.">
+                    <h2><span class="emoji">🐞</span> Debugging: Mengenali Error</h2>
+                    <p class="subtitle-slide">
+                        Di Tahap 3, error itu <strong>wajar</strong>. Yang penting: kamu bisa membaca, memahami, dan
+                        memperbaikinya.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Jenis Error yang Sering Muncul</h3>
+                            <ul class="list">
+                                <li><strong>SyntaxError</strong> – salah penulisan (koma, titik dua, kurung).</li>
+                                <li><strong>IndentationError</strong> – spasi/tab tidak konsisten.</li>
+                                <li><strong>NameError</strong> – nama variabel/fungsi belum didefinisikan.</li>
+                                <li><strong>ValueError</strong> – input tidak cocok dengan tipe data.</li>
+                                <li><strong>Logical Error</strong> – program jalan, tapi hasilnya salah.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3>Strategi Dasar Debugging</h3>
+                            <div class="card">
+                                <ul class="list">
+                                    <li>Baca pesan error pelan-pelan, perhatikan baris kodenya.</li>
+                                    <li>Cek kembali nama variabel & fungsi (harus konsisten).</li>
+                                    <li>Gunakan <code>print()</code> untuk melihat isi variabel.</li>
+                                    <li>Jalankan program sedikit-sedikit, bukan semuanya sekaligus.</li>
+                                    <li>Catat error di worksheet: masalah – penyebab – perbaikan.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 6: Debugging – Contoh Kasus -->
+                <article class="slide" data-side-main="Debugging: Contoh Kasus"
+                    data-side-text="Menuliskan error yang ditemukan, penyebab, dan cara memperbaiki.">
+                    <h2><span class="emoji">🛠️</span> Debugging: Contoh Masalah & Solusi</h2>
+                    <p class="subtitle-slide">
+                        Gunakan pola <strong>Error – Penyebab – Solusi</strong> seperti di worksheet untuk
+                        mendokumentasikan perbaikanmu.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Contoh 1</h3>
+                            <div class="card">
+                                <p style="font-size:13px;"><strong>Error:</strong> Program berhenti ketika user memilih
+                                    menu “2”.</p>
+                                <p style="font-size:13px;"><strong>Penyebab:</strong> Fungsi
+                                    <code>tampilkan_ringkasan()</code> dipanggil sebelum didefinisikan.</p>
+                                <p style="font-size:13px;"><strong>Solusi:</strong> Pindahkan definisi fungsi ke atas,
+                                    sebelum bagian <code>while True</code>, atau cek kembali urutan cell di Colab.</p>
+                            </div>
+
+                            <h3 style="margin-top:10px;">Contoh 2</h3>
+                            <div class="card">
+                                <p style="font-size:13px;"><strong>Error:</strong> Total pengeluaran selalu 0.</p>
+                                <p style="font-size:13px;"><strong>Penyebab:</strong> Salah key dictionary
+                                    (<code>"nomial"</code> bukan <code>"nominal"</code>).</p>
+                                <p style="font-size:13px;"><strong>Solusi:</strong> Perbaiki semua penulisan key
+                                    menjadi <code>"nominal"</code> dan jalankan ulang perulangan.</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Aktivitas di Kelas</h3>
+                            <div class="card">
+                                <p style="font-size:13px;">
+                                    1. Jalankan programmu dan sengaja “memancing” error (misalnya input salah).<br />
+                                    2. Catat minimal <strong>2 error</strong> yang muncul di worksheet:
+                                </p>
+                                <ul class="list">
+                                    <li>Masalah/Error</li>
+                                    <li>Penyebab</li>
+                                    <li>Cara memperbaiki</li>
+                                </ul>
+                                <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                    Dokumentasi debugging adalah bagian penting dari kerja seorang programmer.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 7: Optimasi & Checklist -->
+                <article class="slide" data-side-main="Optimasi & Checklist"
+                    data-side-text="Menyederhanakan kode dan mengecek apakah semua target Tahap 3 sudah tercapai.">
+                    <h2><span class="emoji">✨</span> Optimasi Kecil & Checklist Tahap 3</h2>
+                    <p class="subtitle-slide">
+                        Setelah program berjalan, saatnya merapikan dan memastikan semua target Tahap 3 tercapai.
+                    </p>
+
+                    <section class="two-cols">
+                        <div>
+                            <h3>Optimasi Kode</h3>
+                            <ul class="list">
+                                <li>Gabungkan kode yang berulang menjadi satu fungsi.</li>
+                                <li>Gunakan fungsi bawaan Python: <code>sum()</code>, <code>max()</code>,
+                                    <code>min()</code>, <code>sorted()</code>.</li>
+                                <li>Perbaiki nama variabel agar lebih deskriptif.</li>
+                                <li>Tambahkan komentar di bagian yang sulit dipahami.</li>
+                            </ul>
+                            <div class="card">
+<pre style="font-size:12px;white-space:pre-wrap;">
+def hitung_total(transaksi, jenis):
+    return sum(
+        t["nominal"] 
+        for t in transaksi 
+        if t["jenis"] == jenis
+    )
+</pre>
+                            </div>
+                        </div>
+                        <div>
+                            <h3>Checklist Tahap 3</h3>
+                            <div class="card">
+                                <ul class="checklist">
+                                    <li><input type="checkbox" /> Semua fitur inti sudah diimplementasikan.</li>
+                                    <li><input type="checkbox" /> Program dapat dijalankan secara penuh.</li>
+                                    <li><input type="checkbox" /> Logical error utama sudah diperbaiki.</li>
+                                    <li><input type="checkbox" /> Struktur data berjalan sesuai rencana.</li>
+                                    <li><input type="checkbox" /> Kode punya komentar dasar.</li>
+                                    <li><input type="checkbox" /> Ada optimasi/penyederhanaan kode.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Slide 8: Mini Quiz & Refleksi -->
+                <article class="slide" data-side-main="Mini Quiz & Refleksi"
+                    data-side-text="Cek pemahaman tentang Tahap 3 dan tulis rencana perbaikan untuk Tahap 4.">
+                    <h2><span class="emoji">❓</span> Mini Quiz & Refleksi Tahap 3</h2>
+                    <p class="subtitle-slide">
+                        Jawab mini quiz di bawah ini, lalu tulis refleksi singkat tentang proses implementasi & debugging
+                        yang kamu alami.
+                    </p>
+
+                    <section class="quiz-wrapper">
+                        <div>
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    1. Fokus utama Tahap 3 adalah…
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="false">
+                                        Mendesain ulang tema aplikasi
+                                    </div>
+                                    <div class="quiz-option" data-correct="true">
+                                        Mengimplementasikan logika fitur lengkap dan memperbaiki error
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Membuat kerangka menu pertama kali
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Menghapus semua struktur data
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    2. Contoh optimasi kode yang baik adalah…
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="false">
+                                        Menyalin kode yang sama ke banyak tempat
+                                    </div>
+                                    <div class="quiz-option" data-correct="true">
+                                        Menggabungkan kode berulang menjadi satu fungsi
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Menghapus semua komentar
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Mengganti semua nama variabel menjadi huruf acak
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    3. Logical error berarti…
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="false">
+                                        Program tidak mau dijalankan sama sekali
+                                    </div>
+                                    <div class="quiz-option" data-correct="true">
+                                        Program jalan, tapi hasilnya tidak sesuai yang diharapkan
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        File Python hilang
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Python tidak terinstal di komputer
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="quiz-question">
+                                <div class="quiz-question-title">
+                                    4. Mengapa penting menuliskan error dan solusinya di worksheet?
+                                </div>
+                                <div class="quiz-options">
+                                    <div class="quiz-option" data-correct="false">
+                                        Supaya jumlah halaman worksheet bertambah
+                                    </div>
+                                    <div class="quiz-option" data-correct="true">
+                                        Supaya kamu bisa belajar dari kesalahan dan tidak mengulang error yang sama
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Supaya kode menjadi lebih cepat
+                                    </div>
+                                    <div class="quiz-option" data-correct="false">
+                                        Supaya program bisa berjalan tanpa Python
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card" style="margin-top:8px;">
+                                <h3>Refleksi Singkat</h3>
+                                <p style="font-size:12px;color:var(--text-soft);margin-top:4px;">
+                                    Jawab di worksheet atau buku catatanmu:
+                                </p>
+                                <ul class="list">
+                                    <li>Apa bagian Tahap 3 yang paling menantang?</li>
+                                    <li>Apa bagian yang paling membuatmu bangga?</li>
+                                    <li>Apa yang ingin kamu sempurnakan sebelum Tahap 4?</li>
+                                </ul>
+                            </div>
+                            <p class="quiz-feedback">
+                                Guru dapat menggunakan mini quiz ini sebagai penutup sesi atau bahan diskusi kelas.
+                            </p>
+                        </div>
+                    </section>
+                </article>
+
+                <!-- Footer nav -->
+                <div class="footer-nav">
+                    <div class="slide-dots" id="slideDots"></div>
+                    <div class="slide-counter-text" id="slideCounterText">Slide 1 dari 8</div>
+                    <div class="nav-buttons">
+                        <button class="btn" type="button" data-nav="prev">
+                            <span class="icon">←</span> Prev
+                        </button>
+                        <button class="btn primary" type="button" data-nav="next">
+                            Next <span class="icon">→</span>
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const slides = Array.from(document.querySelectorAll(".slide"));
+            const totalSlides = slides.length;
+            let currentSlide = 0;
+
+            const sidebarNumber = document.getElementById("sidebarSlideNumber");
+            const sidebarMain = document.getElementById("sidebarMain");
+            const sidebarText = document.getElementById("sidebarText");
+            const progressFill = document.getElementById("progressFill");
+            const slideDotsContainer = document.getElementById("slideDots");
+            const slideCounterText = document.getElementById("slideCounterText");
+            const prevBtn = document.querySelector('button[data-nav="prev"]');
+            const nextBtn = document.querySelector('button[data-nav="next"]');
+
+            // Create dots
+            const dots = slides.map((_, idx) => {
+                const dot = document.createElement("div");
+                dot.className = "slide-dot" + (idx === 0 ? " active" : "");
+                dot.dataset.index = String(idx);
+                slideDotsContainer.appendChild(dot);
+                return dot;
+            });
+
+            function updateSidebar(idx) {
+                const slide = slides[idx];
+                const main = slide.getAttribute("data-side-main") || "";
+                const text = slide.getAttribute("data-side-text") || "";
+                sidebarNumber.textContent = String(idx + 1);
+                sidebarMain.textContent = main;
+                sidebarText.textContent = text;
+                slideCounterText.textContent = `Slide ${idx + 1} dari ${totalSlides}`;
+            }
+
+            function updateProgress(idx) {
+                const progress = ((idx + 1) / totalSlides) * 100;
+                progressFill.style.width = progress + "%";
+            }
+
+            function updateDots(idx) {
+                dots.forEach((dot, i) => {
+                    if (i === idx) {
+                        dot.classList.add("active");
+                    } else {
+                        dot.classList.remove("active");
+                    }
+                });
+            }
+
+            function showSlide(idx) {
+                if (idx < 0 || idx >= totalSlides) return;
+                slides[currentSlide].classList.remove("active");
+                slides[idx].classList.add("active");
+                currentSlide = idx;
+                updateSidebar(idx);
+                updateProgress(idx);
+                updateDots(idx);
+            }
+
+            // Initial
+            updateSidebar(0);
+            updateProgress(0);
+
+            // Navigation buttons
+            prevBtn.addEventListener("click", () => {
+                const target = currentSlide - 1;
+                if (target >= 0) showSlide(target);
+            });
+
+            nextBtn.addEventListener("click", () => {
+                const target = currentSlide + 1;
+                if (target < totalSlides) showSlide(target);
+            });
+
+            // Keyboard navigation
+            window.addEventListener("keydown", (e) => {
+                if (e.key === "ArrowLeft") {
+                    const target = currentSlide - 1;
+                    if (target >= 0) showSlide(target);
+                } else if (e.key === "ArrowRight") {
+                    const target = currentSlide + 1;
+                    if (target < totalSlides) showSlide(target);
+                }
+            });
+
+            // Dot navigation
+            dots.forEach((dot) => {
+                dot.addEventListener("click", () => {
+                    const idx = Number(dot.dataset.index || "0");
+                    showSlide(idx);
+                });
+            });
+
+            // Quiz interaction
+            const quizOptions = Array.from(document.querySelectorAll(".quiz-option"));
+            quizOptions.forEach((option) => {
+                option.addEventListener("click", () => {
+                    const question = option.closest(".quiz-question");
+                    if (!question) return;
+                    const siblings = Array.from(
+                        question.querySelectorAll(".quiz-option")
+                    );
+                    siblings.forEach((s) => {
+                        s.classList.remove("correct", "wrong");
+                    });
+                    const isCorrect = option.dataset.correct === "true";
+                    option.classList.add(isCorrect ? "correct" : "wrong");
+                });
+            });
+        })();
+    </script>
+</body>
+
+</html>
