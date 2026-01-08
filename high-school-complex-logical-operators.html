@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Complex Logical Operators</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        .slide {
+            display: none;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        .code-font {
+            font-family: 'Courier New', monospace;
+        }
+
+        .kbd {
+            border: 1px solid #e5e7eb;
+            padding: .1rem .35rem;
+            border-radius: .4rem;
+            background: #f9fafb;
+            font-family: monospace;
+        }
+
+        /* IDE Styles */
+        .editor-container {
+            background: #1e293b;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 150px;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: none;
+            outline: none;
+            resize: none;
+            line-height: 1.5;
+        }
+
+        .output-area {
+            background: #0f172a;
+            color: #a5b4fc;
+            padding: 0.75rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            border-top: 1px solid #334155;
+            min-height: 3rem;
+            white-space: pre-wrap;
+        }
+    </style>
+
+    <!-- Python Controller Script -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            # Check if element is a button with data-action
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            
+            if not code_id: return
+
+            # Get DOM elements
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            
+            code_val = code_el.value
+            
+            # UI Feedback (Loading)
+            out_el.innerText = "Running..."
+            fb_el.classList.add("hidden")
+
+            # Capture Output
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            try:
+                # Create a fresh scope for each run to avoid state pollution
+                scope = {}
+                exec(code_val, scope)
+                
+                result = capture.getvalue().strip()
+                out_el.innerText = result if result else "[No Output]"
+                
+                # Check Logic
+                if action == "check":
+                    expected = el.getAttribute("data-expect")
+                    kws = el.getAttribute("data-kws")
+                    
+                    passed = True
+                    reasons = []
+                    
+                    # 1. Keywords Check
+                    if kws:
+                        for k in kws.split(","):
+                            k = k.strip()
+                            if k and k not in code_val:
+                                passed = False
+                                reasons.append(f"Kurang kata kunci: '{k}'")
+                    
+                    # 2. Output Check
+                    if expected:
+                        # Normalize for comparison
+                        if expected.lower() not in result.lower():
+                            passed = False
+                            reasons.append(f"Output salah. Harusnya mengandung: '{expected}'")
+                    
+                    if passed:
+                        fb_el.innerText = "✅ Benar! Bagus sekali."
+                        fb_el.className = "mt-2 text-sm font-bold text-green-600 block"
+                    else:
+                        fb_el.innerText = "❌ " + "; ".join(reasons)
+                        fb_el.className = "mt-2 text-sm font-bold text-red-600 block"
+                        
+            except Exception as e:
+                out_el.innerText = f"Error: {e}"
+                if action == "check":
+                    fb_el.innerText = "❌ Ada Error di kodemu. Perbaiki dulu ya."
+                    fb_el.className = "mt-2 text-sm font-bold text-red-600 block"
+            finally:
+                sys.stdout = old_stdout
+
+        # Attach single listener to body (Event Delegation)
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+
+    <!-- Access Code Overlay -->
+    <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+            <p class="text-slate-600 mb-4">Masukkan kode kelas untuk memulai</p>
+            <input id="accessCodeInput" type="text" placeholder="Kode..."
+                class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+            <button id="accessBtn"
+                class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka
+                Materi</button>
+            <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white grid place-items-center font-bold">26</div>
+                <div>
+                    <div class="font-semibold leading-tight">Complex Logical Operators</div>
+                    <div class="text-xs text-slate-600">Python • Logic Gates • Optimization</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btnPrev" class="px-3 py-2 rounded-lg border hover:bg-slate-50 disabled:opacity-40 text-sm">←
+                    Prev</button>
+                <button id="btnNext"
+                    class="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">Next →</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-6 mb-20">
+        <!-- Progress -->
+        <div class="mb-6">
+            <div class="flex justify-between text-xs text-slate-500 mb-1">
+                <span>Slide <span id="counter">1</span> / 32</span>
+                <span>Press <span class="kbd">→</span></span>
+            </div>
+            <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div id="bar" class="h-full bg-indigo-600 transition-all duration-300" style="width: 3.125%"></div>
+            </div>
+        </div>
+
+        <!-- 1. Intro -->
+        <section class="slide active">
+            <div class="max-w-2xl mx-auto text-center py-10">
+                <div class="text-6xl mb-4">🧠</div>
+                <h1 class="text-3xl font-bold text-slate-900 mb-4">Logika Python Tingkat Lanjut</h1>
+                <p class="text-lg text-slate-600 mb-8">
+                    Hari ini kita akan belajar menggabungkan banyak kondisi, memahami prioritas logika, dan menulis kode
+                    yang lebih cerdas.
+                </p>
+                <div
+                    class="grid grid-cols-2 gap-4 text-left text-sm bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div>✅ <b>Combine 3+ Conditions</b><br>Menggunakan and, or, not sekaligus.</div>
+                    <div>✅ <b>Precedence</b><br>Siapa yang dieksekusi duluan?</div>
+                    <div>✅ <b>Truth Tables</b><br>Mengevaluasi logika kompleks.</div>
+                    <div>✅ <b>Optimization</b><br>Menulis kode yang efisien.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. The Big Three Review -->
+        <section class="slide">
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h2 class="text-2xl font-bold mb-4">Review: The Big Three</h2>
+                    <p class="text-slate-600 mb-4">Sebelum masuk ke yang kompleks, ingat kembali 3 operator dasar ini.
+                    </p>
+                    <div class="space-y-3">
+                        <div class="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                            <span class="font-bold text-blue-700">AND</span>: Semua harus True.
+                        </div>
+                        <div class="p-3 bg-green-50 rounded-lg border border-green-100">
+                            <span class="font-bold text-green-700">OR</span>: Salah satu True cukup.
+                        </div>
+                        <div class="p-3 bg-rose-50 rounded-lg border border-rose-100">
+                            <span class="font-bold text-rose-700">NOT</span>: Kebalikan (True jadi False).
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-slate-900 p-6 rounded-xl text-slate-50 font-mono text-sm">
+                    # Review Cepat
+                    a = True
+                    b = False
+
+                    print(a and b) # False
+                    print(a or b) # True
+                    print(not a) # False
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Concept: Complex Expressions -->
+        <section class="slide">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-2xl font-bold mb-4">Ekspresi Logika Kompleks</h2>
+                <p class="mb-6">
+                    Dalam dunia nyata, keputusan jarang bergantung pada 1 hal saja. Kita sering butuh menggabungkan 3
+                    kondisi atau lebih.
+                </p>
+                <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-200 text-yellow-900 mb-6">
+                    Contoh: "Kamu dapat beasiswa JIKA (Nilai > 90 DAN Absensi Bagus) ATAU (Juara Lomba Nasional)."
+                </div>
+                <div class="font-mono bg-slate-100 p-4 rounded-lg">
+                    if (nilai > 90 and absen == "Bagus") or juara_nasional:
+                    dpt_beasiswa = True
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Deep Dive: AND -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-6">Operator AND: Si Perfeksionis</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-xl border border-slate-200">
+                    <p class="mb-4">AND hanya akan mengembalikan <b>True</b> jika <b>SEMUA</b> kondisi bernilai True.
+                        Satu saja False, hasilnya False.</p>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex justify-between p-2 bg-green-100 rounded">True and True <span>✅ True</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-red-50 rounded">True and False <span>❌ False</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-red-50 rounded">False and True <span>❌ False</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-red-50 rounded">False and False <span>❌ False</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center bg-slate-100 rounded-xl p-6">
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">🔒 + 🔑 = 🚪</div>
+                        <p class="text-sm text-slate-500">Kunci AND Pintu Tertutup? Tidak bisa masuk.<br>Harus Kunci AND
+                            Pintu Terbuka.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Deep Dive: OR -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-6">Operator OR: Si Optimis</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-xl border border-slate-200">
+                    <p class="mb-4">OR akan mengembalikan <b>True</b> jika <b>MINIMAL SATU</b> kondisi bernilai True.
+                    </p>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex justify-between p-2 bg-green-100 rounded">True or True <span>✅ True</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-green-100 rounded">True or False <span>✅ True</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-green-100 rounded">False or True <span>✅ True</span>
+                        </div>
+                        <div class="flex justify-between p-2 bg-red-50 rounded">False or False <span>❌ False</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-center bg-slate-100 rounded-xl p-6">
+                    <div class="text-center">
+                        <div class="text-4xl mb-2">☂️ / 🧢</div>
+                        <p class="text-sm text-slate-500">Hujan OR Panas?<br>Bawa payung OR topi.<br>Salah satu ada,
+                            kamu aman.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Deep Dive: NOT -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-6">Operator NOT: Si Pembantah</h2>
+            <div class="bg-white p-6 rounded-xl border border-slate-200 text-center max-w-lg mx-auto">
+                <p class="mb-6">NOT membalikkan nilai boolean. True jadi False, False jadi True.</p>
+                <div class="grid grid-cols-2 gap-4 text-lg font-bold">
+                    <div class="p-4 bg-slate-100 rounded-xl">not True ➡️ False</div>
+                    <div class="p-4 bg-slate-100 rounded-xl">not False ➡️ True</div>
+                </div>
+                <p class="mt-6 text-sm text-slate-500">Sering digunakan untuk kondisi negatif, misal: <br><code
+                        class="bg-slate-100 px-2 py-1 rounded">if not is_logged_in:</code></p>
+            </div>
+        </section>
+
+        <!-- 7. Interactive Truth Table AND -->
+        <section class="slide">
+            <h2 class="text-xl font-bold mb-4">Lab: Truth Table AND</h2>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <p class="mb-4 text-sm">Klik switch untuk mengubah nilai A dan B.</p>
+
+                <div class="flex items-center justify-center gap-8 mb-8 text-2xl">
+                    <div class="text-center cursor-pointer" onclick="toggleBool('andA')">
+                        <div class="font-bold mb-2">A</div>
+                        <div id="andA" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False</div>
+                    </div>
+                    <div class="font-bold text-slate-300">AND</div>
+                    <div class="text-center cursor-pointer" onclick="toggleBool('andB')">
+                        <div class="font-bold mb-2">B</div>
+                        <div id="andB" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False</div>
+                    </div>
+                    <div class="font-bold text-slate-300">=</div>
+                    <div class="text-center">
+                        <div class="font-bold mb-2">Result</div>
+                        <div id="andRes" class="px-4 py-2 bg-slate-200 text-slate-500 rounded-lg font-bold">False</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8. Interactive Truth Table OR -->
+        <section class="slide">
+            <h2 class="text-xl font-bold mb-4">Lab: Truth Table OR</h2>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <p class="mb-4 text-sm">Ingat, OR hanya butuh satu "True" untuk menang.</p>
+
+                <div class="flex items-center justify-center gap-8 mb-8 text-2xl">
+                    <div class="text-center cursor-pointer" onclick="toggleBool('orA')">
+                        <div class="font-bold mb-2">A</div>
+                        <div id="orA" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False</div>
+                    </div>
+                    <div class="font-bold text-slate-300">OR</div>
+                    <div class="text-center cursor-pointer" onclick="toggleBool('orB')">
+                        <div class="font-bold mb-2">B</div>
+                        <div id="orB" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False</div>
+                    </div>
+                    <div class="font-bold text-slate-300">=</div>
+                    <div class="text-center">
+                        <div class="font-bold mb-2">Result</div>
+                        <div id="orRes" class="px-4 py-2 bg-slate-200 text-slate-500 rounded-lg font-bold">False</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 8B. NEW Interactive: Truth Table Builder (3 Variables) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Lab: Build the Truth Table (A, B, C)</h2>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <p class="text-sm text-slate-600 mb-5">
+                    Kita evaluasi ekspresi: <b>(A and B) or C</b>. Klik kombinasi di tabel atau toggle A/B/C.
+                    Tujuannya: kamu bisa “melihat” bagaimana AND dan OR bekerja saat digabung.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Left: Toggles + Live Result -->
+                    <div class="rounded-xl border border-slate-200 p-5 bg-slate-50">
+                        <div class="flex items-center justify-between">
+                            <div class="font-bold">Toggle Nilai</div>
+                            <div class="text-xs text-slate-500">klik kotak untuk ubah</div>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap gap-4">
+                            <div class="text-center cursor-pointer" onclick="toggleTruth3('ttA')">
+                                <div class="text-sm font-bold mb-2">A</div>
+                                <div id="ttA" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False
+                                </div>
+                            </div>
+                            <div class="text-center cursor-pointer" onclick="toggleTruth3('ttB')">
+                                <div class="text-sm font-bold mb-2">B</div>
+                                <div id="ttB" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False
+                                </div>
+                            </div>
+                            <div class="text-center cursor-pointer" onclick="toggleTruth3('ttC')">
+                                <div class="text-sm font-bold mb-2">C</div>
+                                <div id="ttC" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="p-4 rounded-xl bg-white border border-slate-200">
+                                <div class="text-xs text-slate-500 mb-1">Langkah 1</div>
+                                <div class="text-sm font-mono">A and B = <span id="ttAB" class="font-bold">False</span>
+                                </div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-white border border-slate-200">
+                                <div class="text-xs text-slate-500 mb-1">Langkah 2</div>
+                                <div class="text-sm font-mono">(A and B) or C = <span id="ttExpr"
+                                        class="font-bold">False</span></div>
+                            </div>
+                        </div>
+
+                        <div id="ttExplain" class="mt-4 text-sm text-slate-700"></div>
+
+                        <div class="mt-4 bg-slate-900 text-slate-50 rounded-xl p-4 font-mono text-sm">
+                            # Python check
+                            A = <span id="ttPyA">False</span>
+                            B = <span id="ttPyB">False</span>
+                            C = <span id="ttPyC">False</span>
+
+                            print((A and B) or C)
+                        </div>
+                    </div>
+
+                    <!-- Right: Full table (clickable) -->
+                    <div class="rounded-xl border border-slate-200 p-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="font-bold">Truth Table (klik baris)</div>
+                            <button onclick="randomTruth3()"
+                                class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700">🎲
+                                Random</button>
+                        </div>
+
+                        <div class="overflow-auto">
+                            <table class="w-full text-sm border-separate" style="border-spacing: 0 .5rem;">
+                                <thead class="text-xs text-slate-500">
+                                    <tr>
+                                        <th class="text-left px-3">A</th>
+                                        <th class="text-left px-3">B</th>
+                                        <th class="text-left px-3">C</th>
+                                        <th class="text-left px-3">A and B</th>
+                                        <th class="text-left px-3">(A and B) or C</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- 8 combinations, row id = ttRow0..7 -->
+                                    <tr id="ttRow0" class="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-xl"
+                                        onclick="setTruth3(false,false,false,0)">
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2" data-ab></td>
+                                        <td class="px-3 py-2" data-expr></td>
+                                    </tr>
+                                    <tr id="ttRow1" class="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-xl"
+                                        onclick="setTruth3(false,false,true,1)">
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2" data-ab></td>
+                                        <td class="px-3 py-2" data-expr></td>
+                                    </tr>
+                                    <tr id="ttRow2" class="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-xl"
+                                        onclick="setTruth3(false,true,false,2)">
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2" data-ab></td>
+                                        <td class="px-3 py-2" data-expr></td>
+                                    </tr>
+                                    <tr id="ttRow3" class="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-xl"
+                                        onclick="setTruth3(false,true,true,3)">
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2" data-ab></td>
+                                        <td class="px-3 py-2" data-expr></td>
+                                    </tr>
+                                    <tr id="ttRow4" class="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-xl"
+                                        onclick="setTruth3(true,false,false,4)">
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2" data-ab></td>
+                                        <td class="px-3 py-2" data-expr></td>
+                                    </tr>
+                                    <tr id="ttRow5" class="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-xl"
+                                        onclick="setTruth3(true,false,true,5)">
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2" data-ab></td>
+                                        <td class="px-3 py-2" data-expr></td>
+                                    </tr>
+                                    <tr id="ttRow6" class="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-xl"
+                                        onclick="setTruth3(true,true,false,6)">
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2">F</td>
+                                        <td class="px-3 py-2" data-ab></td>
+                                        <td class="px-3 py-2" data-expr></td>
+                                    </tr>
+                                    <tr id="ttRow7" class="cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-xl"
+                                        onclick="setTruth3(true,true,true,7)">
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2">T</td>
+                                        <td class="px-3 py-2" data-ab></td>
+                                        <td class="px-3 py-2" data-expr></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-3 text-xs text-slate-500">
+                            Pertanyaan cepat: kapan ekspresi <b>True</b>? (Hint: C = True selalu membuat OR menjadi
+                            True.)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 9. Case Study: 3 Conditions -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Studi Kasus: Login System</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                    <ul class="list-disc pl-5 space-y-2 text-slate-700">
+                        <li>User harus memasukkan <b>username</b> yang benar.</li>
+                        <li>User harus memasukkan <b>password</b> yang benar.</li>
+                        <li>Akun user harus <b>aktif</b> (tidak di-banned).</li>
+                    </ul>
+                    <div class="mt-4 p-4 bg-slate-900 rounded-lg text-white font-mono text-sm">
+                        if username == db_user and <br>
+                        password == db_pass and <br>
+                        is_active:
+                        print("Welcome!")
+                    </div>
+                </div>
+                <div class="flex items-center justify-center">
+                    <div class="text-8xl">🔐</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 10 EXERCISE 1 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 1: Login Check</h2>
+                <p class="text-sm mb-4">Gunakan <code>and</code> untuk memastikan user dan password benar. Ubah
+                    <code>???</code> menjadi kodenya.
+                </p>
+
+                <div class="editor-container">
+                    <textarea id="code1" class="editor-textarea">
+user = "admin"
+password = "123"
+
+if user == "admin" ??? password == "123":
+    print("Login Berhasil")
+else:
+    print("Login Gagal")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code1" data-out="out1" data-fb="fb1"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code1" data-out="out1" data-fb="fb1"
+                            data-expect="Login Berhasil" data-kws="and"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out1" class="output-area"></div>
+                </div>
+                <div id="fb1" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 11 EXERCISE 2 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 2: Akhir Pekan</h2>
+                <p class="text-sm mb-4">Kita libur jika hari Sabtu <b>ATAU</b> Minggu. Gunakan <code>or</code>.</p>
+
+                <div class="editor-container">
+                    <textarea id="code2" class="editor-textarea">
+hari = "Minggu"
+
+if hari == "Sabtu" ??? hari == "Minggu":
+    print("Hore Libur!")
+else:
+    print("Masuk sekolah...")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code2" data-out="out2" data-fb="fb2"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code2" data-out="out2" data-fb="fb2"
+                            data-expect="Hore Libur" data-kws="or"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out2" class="output-area"></div>
+                </div>
+                <div id="fb2" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 12 EXERCISE 3 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 3: Bukan Senin</h2>
+                <p class="text-sm mb-4">Gunakan <code>not</code> untuk mengecek jika hari ini <b>BUKAN</b> Senin.</p>
+
+                <div class="editor-container">
+                    <textarea id="code3" class="editor-textarea">
+hari = "Selasa"
+
+# Cek apakah hari BUKAN "Senin"
+if ??? (hari == "Senin"):
+    print("Semangat, bukan hari Senin!")
+else:
+    print("Yah, hari Senin...")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code3" data-out="out3" data-fb="fb3"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code3" data-out="out3" data-fb="fb3"
+                            data-expect="Semangat" data-kws="not"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out3" class="output-area"></div>
+                </div>
+                <div id="fb3" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 13. Precedence Concept -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Urutan Prioritas (Precedence)</h2>
+            <p class="mb-4 text-slate-700">Sama seperti Matematika (kali bagi dulu, baru tambah kurang), Logika juga
+                punya urutan!</p>
+
+            <div class="relative py-8">
+                <div class="absolute left-10 top-0 bottom-0 w-1 bg-slate-200"></div>
+
+                <div class="relative pl-20 mb-6">
+                    <div
+                        class="absolute left-6 top-1/2 -translate-y-1/2 w-8 h-8 bg-indigo-600 text-white rounded-full grid place-items-center font-bold shadow-lg ring-4 ring-white">
+                        1</div>
+                    <h3 class="font-bold text-lg">NOT</h3>
+                    <p class="text-sm text-slate-500">Paling kuat. Dikerjakan pertama.</p>
+                </div>
+
+                <div class="relative pl-20 mb-6">
+                    <div
+                        class="absolute left-6 top-1/2 -translate-y-1/2 w-8 h-8 bg-blue-500 text-white rounded-full grid place-items-center font-bold shadow-lg ring-4 ring-white">
+                        2</div>
+                    <h3 class="font-bold text-lg">AND</h3>
+                    <p class="text-sm text-slate-500">Kekuatan menengah.</p>
+                </div>
+
+                <div class="relative pl-20">
+                    <div
+                        class="absolute left-6 top-1/2 -translate-y-1/2 w-8 h-8 bg-emerald-500 text-white rounded-full grid place-items-center font-bold shadow-lg ring-4 ring-white">
+                        3</div>
+                    <h3 class="font-bold text-lg">OR</h3>
+                    <p class="text-sm text-slate-500">Paling lemah. Dikerjakan terakhir.</p>
+                </div>
+            </div>
+
+            <div class="bg-indigo-50 p-4 rounded-lg text-indigo-900 text-center font-mono font-bold">
+                not > and > or
+            </div>
+        </section>
+
+        <!-- 14. Precedence Example -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Jebakan Precedence</h2>
+            <div class="bg-white p-6 rounded-xl border border-slate-200">
+                <code class="text-xl block bg-slate-100 p-4 rounded mb-4">True or False and False</code>
+                <p class="mb-4">Bagaimana Python membacanya?</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 border rounded-lg cursor-pointer hover:bg-slate-50"
+                        onclick="alert('Salah! Karena AND lebih kuat dari OR, dia dikerjakan dulu.')">
+                        <div class="font-bold mb-1">A. (True or False) lalu AND False</div>
+                        <div class="text-sm text-slate-500">Hasil: False</div>
+                    </div>
+                    <div class="p-4 border-2 border-green-500 bg-green-50 rounded-lg cursor-pointer">
+                        <div class="font-bold mb-1">B. True or (False and False)</div>
+                        <div class="text-sm text-slate-600">Hasil: True ✅ (Benar!)</div>
+                    </div>
+                </div>
+                <p class="mt-4 text-xs text-slate-500">Penjelasan: Karena `and` lebih prioritas, dia mengikat `False and
+                    False` duluan menjadi `False`. Lalu `True or False` menjadi `True`.</p>
+            </div>
+        </section>
+
+        <!-- 15 EXERCISE 4 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 4: Tanda Kurung</h2>
+                <p class="text-sm mb-4">Gunakan tanda kurung <code>()</code> untuk memaksa bagian OR dikerjakan duluan.
+                </p>
+
+                <div class="editor-container">
+                    <textarea id="code4" class="editor-textarea">
+# Tanpa kurung, ini True karena precedence (True or ...)
+hasil = True or False and False
+print("Tanpa kurung:", hasil)
+
+# Tambahkan kurung di bawah ini agar True or False dihitung dulu
+# Target: Hasilnya harus False
+hasil_baru = True or False and False 
+print("Dengan kurung:", hasil_baru)</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code4" data-out="out4" data-fb="fb4"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code4" data-out="out4" data-fb="fb4" data-expect="False"
+                            data-kws="("
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out4" class="output-area"></div>
+                </div>
+                <div id="fb4" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 16. Concept: Simplification -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-6">Menyederhanakan Logika</h2>
+            <p class="mb-6">Kode yang baik adalah kode yang mudah dibaca. Hindari redundansi!</p>
+
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4 items-center">
+                    <div
+                        class="bg-red-50 p-4 rounded-lg border border-red-100 line-through decoration-red-500 text-slate-500">
+                        if is_active == True:
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-100 font-bold text-green-700">
+                        if is_active:
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 items-center">
+                    <div
+                        class="bg-red-50 p-4 rounded-lg border border-red-100 line-through decoration-red-500 text-slate-500">
+                        if is_empty == False:
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-100 font-bold text-green-700">
+                        if not is_empty:
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 17 EXERCISE 5 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 5: Clean Code</h2>
+                <p class="text-sm mb-4">Sederhanakan kode di bawah ini. Hapus bagian <code>== True</code> dan
+                    <code>== 0</code> yang tidak perlu atau ubah menjadi bentuk not/truthy.
+                </p>
+
+                <div class="editor-container">
+                    <textarea id="code5" class="editor-textarea">
+game_over = True
+score = 0
+
+# Ubah baris ini menjadi lebih pythonic
+# Hapus "== True" dan "== 0" (gunakan 'not score')
+if game_over == True and score == 0:
+    print("Mulai lagi dari awal?")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code5" data-out="out5" data-fb="fb5"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code5" data-out="out5" data-fb="fb5"
+                            data-expect="Mulai lagi" data-kws="not score"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out5" class="output-area"></div>
+                </div>
+                <div id="fb5" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 18. Range Checking -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Pengecekan Rentang (Range)</h2>
+            <p class="mb-6">Di bahasa lain: <code>if x >= 0 and x <= 100</code>.<br>Di Python, kita bisa tulis lebih
+                manis!</p>
+
+            <div
+                class="bg-indigo-600 text-white p-6 rounded-xl text-center text-2xl font-mono shadow-lg mx-auto max-w-md">
+                if 0 <= x <=100: </div>
+
+                    <p class="mt-8 text-center text-slate-600">Ini disebut <b>Chained Comparison</b>.</p>
+        </section>
+
+        <!-- 19 EXERCISE 6 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 6: Rentang Nilai</h2>
+                <p class="text-sm mb-4">Cek apakah suhu air (75 derajat) berada di antara 0 sampai 100 (cair).</p>
+
+                <div class="editor-container">
+                    <textarea id="code6" class="editor-textarea">
+suhu = 75
+
+# Gunakan Chained Comparison (0 <= suhu <= 100)
+if ???:
+    print("Air berbentuk Cair")
+else:
+    print("Air Beku atau Uap")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code6" data-out="out6" data-fb="fb6"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code6" data-out="out6" data-fb="fb6" data-expect="Cair"
+                            data-kws="<= suhu <="
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out6" class="output-area"></div>
+                </div>
+                <div id="fb6" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 20. De Morgan's Law -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">De Morgan's Laws</h2>
+            <p class="mb-4">Aturan untuk membalikkan logika kompleks (NOT di luar kurung).</p>
+
+            <div class="grid gap-4 max-w-2xl mx-auto">
+                <div
+                    class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
+                    <code class="text-lg">not (A and B)</code>
+                    <span class="text-2xl">👉</span>
+                    <code class="text-lg font-bold text-indigo-600">not A or not B</code>
+                </div>
+                <div
+                    class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
+                    <code class="text-lg">not (A or B)</code>
+                    <span class="text-2xl">👉</span>
+                    <code class="text-lg font-bold text-indigo-600">not A and not B</code>
+                </div>
+            </div>
+            <p class="mt-4 text-xs text-center text-slate-500">Tips: "Balik operatornya (and <-> or) saat membuka kurung
+                    NOT"</p>
+        </section>
+
+        <!-- 8C. NEW Interactive: De Morgan's Law Challenge -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Lab: De Morgan’s Law (NOT yang “ngubah operator”)</h2>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <p class="text-sm text-slate-600 mb-5">
+                    De Morgan membantu kita menulis ulang ekspresi <b>NOT</b> agar lebih mudah dibaca.
+                    Saat NOT “masuk ke dalam kurung”, operator biasanya berubah: <b>and ↔ or</b>.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Left: Multiple choice transformation -->
+                    <div class="rounded-xl border border-slate-200 p-5 bg-slate-50">
+                        <div class="flex items-center justify-between">
+                            <div class="font-bold">Tantangan Transformasi</div>
+                            <button onclick="nextDeMorgan()" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700">Soal Baru</button>
+                        </div>
+
+                        <div class="mt-4 p-4 rounded-xl bg-white border border-slate-200">
+                            <div class="text-xs text-slate-500 mb-1">Ubah ekspresi berikut:</div>
+                            <div class="text-lg font-mono font-bold" id="dmExpr">not (A and B)</div>
+                        </div>
+
+                        <div class="mt-4 space-y-2" id="dmChoices">
+                            <!-- Filled by JS -->
+                        </div>
+
+                        <div id="dmFeedback" class="mt-3 text-sm font-bold hidden"></div>
+
+                        <div class="mt-4 text-xs text-slate-500">
+                            Tips: <b>not (X and Y)</b> ↔ <b>(not X) or (not Y)</b> • <b>not (X or Y)</b> ↔ <b>(not X) and (not Y)</b>
+                        </div>
+                    </div>
+
+                    <!-- Right: Equivalence checker with toggles -->
+                    <div class="rounded-xl border border-slate-200 p-5">
+                        <div class="font-bold mb-3">Cek Kesetaraan (klik A/B)</div>
+                        <p class="text-sm text-slate-600 mb-4">Buktikan bahwa dua bentuk ini hasilnya selalu sama.</p>
+
+                        <div class="flex flex-wrap items-center gap-4 mb-4">
+                            <div class="text-center cursor-pointer" onclick="toggleDeMorgan('dmA')">
+                                <div class="text-sm font-bold mb-2">A</div>
+                                <div id="dmA" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False</div>
+                            </div>
+                            <div class="text-center cursor-pointer" onclick="toggleDeMorgan('dmB')">
+                                <div class="text-sm font-bold mb-2">B</div>
+                                <div id="dmB" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg select-none">False</div>
+                            </div>
+                        </div>
+
+                        <div class="grid sm:grid-cols-2 gap-3">
+                            <div class="p-4 rounded-xl bg-slate-900 text-slate-50">
+                                <div class="text-xs text-slate-300 mb-1">Bentuk 1</div>
+                                <div class="font-mono text-sm">not (A and B)</div>
+                                <div class="mt-2 text-lg font-bold" id="dmVal1">True</div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-slate-900 text-slate-50">
+                                <div class="text-xs text-slate-300 mb-1">Bentuk 2</div>
+                                <div class="font-mono text-sm">(not A) or (not B)</div>
+                                <div class="mt-2 text-lg font-bold" id="dmVal2">True</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200" id="dmEqBox">
+                            <div class="font-bold text-emerald-700">✅ Selalu sama</div>
+                            <div class="text-sm text-emerald-800">Coba ubah A/B untuk membuktikan.</div>
+                        </div>
+
+                        <div class="mt-4 bg-slate-100 rounded-xl p-4 font-mono text-sm">
+                            # Python check
+                            A = <span id="dmPyA">False</span>
+                            B = <span id="dmPyB">False</span>
+                            print(not (A and B), (not A) or (not B))
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 21 EXERCISE 7 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 7: Game Logic</h2>
+                <p class="text-sm mb-4">Player menang jika punya (Key DAN Map) ATAU punya (MasterKey).</p>
+
+                <div class="editor-container">
+                    <textarea id="code7" class="editor-textarea">
+has_key = True
+has_map = False
+has_masterword = True
+
+# Menang jika: (Punya Key DAN Map) ATAU (Punya Masterword)
+if (has_key ??? has_map) ??? has_masterword:
+    print("Level Complete!")
+else:
+    print("Still Locked")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code7" data-out="out7" data-fb="fb7"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code7" data-out="out7" data-fb="fb7"
+                            data-expect="Level Complete" data-kws="and,or"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out7" class="output-area"></div>
+                </div>
+                <div id="fb7" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 22 EXERCISE 8 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 8: Diskon Toko</h2>
+                <p class="text-sm mb-4">Diskon diberikan jika (Member AND Belanja > 100rb) OR (Ultah).</p>
+
+                <div class="editor-container">
+                    <textarea id="code8" class="editor-textarea">
+is_member = False
+total_belanja = 150000
+is_ultah = True
+
+# Syarat: (Member DAN Belanja > 100000) ATAU Ultah
+if (is_member ??? total_belanja > 100000) ??? is_ultah:
+    print("Dapat Diskon!")
+else:
+    print("Harga Normal")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code8" data-out="out8" data-fb="fb8"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code8" data-out="out8" data-fb="fb8"
+                            data-expect="Dapat Diskon" data-kws="and,or"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out8" class="output-area"></div>
+                </div>
+                <div id="fb8" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 23 EXERCISE 9 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 9: Tahun Kabisat</h2>
+                <p class="text-sm mb-4">Selesaikan logika tahun kabisat.</p>
+
+                <div class="editor-container">
+                    <textarea id="code9" class="editor-textarea">
+year = 2024
+
+# Habis dibagi 400 
+# ATAU (Habis dibagi 4 TAPI TIDAK Habis dibagi 100)
+if (year % 400 == 0) ??? (year % 4 == 0 ??? year % 100 != 0):
+    print(f"{year} Kabisat")
+else:
+    print(f"{year} Bukan Kabisat")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code9" data-out="out9" data-fb="fb9"
+                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code9" data-out="out9" data-fb="fb9"
+                            data-expect="Kabisat" data-kws="or,and"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out9" class="output-area"></div>
+                </div>
+                <div id="fb9" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 24 EXERCISE 10 -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 10: Final Boss</h2>
+                <p class="text-sm mb-4">Lulus jika Nilai > 75 DAN (Absen < 3 ATAU Ada Surat Dokter).</p>
+
+                        <div class="editor-container">
+                            <textarea id="code10" class="editor-textarea">
+nilai = 80
+absen = 5
+surat_dokter = True
+
+# Tulis semua kondisi
+if nilai > 75 ??? (absen < 3 ??? surat_dokter):
+    print("LULUS")
+else:
+    print("TIDAK LULUS")</textarea>
+                            <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                                <button data-action="run" data-code="code10" data-out="out10" data-fb="fb10"
+                                    class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold">▶
+                                    Run</button>
+                                <button data-action="check" data-code="code10" data-out="out10" data-fb="fb10"
+                                    data-expect="LULUS" data-kws="and,or"
+                                    class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                                    Check Answer</button>
+                            </div>
+                            <div id="out10" class="output-area"></div>
+                        </div>
+                        <div id="fb10" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 25. Optimization: Short Circuit -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Short-Circuit Evaluation</h2>
+            <p class="mb-4">Python itu malas (tapi pintar). Dia berhenti mengecek jika hasil sudah pasti.</p>
+            <div class="grid grid-cols-2 gap-6">
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <h3 class="font-bold text-blue-800 mb-2">AND Short-circuit</h3>
+                    <p class="text-sm"><code>False and ...</code></p>
+                    <p class="text-xs mt-2">Jika yang kiri False, Python <b>tidak peduli</b> yang kanan. Hasil pasti
+                        False.</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-xl border border-green-100">
+                    <h3 class="font-bold text-green-800 mb-2">OR Short-circuit</h3>
+                    <p class="text-sm"><code>True or ...</code></p>
+                    <p class="text-xs mt-2">Jika yang kiri True, Python <b>tidak peduli</b> yang kanan. Hasil pasti
+                        True.</p>
+                </div>
+            </div>
+            <p class="mt-4 text-xs text-slate-500 bg-white p-2 rounded border border-dashed text-center">Berguna untuk
+                safety, misal: <code>if x != 0 and 10/x > 1</code> (Mencegah error bagi nol)</p>
+        </section>
+
+        <!-- 26. Quiz 1 -->
+        <section class="slide">
+            <div class="max-w-xl mx-auto py-10">
+                <h2 class="text-xl font-bold mb-6">Mini Quiz 1</h2>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="mb-6 font-mono font-bold text-lg">True and False or True</p>
+                    <div class="space-y-3">
+                        <button onclick="checkQuiz(this, true)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">A.
+                            True</button>
+                        <button onclick="checkQuiz(this, false)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">B.
+                            False</button>
+                    </div>
+                    <p class="feedback mt-4 font-bold hidden"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 27. Quiz 2 -->
+        <section class="slide">
+            <div class="max-w-xl mx-auto py-10">
+                <h2 class="text-xl font-bold mb-6">Mini Quiz 2</h2>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="mb-6 font-mono font-bold text-lg">not (True or False)</p>
+                    <div class="space-y-3">
+                        <button onclick="checkQuiz(this, false)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">A.
+                            True</button>
+                        <button onclick="checkQuiz(this, true)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">B.
+                            False</button>
+                    </div>
+                    <p class="feedback mt-4 font-bold hidden"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 28. Quiz 3 -->
+        <section class="slide">
+            <div class="max-w-xl mx-auto py-10">
+                <h2 class="text-xl font-bold mb-6">Mini Quiz 3</h2>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="mb-6 font-mono font-bold text-lg">Manakah yang prioritasnya (Precedence) paling TINGGI?
+                    </p>
+                    <div class="space-y-3">
+                        <button onclick="checkQuiz(this, false)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">A.
+                            AND</button>
+                        <button onclick="checkQuiz(this, false)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">B.
+                            OR</button>
+                        <button onclick="checkQuiz(this, true)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">C.
+                            NOT</button>
+                    </div>
+                    <p class="feedback mt-4 font-bold hidden"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 29. Challenge Debug -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Final Challenge: Debugging</h2>
+            <div class="bg-white p-6 rounded-xl border border-slate-200">
+                <p class="mb-4 text-slate-600">Kode di bawah ini punya bug logika. Diskon diberikan ke SEMUA Orang,
+                    padahal harusnya cuma Member yang Ultah.</p>
+                <div class="bg-slate-900 text-slate-300 p-4 rounded-lg font-mono text-sm mb-4">
+                    is_member = False
+                    is_ultah = True
+
+                    # BUG: Ini hasilnya True, padahal harusnya False (karena bukan member)
+                    if is_member or is_ultah:
+                    print("Dapat Diskon")
+                </div>
+                <div class="bg-yellow-50 p-4 rounded-lg text-yellow-800 text-sm">
+                    <b>Solusi:</b> Ganti <code>or</code> dengan <code>and</code> agar kedua syarat wajib terpenuhi.
+                </div>
+            </div>
+        </section>
+
+        <!-- 30. Closing -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto text-center py-10">
+                <div class="text-6xl mb-4">🎉</div>
+                <h1 class="text-3xl font-bold text-slate-900 mb-4">Great Job!</h1>
+                <p class="text-lg text-slate-600 mb-8">
+                    Kamu sudah menguasai operator logika kompleks. Ini adalah fondasi penting untuk membuat program yang
+                    "pintar" mengambil keputusan.
+                </p>
+                <div class="p-6 bg-white border border-slate-200 rounded-2xl">
+                    <h3 class="font-bold mb-2">Next Steps:</h3>
+                    <ul class="text-left space-y-2 text-slate-600">
+                        <li>▶️ Coba buat program login dengan limit percobaan.</li>
+                        <li>▶️ Eksplorasi Nested If vs Complex Logic (mana yang lebih bersih?).</li>
+                        <li>▶️ Lanjut ke sesi 27!</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation Script -->
+    <script>
+        // Access Code Logic
+        const overlay = document.getElementById('accessOverlay');
+        const input = document.getElementById('accessCodeInput');
+        const btn = document.getElementById('accessBtn');
+        const error = document.getElementById('accessError');
+        const CODE = 'RGMDSHS25';
+
+        function checkCode() {
+            if (input.value.toUpperCase().trim() === CODE) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+            } else {
+                error.classList.remove('hidden');
+            }
+        }
+        btn.addEventListener('click', checkCode);
+        input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+        // Slides Logic
+        const slides = document.querySelectorAll('.slide');
+        const bar = document.getElementById('bar');
+        const counter = document.getElementById('counter');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (index + slides.length) % slides.length;
+            slides[currentSlide].classList.add('active');
+
+            // Update UI
+            document.getElementById('btnPrev').disabled = currentSlide === 0;
+            document.getElementById('btnNext').disabled = currentSlide === slides.length - 1;
+            document.getElementById('btnPrev').style.opacity = currentSlide === 0 ? '0.4' : '1';
+            document.getElementById('btnNext').style.opacity = currentSlide === slides.length - 1 ? '0.4' : '1';
+
+            counter.innerText = currentSlide + 1;
+            bar.style.width = ((currentSlide + 1) / slides.length * 100) + '%';
+            window.scrollTo(0, 0);
+        }
+
+        document.getElementById('btnNext').addEventListener('click', () => showSlide(currentSlide + 1));
+        document.getElementById('btnPrev').addEventListener('click', () => showSlide(currentSlide - 1));
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+            if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+        });
+
+        // Toggle Logic for Labs
+        function toggleBool(id) {
+            const el = document.getElementById(id);
+            const isTrue = el.innerText.includes('True');
+            if (isTrue) {
+                el.innerText = 'False';
+                el.classList.replace('bg-green-100', 'bg-red-100');
+                el.classList.replace('text-green-700', 'text-red-700');
+            } else {
+                el.innerText = 'True';
+                el.classList.replace('bg-red-100', 'bg-green-100');
+                el.classList.replace('text-red-700', 'text-green-700');
+            }
+            // Recalculate
+            const a = document.getElementById(id.replace(/A|B/, 'A')).innerText.includes('True');
+            const b = document.getElementById(id.replace(/A|B/, 'B')).innerText.includes('True');
+            const type = id.substring(0, 2) === 'or' ? 'or' : 'and';
+            const resEl = document.getElementById(type + 'Res');
+
+            let res = type === 'or' ? (a || b) : (a && b);
+
+            resEl.innerText = res ? 'True' : 'False';
+            resEl.className = `px-4 py-2 rounded-lg font-bold select-none ${res ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-500'}`;
+        }
+
+        // ------------------------------
+        // NEW Lab: Truth Table Builder (3 Variables)
+        // Expression: (A and B) or C
+        // ------------------------------
+        function setBoolPill(el, val) {
+            el.innerText = val ? 'True' : 'False';
+            // base classes already present; swap color classes
+            if (val) {
+                el.classList.remove('bg-red-100', 'text-red-700');
+                el.classList.add('bg-green-100', 'text-green-700');
+            } else {
+                el.classList.remove('bg-green-100', 'text-green-700');
+                el.classList.add('bg-red-100', 'text-red-700');
+            }
+        }
+
+        function readBoolFromPill(id) {
+            return document.getElementById(id).innerText.includes('True');
+        }
+
+        function toggleTruth3(id) {
+            const el = document.getElementById(id);
+            const val = !el.innerText.includes('True');
+            setBoolPill(el, val);
+            updateTruth3();
+        }
+
+        function highlightTruthRow(idx) {
+            for (let i = 0; i < 8; i++) {
+                const row = document.getElementById('ttRow' + i);
+                if (!row) continue;
+                row.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50');
+            }
+            if (idx === null || idx === undefined) return;
+            const active = document.getElementById('ttRow' + idx);
+            if (active) active.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50');
+        }
+
+        function updateTruth3(rowIdx = null) {
+            const A = readBoolFromPill('ttA');
+            const B = readBoolFromPill('ttB');
+            const C = readBoolFromPill('ttC');
+
+            const ab = A && B;
+            const expr = (ab || C);
+
+            document.getElementById('ttAB').innerText = ab ? 'True' : 'False';
+            document.getElementById('ttExpr').innerText = expr ? 'True' : 'False';
+            document.getElementById('ttPyA').innerText = A ? 'True' : 'False';
+            document.getElementById('ttPyB').innerText = B ? 'True' : 'False';
+            document.getElementById('ttPyC').innerText = C ? 'True' : 'False';
+
+            // Explanation text
+            const explain = document.getElementById('ttExplain');
+            if (C) {
+                explain.innerHTML = "✅ Karena <b>C = True</b>, bagian <b>... or C</b> langsung True (OR cukup salah satu True).";
+            } else if (ab) {
+                explain.innerHTML = "✅ Karena <b>A and B = True</b>, maka <b>(A and B) or C</b> juga True.";
+            } else {
+                explain.innerHTML = "❌ C = False dan A and B = False → OR tidak punya 'True' → hasil False.";
+            }
+
+            // highlight row if matches one of 8 combos
+            const idx = rowIdx !== null ? rowIdx : ((A ? 4 : 0) + (B ? 2 : 0) + (C ? 1 : 0));
+            highlightTruthRow(idx);
+        }
+
+        function setTruth3(A, B, C, rowIdx) {
+            setBoolPill(document.getElementById('ttA'), A);
+            setBoolPill(document.getElementById('ttB'), B);
+            setBoolPill(document.getElementById('ttC'), C);
+            updateTruth3(rowIdx);
+        }
+
+        function randomTruth3() {
+            const A = Math.random() < 0.5;
+            const B = Math.random() < 0.5;
+            const C = Math.random() < 0.5;
+            const idx = (A ? 4 : 0) + (B ? 2 : 0) + (C ? 1 : 0);
+            setTruth3(A, B, C, idx);
+        }
+
+        function initTruth3Table() {
+            // Fill computed columns for all rows
+            const combos = [
+                [false, false, false],
+                [false, false, true],
+                [false, true, false],
+                [false, true, true],
+                [true, false, false],
+                [true, false, true],
+                [true, true, false],
+                [true, true, true],
+            ];
+            for (let i = 0; i < combos.length; i++) {
+                const row = document.getElementById('ttRow' + i);
+                if (!row) continue;
+                const [A, B, C] = combos[i];
+                const ab = A && B;
+                const expr = (ab || C);
+                const cellsAB = row.querySelector('[data-ab]');
+                const cellsExpr = row.querySelector('[data-expr]');
+                if (cellsAB) cellsAB.innerText = ab ? 'T' : 'F';
+                if (cellsExpr) cellsExpr.innerText = expr ? 'T' : 'F';
+            }
+            // Set initial state
+            updateTruth3();
+        }
+
+        // ------------------------------
+        // NEW Lab: De Morgan's Law Challenge
+        // ------------------------------
+        const deMorganQuestions = [
+            {
+                expr: 'not (A and B)',
+                choices: ['(not A) and (not B)', '(not A) or (not B)', 'A or B'],
+                correct: 1,
+                note: 'not (A and B) berubah menjadi (not A) or (not B).'
+            },
+            {
+                expr: 'not (A or B)',
+                choices: ['(not A) and (not B)', '(not A) or (not B)', 'A and B'],
+                correct: 0,
+                note: 'not (A or B) berubah menjadi (not A) and (not B).'
+            },
+            {
+                expr: 'not (x > 10 and y > 10)',
+                choices: ['(x <= 10) or (y <= 10)', '(x <= 10) and (y <= 10)', '(x > 10) or (y > 10)'],
+                correct: 0,
+                note: 'Negasi “> 10” menjadi “<= 10”, dan AND berubah jadi OR.'
+            }
+        ];
+        let dmIdx = 0;
+        let dmLocked = false;
+
+        function renderDeMorgan() {
+            const q = deMorganQuestions[dmIdx];
+            document.getElementById('dmExpr').innerText = q.expr;
+            const wrap = document.getElementById('dmChoices');
+            wrap.innerHTML = '';
+            dmLocked = false;
+            const fb = document.getElementById('dmFeedback');
+            fb.className = 'mt-3 text-sm font-bold hidden';
+            fb.innerText = '';
+
+            q.choices.forEach((txt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-white transition';
+                btn.innerHTML = `<span class="font-mono">${txt}</span>`;
+                btn.addEventListener('click', () => pickDeMorgan(i));
+                wrap.appendChild(btn);
+            });
+        }
+
+        function pickDeMorgan(choiceIdx) {
+            if (dmLocked) return;
+            dmLocked = true;
+
+            const q = deMorganQuestions[dmIdx];
+            const wrap = document.getElementById('dmChoices');
+            const buttons = Array.from(wrap.querySelectorAll('button'));
+            buttons.forEach((b, i) => {
+                b.disabled = true;
+                b.classList.add('opacity-60', 'cursor-not-allowed');
+                if (i === q.correct) {
+                    b.classList.add('border-emerald-500');
+                }
+            });
+
+            const fb = document.getElementById('dmFeedback');
+            fb.classList.remove('hidden');
+
+            if (choiceIdx === q.correct) {
+                buttons[choiceIdx].classList.add('bg-emerald-100', 'text-emerald-800', 'opacity-100');
+                fb.className = 'mt-3 text-sm font-bold text-emerald-700 block';
+                fb.innerText = '✅ Benar! ' + q.note;
+            } else {
+                buttons[choiceIdx].classList.add('bg-rose-100', 'text-rose-800', 'opacity-100', 'border-rose-500');
+                fb.className = 'mt-3 text-sm font-bold text-rose-700 block';
+                fb.innerText = '❌ Belum tepat. Jawaban benar: ' + q.choices[q.correct];
+            }
+        }
+
+        function nextDeMorgan() {
+            dmIdx = (dmIdx + 1) % deMorganQuestions.length;
+            renderDeMorgan();
+        }
+
+        function toggleDeMorgan(id) {
+            const el = document.getElementById(id);
+            const val = !el.innerText.includes('True');
+            setBoolPill(el, val);
+            updateDeMorganEquivalence();
+        }
+
+        function updateDeMorganEquivalence() {
+            const A = document.getElementById('dmA').innerText.includes('True');
+            const B = document.getElementById('dmB').innerText.includes('True');
+            const v1 = !(A && B);
+            const v2 = (!A) || (!B);
+            document.getElementById('dmVal1').innerText = v1 ? 'True' : 'False';
+            document.getElementById('dmVal2').innerText = v2 ? 'True' : 'False';
+            document.getElementById('dmPyA').innerText = A ? 'True' : 'False';
+            document.getElementById('dmPyB').innerText = B ? 'True' : 'False';
+
+            const box = document.getElementById('dmEqBox');
+            if (v1 === v2) {
+                box.className = 'mt-3 p-4 rounded-xl bg-emerald-50 border border-emerald-200';
+                box.innerHTML = '<div class="font-bold text-emerald-700">✅ Selalu sama</div><div class="text-sm text-emerald-800">Coba ubah A/B untuk membuktikan.</div>';
+            } else {
+                box.className = 'mt-3 p-4 rounded-xl bg-rose-50 border border-rose-200';
+                box.innerHTML = '<div class="font-bold text-rose-700">⚠️ Tidak sama?</div><div class="text-sm text-rose-800">Kalau ini terjadi, berarti ada bug (harusnya selalu sama).</div>';
+            }
+        }
+
+        // Quiz Logic
+        function checkQuiz(btn, isCorrect) {
+            const parent = btn.parentElement;
+            const fb = parent.nextElementSibling;
+
+            // Reset styles
+            Array.from(parent.children).forEach(b => {
+                b.className = "w-full text-left p-4 rounded-xl border border-slate-200 opacity-50 cursor-not-allowed";
+                b.disabled = true;
+            });
+
+            btn.classList.remove('opacity-50');
+            btn.classList.remove('border-slate-200');
+
+            if (isCorrect) {
+                btn.classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+                fb.innerText = "✅ Benar!";
+                fb.classList.replace('hidden', 'block');
+                fb.classList.add('text-green-600');
+            } else {
+                btn.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+                fb.innerText = "❌ Kurang tepat.";
+                fb.classList.replace('hidden', 'block');
+                fb.classList.add('text-red-600');
+            }
+        }
+
+        // Init new labs once DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            initTruth3Table();
+            renderDeMorgan();
+            updateDeMorganEquivalence();
+        });
+    </script>
+</body>
+
+</html>
