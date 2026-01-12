@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Algorithm Optimization</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        .slide {
+            display: none;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        .code-font {
+            font-family: 'Courier New', monospace;
+        }
+
+        .kbd {
+            border: 1px solid #e5e7eb;
+            padding: .1rem .35rem;
+            border-radius: .4rem;
+            background: #f9fafb;
+            font-family: monospace;
+        }
+
+        /* IDE Styles */
+        .editor-container {
+            background: #1e293b;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 150px;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: none;
+            outline: none;
+            resize: none;
+            line-height: 1.5;
+        }
+
+        .output-area {
+            background: #0f172a;
+            color: #a5b4fc;
+            padding: 0.75rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            border-top: 1px solid #334155;
+            min-height: 3rem;
+            white-space: pre-wrap;
+        }
+
+        /* Animations */
+        .item-box {
+            transition: all 0.3s ease;
+        }
+
+        .scanning {
+            border-color: #f59e0b !important;
+            background-color: #fef3c7 !important;
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        .found {
+            border-color: #10b981 !important;
+            background-color: #d1fae5 !important;
+            transform: scale(1.2);
+            z-index: 10;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .bar {
+            transition: height 0.2s ease, background-color 0.2s;
+        }
+
+        .bar-active {
+            background-color: #f87171 !important;
+        }
+
+        /* Red for active swap */
+        .bar-sorted {
+            background-color: #10b981 !important;
+        }
+
+        /* Green for sorted */
+    </style>
+
+    <!-- Python Controller Script -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        import time
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            
+            if not code_id: return
+
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            
+            code_val = code_el.value
+            
+            out_el.innerText = "Running..."
+            fb_el.classList.add("hidden")
+
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            start_time = time.time()
+            
+            try:
+                scope = {}
+                exec(code_val, scope)
+                
+                result = capture.getvalue().strip()
+                elapsed = (time.time() - start_time) * 1000 # ms
+                
+                out_el.innerText = result if result else "[No Output]"
+                
+                if action == "check":
+                    expected = el.getAttribute("data-expect")
+                    kws = el.getAttribute("data-kws")
+                    
+                    passed = True
+                    reasons = []
+                    
+                    if kws:
+                        for k in kws.split(","):
+                            k = k.strip()
+                            if k and k not in code_val:
+                                passed = False
+                                reasons.append(f"Kurang konsep: '{k}'")
+                    
+                    if expected:
+                        if expected.lower() not in result.lower():
+                            passed = False
+                            reasons.append(f"Output salah. Harusnya mengandung: '{expected}'")
+                    
+                    if passed:
+                        fb_el.innerText = f"✅ Benar! Code berjalan dalam {elapsed:.2f}ms"
+                        fb_el.className = "mt-2 text-sm font-bold text-green-600 block"
+                    else:
+                        fb_el.innerText = "❌ " + "; ".join(reasons)
+                        fb_el.className = "mt-2 text-sm font-bold text-red-600 block"
+                        
+            except Exception as e:
+                out_el.innerText = f"Error: {e}"
+                if action == "check":
+                    fb_el.innerText = "❌ Fix errornya dulu ya."
+                    fb_el.className = "mt-2 text-sm font-bold text-red-600 block"
+            finally:
+                sys.stdout = old_stdout
+
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+
+    <!-- Access Code Overlay -->
+    <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+            <p class="text-slate-600 mb-4">Masukkan kode kelas untuk memulai</p>
+            <input id="accessCodeInput" type="text" placeholder="Kode..."
+                class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+            <button id="accessBtn"
+                class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka
+                Materi</button>
+            <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-purple-600 text-white grid place-items-center font-bold">27</div>
+                <div>
+                    <div class="font-semibold leading-tight">Optimasi Algoritma Dasar</div>
+                    <div class="text-xs text-slate-600">Performance • Efficiency • Big O</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btnPrev" class="px-3 py-2 rounded-lg border hover:bg-slate-50 disabled:opacity-40 text-sm">←
+                    Prev</button>
+                <button id="btnNext"
+                    class="px-3 py-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 text-sm">Next →</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-6 mb-20">
+        <!-- Progress -->
+        <div class="mb-6">
+            <div class="flex justify-between text-xs text-slate-500 mb-1">
+                <span>Slide <span id="counter">1</span> / 30</span>
+                <span>Press <span class="kbd">→</span></span>
+            </div>
+            <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                <div id="bar" class="h-full bg-purple-600 transition-all duration-300" style="width: 3%"></div>
+            </div>
+        </div>
+
+        <!-- 1. Intro -->
+        <section class="slide active">
+            <div class="max-w-2xl mx-auto text-center py-10">
+                <div class="text-6xl mb-4">🐢 vs 🐇</div>
+                <h1 class="text-3xl font-bold text-slate-900 mb-4">Kenapa Gameku Lag?</h1>
+                <p class="text-lg text-slate-600 mb-8">
+                    Pernah main game tapi patah-patah? Itu bisa jadi karena kodenya "kurang pintar". Hari ini kita
+                    belajar cara bikin kode yang ngebut!
+                </p>
+                <div
+                    class="grid grid-cols-2 gap-4 text-left text-sm bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div>✅ <b>Kerja Cerdas</b><br>Bukan kerja keras.</div>
+                    <div>✅ <b>Jalan Pintas</b><br>Cara cepat menemukan barang.</div>
+                    <div>✅ <b>Kamus Ajaib</b><br>Trik memori komputer.</div>
+                    <div>✅ <b>Hindari Macet</b><br>Menghapus antrian panjang.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Analogy -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-6">Mencari Nama di Buku Telepon</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="bg-white p-6 rounded-xl border border-red-200">
+                    <h3 class="font-bold text-red-600 mb-2">Cara Lama (Lambat)</h3>
+                    <p class="text-sm prose">Kamu buka halaman pertama, baca satu-satu sampai halaman terakhir. Kalau
+                        namanya "Zainal", kamu bakal capek banget!</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-green-200">
+                    <h3 class="font-bold text-green-600 mb-2">Cara Pintar (Cepat)</h3>
+                    <p class="text-sm prose">Kamu langsung buka bagian huruf "Z". Cuma butuh 1 detik kan?</p>
+                </div>
+            </div>
+            <div class="mt-8 text-center text-slate-500 text-sm">
+                Dalam koding, ini disebut <b>Algoritma</b>. Kita mau pilih cara yang pintar.
+            </div>
+        </section>
+
+        <!-- 3. What is a "Step"? -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Menghitung "Langkah"</h2>
+            <p class="mb-4">Bayangkan kamu disuruh Ibu mengupas telur.</p>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-slate-100 p-4 rounded-lg">
+                    <h3 class="font-bold">1 Telur</h3>
+                    <p class="text-sm">Kamu butuh 1 langkah (Tok!). Selesai.</p>
+                </div>
+                <div class="bg-slate-100 p-4 rounded-lg">
+                    <h3 class="font-bold">100 Telur</h3>
+                    <p class="text-sm">Kamu harus "Tok!" 100 kali. Capek kan?</p>
+                </div>
+            </div>
+            <p class="mt-4 text-center text-sm text-slate-600">Komputer juga sama. Semakin banyak data, semakin banyak
+                "langkah" komputer bekerja.</p>
+        </section>
+
+        <!-- 4. Interactive Step Count -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Mencoba Loop</h2>
+            <p class="mb-4">Looping itu seperti menyuruh robot bekerja berulang kali. Coba ubah angkanya!</p>
+
+            <div class="bg-white p-6 rounded-xl border border-slate-200 max-w-xl mx-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <label class="font-bold">Jumlah Telur (N):</label>
+                    <input type="number" id="nVal" value="5" class="border p-2 rounded w-20 text-center"
+                        oninput="updateSteps()">
+                </div>
+                <div class="bg-slate-100 p-4 rounded mb-4 font-mono text-sm">
+                    for i in range(Jumlah_Telur):
+                    pecahkan_telur()
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-slate-500">Robot bekerja sebanyak:</div>
+                    <div id="stepRes" class="text-4xl font-bold text-purple-600">5 kali</div>
+                </div>
+                <script>
+                    function updateSteps() {
+                        const n = document.getElementById('nVal').value;
+                        document.getElementById('stepRes').innerText = n + " kali";
+                    }
+                </script>
+            </div>
+        </section>
+
+        <!-- 5. Big O Simplification -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Big O (O Besar)</h2>
+            <p class="mb-4">Ini bahasa bule-nya programmer untuk bilang: "Seberapa capek komputer kita?"</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-6 bg-green-50 rounded-xl border border-green-200">
+                    <h3 class="text-2xl font-bold text-green-700 mb-2">O(1) "Santai"</h3>
+                    <p class="text-sm">Mau datanya 1 atau 1000, kerjanya tetap sama. <br><i>Contoh: Mengambil buku
+                            paling atas tumpukan.</i></p>
+                </div>
+                <div class="p-6 bg-yellow-50 rounded-xl border border-yellow-200">
+                    <h3 class="text-2xl font-bold text-yellow-700 mb-2">O(n) "Capek"</h3>
+                    <p class="text-sm">Makin banyak data, makin capek. <br><i>Contoh: Mengabsen murid satu per satu.</i>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. EXERCISE 1: Loop Counter -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 1: Robot Pengupas Telur</h2>
+                <p class="text-sm mb-4">Buat robot (loop) yang bekerja sebanyak <code>N</code> kali.</p>
+
+                <div class="editor-container">
+                    <textarea id="code1" class="editor-textarea">
+N = 100
+kerja = 0
+
+# Tulis loop range(N):
+    # kerja tambah 1
+
+print(f"Total Kerja: {kerja}")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code1" data-out="out1" data-fb="fb1"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code1" data-out="out1" data-fb="fb1" data-expect="100"
+                            data-kws="for,range"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out1" class="output-area"></div>
+                </div>
+                <div id="fb1" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 7. Linear Search Animation -->
+        <section class="slide" data-animate="search">
+            <h2 class="text-2xl font-bold mb-4">Mencari: Cara Biasa (Animation)</h2>
+            <p class="mb-4">Bayangkan kamu cari kaos kaki merah di tumpukan baju kotor. Kamu harus angkat satu-satu
+                sampai ketemu.</p>
+            <div class="flex justify-center gap-2 mb-6" id="searchDest">
+                <div
+                    class="item-box w-12 h-12 border-2 border-slate-200 bg-white grid place-items-center rounded-lg text-2xl">
+                    🍎</div>
+                <div
+                    class="item-box w-12 h-12 border-2 border-slate-200 bg-white grid place-items-center rounded-lg text-2xl">
+                    🍌</div>
+                <div
+                    class="item-box w-12 h-12 border-2 border-slate-200 bg-white grid place-items-center rounded-lg text-2xl">
+                    🍇</div>
+                <div class="item-box w-12 h-12 border-2 border-purple-200 bg-purple-50 grid place-items-center rounded-lg text-2xl font-bold"
+                    data-target="true">🍒</div>
+                <div
+                    class="item-box w-12 h-12 border-2 border-slate-200 bg-white grid place-items-center rounded-lg text-2xl">
+                    🍉</div>
+            </div>
+            <div class="text-center">
+                <p class="text-sm text-slate-500 italic animate-pulse">Sedang mencari cherry...</p>
+            </div>
+            <p class="text-center text-sm text-slate-500 mt-6">Kalau cherry-nya ada di paling bawah, lama banget kan?
+            </p>
+        </section>
+
+        <!-- 8. EXERCISE 2: Linear Search -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 2: Cari Manual</h2>
+                <p class="text-sm mb-4">Coba bikin kode untuk mencari "penghapus" di dalam tas (list).</p>
+
+                <div class="editor-container">
+                    <textarea id="code2" class="editor-textarea">
+tas = ["buku", "pensil", "penghapus", "penggaris"]
+target = "penghapus"
+
+ketemu = False
+# Loop barang di dalam tas:
+    # jika barang == target:
+        # set ketemu = True
+
+if ketemu: print("Hore Ketemu!")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code2" data-out="out2" data-fb="fb2"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code2" data-out="out2" data-fb="fb2" data-expect="Ketemu"
+                            data-kws="for,if"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out2" class="output-area"></div>
+                </div>
+                <div id="fb2" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 9. The Early Exit (SMA Version) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Trik 1: Early Exit — Berhenti Kalau Sudah Ketemu</h2>
+
+            <p class="mb-4">
+                Kalau kamu sudah menemukan kaos kaki merahnya, apakah kamu masih lanjut bongkar tumpukan baju?
+            </p>
+            <p class="text-2xl text-center font-bold mb-4">Tentu TIDAK! 🛑</p>
+
+            <!-- Main code -->
+            <div class="bg-slate-900 p-6 rounded-xl text-slate-300 font-mono text-sm mb-5">
+                langkah = 0<br><br>
+                for baju in tumpukan:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;langkah += 1<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if baju == "Kaos Kaki Merah":<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print("Ketemu!")<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break # ✅ stop loop sekarang juga<br><br>
+                print("Total dicek:", langkah)
+            </div>
+
+            <!-- Explanation panel -->
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-slate-200">
+                    <h3 class="font-bold mb-2">Kenapa ini bikin lebih cepat?</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                        <li><b>Tanpa break</b> → loop biasanya tetap lanjut sampai akhir (cek semua item).</li>
+                        <li><b>Dengan break</b> → begitu target ketemu, loop <b>langsung berhenti</b> (hemat langkah).
+                        </li>
+                        <li>Ini meningkatkan performa <b>rata-rata</b>, terutama kalau target sering muncul di
+                            tengah/awal.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-amber-50 p-5 rounded-xl border border-amber-200">
+                    <h3 class="font-bold mb-2 text-amber-900">Catatan Big O</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-amber-900/90">
+                        <li><b>Best case</b>: target di awal → hampir O(1) (sedikit langkah).</li>
+                        <li><b>Worst case</b>: target di akhir / tidak ada → tetap O(n).</li>
+                        <li>Jadi, <b>break tidak mengubah worst-case</b>, tapi sering bikin program terasa lebih
+                            “ngebut”.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Optional advanced: for-else -->
+            <div class="mt-5 bg-slate-100 p-5 rounded-xl border border-slate-200">
+                <div class="font-bold mb-2">Bonus Python: <code>for ... else</code> (opsional)</div>
+                <p class="text-sm text-slate-700 mb-3">
+                    Di Python, <code>else</code> pada <code>for</code> jalan <b>kalau loop selesai tanpa break</b>.
+                    Berguna buat kasus “kalau tidak ketemu”.
+                </p>
+                <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                    for baju in tumpukan:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;if baju == "Kaos Kaki Merah":<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print("Ketemu!")<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;break<br>
+                    else:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;print("Tidak ketemu di tumpukan 😢")
+                </div>
+            </div>
+
+            <!-- Common pitfall -->
+            <div class="mt-5 text-sm text-slate-600">
+                <b>Waspada:</b> kalau ada <i>nested loop</i> (loop di dalam loop), <code>break</code> hanya menghentikan
+                <b>loop terdalam</b>. Untuk berhenti total, biasanya pakai <code>return</code> (di dalam fungsi) atau
+                flag.
+            </div>
+        </section>
+
+
+        <!-- 10. EXERCISE 3: Adding Break -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 3: Stop Seketika</h2>
+                <p class="text-sm mb-4">Tambahkan perintah sakti <code>break</code> agar pencarian berhenti setelah
+                    "Donut" ditemukan.</p>
+
+                <div class="editor-container">
+                    <textarea id="code3" class="editor-textarea">
+makanan = ["Pizza", "Burger", "Donut", "Salad", "Soup"]
+
+for m in makanan:
+    print(f"Mengecek {m}...")
+    if m == "Donut":
+        print("Yummy!")
+        # Tambahkan break di sini agar Salad & Soup tidak dicek</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code3" data-out="out3" data-fb="fb3"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code3" data-out="out3" data-fb="fb3" data-expect="Yummy"
+                            data-kws="break"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out3" class="output-area"></div>
+                </div>
+                <div id="fb3" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 11. Data Structures (SMA Version) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Trik 2: “Teleportasi” Pakai Dictionary (Map)</h2>
+
+            <p class="mb-4">
+                <b>Dictionary</b> itu seperti <b>kamus</b> atau <b>loker</b> — kamu mencari pakai <b>kunci (key)</b>,
+                lalu langsung dapat <b>nilai (value)</b>. Jadi tidak perlu cek satu per satu.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-4 mb-5">
+                <div class="p-5 bg-slate-100 rounded-xl border border-slate-200">
+                    <h3 class="font-bold mb-2">List (Antrian / Scan 1-1)</h3>
+                    <p class="text-sm text-slate-700">
+                        Kalau data disimpan sebagai list, biasanya kita <b>cek dari awal</b> sampai ketemu.
+                        Kalau yang dicari ada di belakang, ya… butuh waktu lebih lama.
+                    </p>
+                    <p class="text-xs text-slate-500 mt-3">
+                        Analogi: “Permisi, apakah ini loker Budi?” (tanya dari ujung ke ujung)
+                    </p>
+                    <div class="mt-3 bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                        daftar_nama = ["Ani", "Bima", "Caca", "Budi", "Dina"]<br>
+                        # Cari "Budi" harus cek satu-satu
+                    </div>
+                </div>
+
+                <div class="p-5 bg-purple-100 rounded-xl border border-purple-200">
+                    <h3 class="font-bold mb-2 text-purple-900">Dictionary (Teleport / Langsung ke Tujuan)</h3>
+                    <p class="text-sm text-slate-800">
+                        Dictionary menyimpan pasangan <b>key → value</b>. Kamu sebut <b>key</b>-nya,
+                        program bisa langsung menuju datanya (rata-rata cepat).
+                    </p>
+                    <p class="text-xs text-slate-700 mt-3">
+                        Analogi: “Loker Budi? Oh, nomor 105.” (langsung jalan ke sana)
+                    </p>
+                    <div class="mt-3 bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                        loker = {<br>
+                        &nbsp;&nbsp;"Ani": 101,<br>
+                        &nbsp;&nbsp;"Bima": 102,<br>
+                        &nbsp;&nbsp;"Budi": 105<br>
+                        }<br><br>
+                        print(loker["Budi"]) # 105 ✅
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-slate-200">
+                    <h3 class="font-bold mb-2">Kapan pakai dictionary?</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                        <li>Kalau sering <b>mencari data berdasarkan “nama/kode”</b> (key).</li>
+                        <li>Kalau ingin cek cepat: <b>“Ada nggak?”</b> → <code>if key in dict</code>.</li>
+                        <li>Kalau data berupa pasangan: contoh <i>email → nilai</i>, <i>kode barang → harga</i>.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-amber-50 p-5 rounded-xl border border-amber-200">
+                    <h3 class="font-bold mb-2 text-amber-900">Catatan performa</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-amber-900/90">
+                        <li><b>List search</b> biasanya O(n) → makin banyak data, makin lama (cek satu-satu).</li>
+                        <li><b>Dict lookup</b> rata-rata O(1) → terasa “teleport”, cepat meski data besar.</li>
+                        <li>Tapi dict butuh <b>memori</b> lebih dan butuh <b>key unik</b>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-5 bg-slate-100 p-5 rounded-xl border border-slate-200">
+                <div class="font-bold mb-2">Contoh penting: cek aman biar nggak error</div>
+                <p class="text-sm text-slate-700 mb-3">
+                    Kalau key belum ada, akses <code>dict[key]</code> bisa error. Lebih aman pakai <code>in</code> atau
+                    <code>get()</code>.
+                </p>
+                <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                    if "Budi" in loker:<br>
+                    &nbsp;&nbsp;print(loker["Budi"])<br>
+                    else:<br>
+                    &nbsp;&nbsp;print("Budi belum punya loker")<br><br>
+                    print(loker.get("Eka", "Tidak ditemukan")) # aman ✅
+                </div>
+            </div>
+        </section>
+
+
+        <!-- 12. Visual Lookup (Interactive, SAME DATA for List & Dict) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">List vs Dictionary (Interaktif)</h2>
+            <p class="text-slate-600 mb-6">
+                Cari nama. <b>List</b> akan scan satu per satu, sedangkan <b>Dictionary</b> langsung akses
+                <i>key</i>-nya.
+                (Isi data list & dict <b>sama persis</b>.)
+            </p>
+
+            <!-- Controls -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+                <div class="grid md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2" for="lookup12Target">Target yang dicari</label>
+                        <input id="lookup12Target" class="w-full border rounded-lg px-3 py-2"
+                            placeholder='Contoh: Budi / Dina / Zara' />
+                        <p class="text-xs text-slate-500 mt-1">Coba nama yang tidak ada, misalnya <b>Zara</b>.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2" for="lookup12Speed">Kecepatan scan list</label>
+                        <input id="lookup12Speed" type="range" min="150" max="900" step="50" value="450"
+                            class="w-full" />
+                        <div class="text-xs text-slate-500 mt-1">Kiri cepat, kanan lambat.</div>
+                    </div>
+
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="lookup12Start" class="px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold">
+                            ▶ Mulai
+                        </button>
+                        <button id="lookup12Random"
+                            class="px-4 py-2 rounded-lg bg-white border border-slate-300 font-semibold">
+                            🎲 Random target
+                        </button>
+                        <button id="lookup12Reset"
+                            class="px-4 py-2 rounded-lg bg-white border border-slate-300 font-semibold">
+                            ↺ Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual panels -->
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- List panel -->
+                <div class="border p-4 rounded-xl">
+                    <h3 class="font-bold text-center mb-2">List Lookup (scan 1 per 1)</h3>
+                    <div class="text-sm text-slate-600 text-center mb-4">
+                        Langkah: <span id="lookup12ListSteps" class="font-bold">0</span>
+                    </div>
+
+                    <div id="lookup12ListBox" class="flex flex-col gap-2">
+                        <!-- cells injected by JS -->
+                    </div>
+
+                    <div id="lookup12ListStatus"
+                        class="mt-4 text-sm bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-700">
+                        Status: belum mulai.
+                    </div>
+                </div>
+
+                <!-- Dict panel -->
+                <div class="border p-4 rounded-xl relative overflow-hidden">
+                    <h3 class="font-bold text-center mb-2">Dict Lookup (teleport)</h3>
+                    <div class="text-sm text-slate-600 text-center mb-4">
+                        Langkah: <span id="lookup12DictSteps" class="font-bold">0</span> (biasanya 1 kali akses)
+                    </div>
+
+                    <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                        <div class="text-xs text-purple-900 font-semibold mb-2">Dictionary (key → value)</div>
+                        <div id="lookup12DictPreview" class="font-mono text-sm text-slate-800">
+                            <!-- injected by JS -->
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-center min-h-[92px]">
+                        <div id="lookup12DictResult" class="px-4 py-3 rounded-full border text-sm font-bold hidden">
+                            <!-- result -->
+                        </div>
+                    </div>
+
+                    <div id="lookup12DictStatus"
+                        class="text-sm bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-700">
+                        Status: belum mulai.
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                (function () {
+                    // ============================================================
+                    // SAME DATA SOURCE for BOTH List & Dict
+                    // ============================================================
+                    const pairs = [
+                        { name: "Ani", value: 101 },
+                        { name: "Bima", value: 102 },
+                        { name: "Budi", value: 105 },
+                        { name: "Caca", value: 108 },
+                        { name: "Dina", value: 110 },
+                        { name: "Eka", value: 115 }
+                    ];
+
+                    // List: scan one-by-one (same info)
+                    const listData = pairs;
+
+                    // Dict: key -> value (built from the same info)
+                    const dictData = Object.fromEntries(pairs.map(p => [p.name, p.value]));
+
+                    // --- Elements ---
+                    const elTarget = document.getElementById("lookup12Target");
+                    const elSpeed = document.getElementById("lookup12Speed");
+                    const btnStart = document.getElementById("lookup12Start");
+                    const btnRandom = document.getElementById("lookup12Random");
+                    const btnReset = document.getElementById("lookup12Reset");
+
+                    const elListBox = document.getElementById("lookup12ListBox");
+                    const elListStatus = document.getElementById("lookup12ListStatus");
+                    const elListSteps = document.getElementById("lookup12ListSteps");
+
+                    const elDictPreview = document.getElementById("lookup12DictPreview");
+                    const elDictResult = document.getElementById("lookup12DictResult");
+                    const elDictStatus = document.getElementById("lookup12DictStatus");
+                    const elDictSteps = document.getElementById("lookup12DictSteps");
+
+                    let timer = null;
+                    let running = false;
+
+                    // --- Render list cells (shows name -> value) ---
+                    function renderListCells(activeIndex = -1, foundIndex = -1) {
+                        elListBox.innerHTML = "";
+                        listData.forEach((item, i) => {
+                            const cell = document.createElement("div");
+                            const base = "p-2 rounded-lg border text-sm flex items-center justify-between";
+                            const isActive = i === activeIndex;
+                            const isFound = i === foundIndex;
+
+                            cell.className = base + " " + (
+                                isFound ? "bg-green-200 border-green-300 text-green-900 font-bold" :
+                                    isActive ? "bg-amber-100 border-amber-200 text-amber-900" :
+                                        "bg-white border-slate-200 text-slate-800"
+                            );
+
+                            cell.innerHTML = `
+            <span>
+              Index ${i}: <span class="font-mono">"${item.name}"</span>
+              → <span class="font-mono">${item.value}</span>
+            </span>
+            <span class="text-xs ${isFound ? "text-green-800" : isActive ? "text-amber-800" : "text-slate-500"}">
+              ${isFound ? "✅ cocok" : isActive ? "🔎 cek" : ""}
+            </span>
+          `;
+                            elListBox.appendChild(cell);
+                        });
+                    }
+
+                    // --- Render dict preview (from same data) ---
+                    function renderDictPreview() {
+                        const keys = Object.keys(dictData);
+                        const sample = keys.slice(0, 4).map(k => `"${k}": ${dictData[k]}`).join(", ");
+                        elDictPreview.textContent = "{ " + sample + (keys.length > 4 ? ", ..." : "") + " }";
+                    }
+
+                    function setDictResult(type, text) {
+                        elDictResult.classList.remove("hidden");
+                        elDictResult.className = "px-4 py-3 rounded-full border text-sm font-bold";
+                        if (type === "found") {
+                            elDictResult.classList.add("bg-green-200", "border-green-300", "text-green-900", "shadow-lg");
+                        } else if (type === "notfound") {
+                            elDictResult.classList.add("bg-rose-100", "border-rose-200", "text-rose-900");
+                        } else {
+                            elDictResult.classList.add("bg-slate-100", "border-slate-200", "text-slate-800");
+                        }
+                        elDictResult.textContent = text;
+                    }
+
+                    function stop() {
+                        if (timer) clearInterval(timer);
+                        timer = null;
+                        running = false;
+                        btnStart.disabled = false;
+                        btnStart.classList.remove("opacity-60");
+                    }
+
+                    function resetAll() {
+                        stop();
+                        elListSteps.textContent = "0";
+                        elDictSteps.textContent = "0";
+                        elListStatus.textContent = "Status: belum mulai.";
+                        elDictStatus.textContent = "Status: belum mulai.";
+                        elTarget.value = "";
+                        renderListCells(-1, -1);
+                        renderDictPreview();
+                        elDictResult.classList.add("hidden");
+                    }
+
+                    function randomTarget() {
+                        const names = listData.map(x => x.name);
+                        const pool = [...names, "Zara", "Raka"]; // include not-found
+                        elTarget.value = pool[Math.floor(Math.random() * pool.length)];
+                    }
+
+                    // --- Main run ---
+                    function start() {
+                        if (running) return;
+
+                        const target = (elTarget.value || "").trim();
+                        if (!target) {
+                            elListStatus.textContent = 'Status: isi dulu targetnya (contoh: "Budi").';
+                            elDictStatus.textContent = 'Status: isi dulu targetnya (contoh: "Budi").';
+                            return;
+                        }
+
+                        running = true;
+                        btnStart.disabled = true;
+                        btnStart.classList.add("opacity-60");
+
+                        // Dict: instant lookup (built from same pairs)
+                        elDictSteps.textContent = "1";
+                        if (Object.prototype.hasOwnProperty.call(dictData, target)) {
+                            elDictStatus.textContent = `Status: dict langsung akses key "${target}".`;
+                            setDictResult("found", `✅ Ketemu! "${target}" → ${dictData[target]}`);
+                        } else {
+                            elDictStatus.textContent = `Status: dict cek key "${target}" (tidak ada).`;
+                            setDictResult("notfound", `❌ Tidak ketemu: key "${target}" tidak ada`);
+                        }
+
+                        // List: step-by-step scan (same pairs)
+                        let i = 0;
+                        let steps = 0;
+                        elListStatus.textContent = `Status: mulai scan list untuk "${target}"...`;
+
+                        const speed = Number(elSpeed.value) || 450;
+                        renderListCells(0, -1);
+
+                        timer = setInterval(() => {
+                            steps += 1;
+                            elListSteps.textContent = String(steps);
+
+                            const currentName = listData[i].name;
+                            const currentValue = listData[i].value;
+
+                            renderListCells(i, -1);
+
+                            if (currentName === target) {
+                                renderListCells(i, i);
+                                elListStatus.textContent = `✅ Ketemu di index ${i} setelah ${steps} langkah: "${currentName}" → ${currentValue}`;
+                                stop();
+                                return;
+                            }
+
+                            i += 1;
+
+                            if (i >= listData.length) {
+                                renderListCells(-1, -1);
+                                elListStatus.textContent = `❌ Tidak ketemu setelah ${steps} langkah. (List harus cek semua item)`;
+                                stop();
+                                return;
+                            }
+                        }, speed);
+                    }
+
+                    // --- Init ---
+                    renderListCells(-1, -1);
+                    renderDictPreview();
+
+                    // --- Events ---
+                    btnStart.addEventListener("click", start);
+                    btnReset.addEventListener("click", resetAll);
+                    btnRandom.addEventListener("click", randomTarget);
+
+                    // Enter to start
+                    elTarget.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") start();
+                    });
+
+                    // Stop timer when tab hidden
+                    document.addEventListener("visibilitychange", () => {
+                        if (document.hidden) stop();
+                    });
+                })();
+            </script>
+        </section>
+
+
+
+        <!-- 13. EXERCISE 4: List vs Dict -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 4: Mode Cepat</h2>
+                <p class="text-sm mb-4">Kita punya buku telepon "ajaib" (dictionary). Ambil nomor Budi tanpa mencari
+                    satu-satu!</p>
+
+                <div class="editor-container">
+                    <textarea id="code4" class="editor-textarea">
+# Buku telepon biasa (List) - Lambat
+kontak_list = [["udi", "081"], ["siti", "082"], ["budi", "083"]]
+
+# Buku telepon ajaib (Dictionary) - Cepat
+kontak_dict = {"udi": "081", "siti": "082", "budi": "083"}
+
+# Ambil nomor budi langsung dari dictionary
+print(kontak_dict[???])</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code4" data-out="out4" data-fb="fb4"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code4" data-out="out4" data-fb="fb4" data-expect="083"
+                            data-kws="['budi']"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out4" class="output-area"></div>
+                </div>
+                <div id="fb4" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 14. String Immutability (SMA Detailed) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Trik 3: Menulis Kalimat — String itu “Tidak Bisa Diubah”</h2>
+            <p class="text-slate-600 mb-6">
+                Di Python, <b>string bersifat immutable</b> (tidak bisa diubah). Jadi kalau kamu “menambah” string,
+                sebenarnya Python membuat <b>string baru</b>.
+            </p>
+
+            <div class="bg-red-50 p-6 rounded-xl border border-red-200 mb-6">
+                <h3 class="font-bold text-red-800">Masalah: Menempel Kata dengan <code>+=</code></h3>
+                <p class="text-sm mt-2 text-slate-700">
+                    Bayangkan kamu menulis surat. Setiap mau nambah satu kata, kamu <b>salin ulang</b> seluruh surat ke
+                    kertas baru,
+                    baru tulis kata tambahannya. Semakin panjang suratnya, semakin capek.
+                </p>
+
+                <div class="mt-4 bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                    teks = ""<br>
+                    for kata in daftar_kata:<br>
+                    &nbsp;&nbsp;teks += kata + " " # bikin string baru berulang-ulang<br>
+                </div>
+
+                <p class="text-xs text-red-800 mt-3">
+                    Kenapa boros? Karena setiap <code>+=</code> membuat salinan baru yang panjangnya makin besar.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-slate-200">
+                    <h3 class="font-bold mb-2">Versi konsep (immutability)</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                        <li><b>Immutable</b> = isinya tidak bisa diganti “di tempat”.</li>
+                        <li><code>teks += "a"</code> sebenarnya setara dengan <code>teks = teks + "a"</code>.</li>
+                        <li>Setiap gabung, Python membuat <b>objek string baru</b> lalu menyalin isi lama + tambahan.
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="bg-amber-50 p-5 rounded-xl border border-amber-200">
+                    <h3 class="font-bold mb-2 text-amber-900">Dampak performa</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-amber-900/90">
+                        <li>Kalau nambah 1 huruf berkali-kali, total kerja bisa jadi <b>mendekati O(n²)</b>.</li>
+                        <li>Karena saat string makin panjang, biaya “salin ulang” makin besar.</li>
+                        <li>Kalau datanya banyak (ribuan kata/karakter), bedanya bisa kerasa banget.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-6 bg-emerald-50 p-6 rounded-xl border border-emerald-200">
+                <h3 class="font-bold text-emerald-900 mb-2">Solusi: Kumpulkan dulu, gabungkan sekali (pakai
+                    <code>join</code>)
+                </h3>
+                <p class="text-sm text-slate-700 mb-4">
+                    Triknya: simpan potongan kata/karakter ke <b>list</b> dulu, lalu gabungkan sekali di akhir.
+                    Ini biasanya jauh lebih efisien.
+                </p>
+
+                <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                    potongan = []<br>
+                    for kata in daftar_kata:<br>
+                    &nbsp;&nbsp;potongan.append(kata)<br><br>
+                    teks = " ".join(potongan) # gabung sekali ✅
+                </div>
+
+                <p class="text-xs text-emerald-900 mt-3">
+                    <b>Inti optimasi:</b> lebih baik “kumpulkan” → “satukan sekali”, daripada “salin ulang” setiap
+                    langkah.
+                </p>
+            </div>
+
+            <div class="mt-5 text-sm text-slate-600">
+                <b>Kapan <code>+=</code> masih oke?</b> Kalau jumlah gabungannya sedikit (misalnya 3–10 kali), biasanya
+                tidak masalah.
+                Optimasi ini penting saat loop-nya besar.
+            </div>
+        </section>
+
+
+        <!-- 15. EXERCISE 5: The Slow Way -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 5: Cara Capek</h2>
+                <p class="text-sm mb-4">Kode ini seperti menyalin ulang surat berkali-kali. Coba jalankan.</p>
+
+                <div class="editor-container">
+                    <textarea id="code5" class="editor-textarea">
+hasil = ""
+kata_kata = ["Halo", " ", "Dunia", " ", "Python"]
+
+# Tiap loop, dia copy ulang semuanya
+for k in kata_kata:
+    hasil += k
+
+print(hasil)</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code5" data-out="out5" data-fb="fb5"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code5" data-out="out5" data-fb="fb5"
+                            data-expect="Halo Dunia" data-kws="+="
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out5" class="output-area"></div>
+                </div>
+                <div id="fb5" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 16. The Join Solution (Clear + SMA) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Solusi: “Lem Kertas” dengan <code>.join()</code></h2>
+            <p class="text-slate-600 mb-6">
+                Daripada menyalin ulang kalimat setiap nambah kata (<code>+=</code>), kita <b>kumpulkan dulu</b>
+                potongan kata di list,
+                lalu <b>gabungkan sekali</b> di akhir. Ini biasanya jauh lebih cepat dan rapi.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-4 mb-6">
+                <!-- Bad: += -->
+                <div class="bg-red-50 p-5 rounded-xl border border-red-200">
+                    <h3 class="font-bold text-red-800 mb-2">❌ Kurang efisien: <code>+=</code> di loop</h3>
+                    <p class="text-sm text-slate-700 mb-3">
+                        Setiap <code>+=</code> bikin string baru (salin ulang isi lama + tambahan).
+                    </p>
+                    <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                        teks = ""<br>
+                        for kata in list_kata:<br>
+                        &nbsp;&nbsp;teks += kata + " "
+                    </div>
+                    <p class="text-xs text-red-800 mt-3">
+                        Risiko: kalau list_kata panjang, kerja total bisa membengkak.
+                    </p>
+                </div>
+
+                <!-- Good: join -->
+                <div class="bg-green-50 p-5 rounded-xl border border-green-200">
+                    <h3 class="font-bold text-green-900 mb-2">✅ Efisien: <code>join()</code> sekali di akhir</h3>
+                    <p class="text-sm text-slate-700 mb-3">
+                        Python mengukur total panjang dulu, lalu “menempel” semuanya <b>sekali jalan</b>.
+                    </p>
+                    <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                        teks = " ".join(list_kata)
+                    </div>
+                    <p class="text-xs text-green-900 mt-3">
+                        Hasil: cepat (lebih sedikit penyalinan), output juga rapi.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl border border-slate-200 mb-6">
+                <h3 class="font-bold mb-2">Cara bacanya (biar nggak kebalik)</h3>
+                <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                    <li><code>" ".join(list_kata)</code> artinya: “gabungkan semua elemen list_kata, dipisah oleh
+                        spasi”.</li>
+                    <li>Yang di depan titik (<code>" "</code>) itu namanya <b>separator</b> (pemisaah).</li>
+                    <li>Kalau mau tanpa pemisah: <code>"".join(list_kata)</code>.</li>
+                </ul>
+            </div>
+
+            <div class="bg-green-50 p-6 rounded-xl border border-green-200 text-center">
+                <div class="text-3xl font-mono mb-2">" ".join(list_kata)</div>
+                <p class="text-sm text-green-800">
+                    Ibarat nge-lem semua potongan puzzle sekaligus: <b>cepat</b> & <b>rapi</b>.
+                </p>
+            </div>
+
+            <div class="mt-5 grid md:grid-cols-2 gap-4">
+                <div class="bg-amber-50 p-5 rounded-xl border border-amber-200">
+                    <h3 class="font-bold text-amber-900 mb-2">⚠️ Kesalahan umum #1</h3>
+                    <p class="text-sm text-amber-900/90">
+                        <code>join</code> butuh isi list berupa <b>string semua</b>. Kalau ada angka, harus diubah dulu.
+                    </p>
+                    <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm mt-3">
+                        angka = [1, 2, 3]<br>
+                        teks = ", ".join(map(str, angka)) # "1, 2, 3"
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 p-5 rounded-xl border border-amber-200">
+                    <h3 class="font-bold text-amber-900 mb-2">⚠️ Kesalahan umum #2</h3>
+                    <p class="text-sm text-amber-900/90">
+                        Jangan lupa: separator bisa kamu atur sesuai kebutuhan.
+                    </p>
+                    <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm mt-3">
+                        "-".join(["A", "B", "C"]) # "A-B-C"<br>
+                        "\\n".join(["baris1","baris2"]) # pisah baris
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- 17. EXERCISE 6: Refactor to Join -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 6: Cara Cepat</h2>
+                <p class="text-sm mb-4">Gunakan <code>"".join(words)</code> untuk menyatukan kata tanpa capek.</p>
+
+                <div class="editor-container">
+                    <textarea id="code6" class="editor-textarea">
+words = ["Halo", " ", "Dunia", " ", "Python"]
+
+# Satukan dengan lem ajaib (join)
+result = ???
+
+print(result)</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code6" data-out="out6" data-fb="fb6"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code6" data-out="out6" data-fb="fb6"
+                            data-expect="Halo Dunia" data-kws="join"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out6" class="output-area"></div>
+                </div>
+                <div id="fb6" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 18. Nested Loop Trap (Clear + SMA) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Trik 4: Jebakan Perulangan — Nested Loop = Kerjaan Meledak</h2>
+            <p class="text-slate-600 mb-6">
+                “Loop di dalam loop” itu bahaya karena jumlah langkahnya bisa naik <b>berlipat</b>.
+                Kalau ukuran data naik 10×, kerjaannya bisa naik <b>100×</b>.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-4 mb-6">
+                <!-- Story / intuition -->
+                <div class="bg-indigo-900 text-white p-6 rounded-xl text-center font-mono text-sm leading-relaxed">
+                    Kamu punya 10 buku.<br>
+                    Temanmu punya 10 buku.<br>
+                    Kalau kamu bandingkan setiap bukumu dengan setiap buku temanmu:<br>
+                    <b>10 × 10 = 100</b> perbandingan.
+                    <div class="mt-3 opacity-90">
+                        Kalau 1.000 buku? <b>1.000 × 1.000 = 1.000.000</b> 😱
+                    </div>
+                </div>
+
+                <!-- Big O panel -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200">
+                    <h3 class="font-bold mb-2">Big O</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
+                        <li>1 loop yang jalan n kali → <b>O(n)</b></li>
+                        <li>2 loop (n × n) → <b>O(n²)</b> (meledak cepat)</li>
+                        <li>3 loop (n × n × n) → <b>O(n³)</b> (lebih gawat)</li>
+                    </ul>
+                    <p class="text-xs text-slate-500 mt-3">
+                        Intinya: nested loop sering jadi sumber program “lemot” saat data membesar.
+                    </p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 p-6 rounded-xl text-slate-200 font-mono text-sm leading-relaxed mb-6">
+                # Contoh jebakan: cek buku yang sama (cara lambat)<br>
+                for bukuku in buku_aku:<br>
+                &nbsp;&nbsp;for bukumu in buku_teman:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;if bukuku == bukumu:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print("Ada buku yang sama!")<br>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4">
+                <!-- Fix 1: set -->
+                <div class="bg-emerald-50 p-6 rounded-xl border border-emerald-200">
+                    <h3 class="font-bold text-emerald-900 mb-2">Solusi cepat: ubah salah satunya jadi <code>set</code>
+                    </h3>
+                    <p class="text-sm text-slate-700 mb-3">
+                        <code>set</code> punya pengecekan “ada/tidak” yang cepat (mirip dict lookup).
+                        Jadi cukup 1 loop.
+                    </p>
+                    <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+                        buku_teman_set = set(buku_teman)<br>
+                        for bukuku in buku_aku:<br>
+                        &nbsp;&nbsp;if bukuku in buku_teman_set:<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;print("Ada buku yang sama!")<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;break
+                    </div>
+                    <p class="text-xs text-emerald-900 mt-3">
+                        Dari <b>O(n²)</b> jadi kira-kira <b>O(n)</b> (plus biaya bikin set).
+                    </p>
+                </div>
+
+                <!-- Fix 2: early exit / goal-oriented -->
+                <div class="bg-amber-50 p-6 rounded-xl border border-amber-200">
+                    <h3 class="font-bold text-amber-900 mb-2">Tips: pastikan tujuan loop jelas</h3>
+                    <ul class="list-disc pl-5 space-y-1 text-sm text-amber-900/90">
+                        <li>Kalau cuma butuh “ketemu sekali”, pakai <code>break</code> setelah ketemu.</li>
+                        <li>Kalau butuh hitung jumlah, simpan hasil di dict (mis. frekuensi) daripada bandingkan semua
+                            pasangan.</li>
+                        <li>Tanya diri sendiri: “Apa yang bisa dijadikan <b>key</b> untuk lookup?”</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-5 text-sm text-slate-600 text-center">
+                <b>Rule of thumb:</b> Kalau kamu melihat 2 loop bersarang, cek lagi…
+                jangan-jangan bisa diganti jadi 1 loop + <code>set/dict</code>.
+            </div>
+        </section>
+
+
+        <!-- 19. Sorting Animation (Interactive Bubble Sort) -->
+        <section class="slide" data-animate="sort">
+            <h2 class="text-2xl font-bold mb-2">Visual: Kenapa Loop Ganda itu Lambat?</h2>
+            <p class="mb-4 text-center text-sm text-slate-600">
+                Ini simulasi <b>Bubble Sort</b> (dua loop bersarang). Setiap langkah adalah <b>membandingkan</b> 2 kotak
+                tetangga.
+                Semakin besar <code>n</code>, jumlah perbandingan naik mendekati <b>n²</b>.
+            </p>
+
+            <!-- Controls -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+                <div class="grid md:grid-cols-4 gap-3 items-end">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2" for="sortN">Jumlah data (n)</label>
+                        <input id="sortN" type="range" min="8" max="60" step="1" value="20" class="w-full" />
+                        <div class="text-xs text-slate-500 mt-1">
+                            n: <span id="sortNLabel" class="font-bold">20</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold mb-2" for="sortSpeed">Kecepatan animasi</label>
+                        <input id="sortSpeed" type="range" min="10" max="200" step="10" value="80" class="w-full" />
+                        <div class="text-xs text-slate-500 mt-1">
+                            delay: <span id="sortSpeedLabel" class="font-bold">80</span> ms
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="sortStart" class="px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold">▶
+                            Start</button>
+                        <button id="sortPause"
+                            class="px-4 py-2 rounded-lg bg-white border border-slate-300 font-semibold" disabled>⏸
+                            Pause</button>
+                        <button id="sortReset"
+                            class="px-4 py-2 rounded-lg bg-white border border-slate-300 font-semibold">↺ Reset</button>
+                        <button id="sortShuffle"
+                            class="px-4 py-2 rounded-lg bg-white border border-slate-300 font-semibold">🎲
+                            Shuffle</button>
+                    </div>
+
+                    <div class="text-sm text-slate-700">
+                        <div><b>Teori perbandingan</b> (worst case):</div>
+                        <div class="font-mono">
+                            n(n−1)/2 = <span id="sortTheory" class="font-bold">190</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bars -->
+            <div class="flex justify-center items-end gap-1 h-48 mb-3 border-b border-slate-300 pb-2 bg-slate-50 rounded p-4"
+                id="sortContainer" aria-label="Bubble sort visual bars"></div>
+
+            <div id="sortStatus" class="text-center mt-2 text-sm font-mono text-slate-600">
+                comparisons: 0 | swaps: 0 | pass: 0
+            </div>
+
+            <p class="text-center text-xs text-slate-400 mt-2">
+                Tips: geser <b>n</b> ke 50–60 dan lihat “comparisons” naik cepat.
+            </p>
+
+            <script>
+                (function () {
+                    // -------- helpers --------
+                    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+                    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+                    // -------- elements --------
+                    const container = document.getElementById("sortContainer");
+                    const statusEl = document.getElementById("sortStatus");
+
+                    const nRange = document.getElementById("sortN");
+                    const nLabel = document.getElementById("sortNLabel");
+                    const speedRange = document.getElementById("sortSpeed");
+                    const speedLabel = document.getElementById("sortSpeedLabel");
+                    const theoryEl = document.getElementById("sortTheory");
+
+                    const btnStart = document.getElementById("sortStart");
+                    const btnPause = document.getElementById("sortPause");
+                    const btnReset = document.getElementById("sortReset");
+                    const btnShuffle = document.getElementById("sortShuffle");
+
+                    // -------- state --------
+                    let arr = [];
+                    let running = false;
+                    let paused = false;
+                    let abort = false;
+
+                    let comparisons = 0;
+                    let swaps = 0;
+                    let pass = 0;
+
+                    function computeTheory(n) {
+                        return Math.floor((n * (n - 1)) / 2);
+                    }
+
+                    function updateLabels() {
+                        const n = Number(nRange.value);
+                        const sp = Number(speedRange.value);
+                        nLabel.textContent = String(n);
+                        speedLabel.textContent = String(sp);
+                        theoryEl.textContent = String(computeTheory(n));
+                    }
+
+                    function resetCounters() {
+                        comparisons = 0;
+                        swaps = 0;
+                        pass = 0;
+                        statusEl.textContent = `comparisons: ${comparisons} | swaps: ${swaps} | pass: ${pass}`;
+                    }
+
+                    function setButtonsForRun(isRunning) {
+                        btnStart.disabled = isRunning;
+                        btnStart.classList.toggle("opacity-60", isRunning);
+                        btnPause.disabled = !isRunning;
+                        btnPause.classList.toggle("opacity-60", !isRunning);
+                        nRange.disabled = isRunning;
+                        speedRange.disabled = false; // speed can change anytime
+                        btnShuffle.disabled = isRunning;
+                    }
+
+                    function generateArray(n) {
+                        // values 10..100 (relative height)
+                        const out = [];
+                        for (let i = 0; i < n; i++) out.push(10 + Math.floor(Math.random() * 91));
+                        return out;
+                    }
+
+                    function renderBars(activeI = -1, activeJ = -1, sortedBoundary = -1) {
+                        container.innerHTML = "";
+                        const n = arr.length;
+                        for (let i = 0; i < n; i++) {
+                            const v = arr[i];
+                            const bar = document.createElement("div");
+                            bar.className = "w-2 md:w-3 rounded-t";
+                            bar.style.height = `${v * 1.6}px`;
+
+                            // coloring via utility classes (no hard-coded colors needed beyond Tailwind classes)
+                            // active compare bars
+                            if (i === activeI || i === activeJ) {
+                                bar.classList.add("bg-amber-400");
+                            } else if (sortedBoundary !== -1 && i >= sortedBoundary) {
+                                // already sorted part (right side) — bubble sort locks biggest to the end
+                                bar.classList.add("bg-emerald-400");
+                            } else {
+                                bar.classList.add("bg-slate-400");
+                            }
+
+                            container.appendChild(bar);
+                        }
+                    }
+
+                    function shuffle() {
+                        arr = generateArray(Number(nRange.value));
+                        resetCounters();
+                        renderBars();
+                    }
+
+                    function resetAll() {
+                        abort = true; // stop any loop
+                        running = false;
+                        paused = false;
+                        setButtonsForRun(false);
+                        updateLabels();
+                        shuffle();
+                    }
+
+                    async function waitIfPaused() {
+                        while (paused && !abort) {
+                            await sleep(80);
+                        }
+                    }
+
+                    async function bubbleSortAnimate() {
+                        abort = false;
+                        running = true;
+                        paused = false;
+                        resetCounters();
+                        setButtonsForRun(true);
+
+                        const n = arr.length;
+                        const delay = () => clamp(Number(speedRange.value), 10, 300);
+
+                        // bubble sort: O(n^2) comparisons
+                        for (let end = n - 1; end > 0; end--) {
+                            pass += 1;
+
+                            let swappedThisPass = false;
+
+                            for (let i = 0; i < end; i++) {
+                                if (abort) break;
+                                await waitIfPaused();
+
+                                // compare i and i+1
+                                comparisons += 1;
+                                renderBars(i, i + 1, end + 1);
+                                statusEl.textContent = `comparisons: ${comparisons} | swaps: ${swaps} | pass: ${pass}`;
+                                await sleep(delay());
+
+                                if (arr[i] > arr[i + 1]) {
+                                    // swap
+                                    const tmp = arr[i];
+                                    arr[i] = arr[i + 1];
+                                    arr[i + 1] = tmp;
+                                    swaps += 1;
+                                    swappedThisPass = true;
+
+                                    renderBars(i, i + 1, end + 1);
+                                    statusEl.textContent = `comparisons: ${comparisons} | swaps: ${swaps} | pass: ${pass}`;
+                                    await sleep(delay());
+                                }
+                            }
+
+                            // optimization: if no swaps in a full pass, array already sorted (early exit)
+                            if (!abort && !swappedThisPass) break;
+                        }
+
+                        // final render: all sorted
+                        if (!abort) {
+                            renderBars(-1, -1, 0);
+                            statusEl.textContent += " | ✅ sorted";
+                        }
+
+                        running = false;
+                        paused = false;
+                        setButtonsForRun(false);
+                    }
+
+                    // -------- events --------
+                    nRange.addEventListener("input", () => {
+                        updateLabels();
+                    });
+
+                    speedRange.addEventListener("input", () => {
+                        updateLabels();
+                    });
+
+                    btnShuffle.addEventListener("click", () => {
+                        if (!running) shuffle();
+                    });
+
+                    btnReset.addEventListener("click", () => {
+                        resetAll();
+                    });
+
+                    btnStart.addEventListener("click", async () => {
+                        if (running) return;
+                        // ensure we have data
+                        if (!arr.length) shuffle();
+                        await bubbleSortAnimate();
+                    });
+
+                    btnPause.addEventListener("click", () => {
+                        if (!running) return;
+                        paused = !paused;
+                        btnPause.textContent = paused ? "▶ Resume" : "⏸ Pause";
+                    });
+
+                    // optional: auto-regenerate data when n changes (only if not running)
+                    nRange.addEventListener("change", () => {
+                        if (!running) shuffle();
+                    });
+
+                    // -------- init --------
+                    updateLabels();
+                    shuffle();
+                    setButtonsForRun(false);
+                })();
+            </script>
+        </section>
+
+
+        <!-- 20. EXERCISE 7: The Bad Loop -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 7: Mencari Duplikat (Lambat)</h2>
+                <p class="text-sm mb-4">Kode ini membandingkan setiap angka dengan semua angka lain. Boros waktu!</p>
+
+                <div class="editor-container">
+                    <textarea id="code7" class="editor-textarea">
+kartu = [1, 2, 3, 4, 5, 2] # Ada angka 2 ganda
+
+# Bandingkan kartu 1 dengan kartu 2, kartu 1 dengan kartu 3, dst...
+for i in range(len(kartu)):
+    for j in range(i + 1, len(kartu)):
+        if kartu[i] == kartu[j]:
+            print(f"Duplikat ditemukan: {kartu[i]}")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code7" data-out="out7" data-fb="fb7"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code7" data-out="out7" data-fb="fb7"
+                            data-expect="Duplikat" data-kws="for,for"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out7" class="output-area"></div>
+                </div>
+                <div id="fb7" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+       <!-- 21. Set Solution (Clear + SMA) -->
+<section class="slide">
+  <h2 class="text-2xl font-bold mb-2">Solusi: Keranjang Ajaib (<code>set</code>)</h2>
+  <p class="text-slate-600 mb-6">
+    <b>Masalah yang diselesaikan:</b> kita ingin tahu apakah ada <b>data duplikat</b> di sebuah daftar.
+    Kalau pakai perbandingan satu-satu, bisa jadi <b>loop ganda</b> (O(n²)).
+    Dengan <code>set</code>, cukup <b>1 loop</b> karena cek “sudah ada?” itu cepat.
+  </p>
+
+  <div class="grid md:grid-cols-2 gap-4 mb-6">
+    <!-- Slow -->
+    <div class="bg-red-50 p-6 rounded-xl border border-red-200">
+      <h3 class="font-bold text-red-800 mb-2">❌ Cara lambat: bandingkan semua pasangan</h3>
+      <p class="text-sm text-slate-700 mb-3">
+        Ini contoh “jebakan perulangan” (nested loop).
+      </p>
+      <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+        # O(n^2) — makin banyak data makin berat<br>
+        for i in range(len(data)):<br>
+        &nbsp;&nbsp;for j in range(i+1, len(data)):<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;if data[i] == data[j]:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;print("Duplikat:", data[i])
+      </div>
+    </div>
+
+    <!-- Fast -->
+    <div class="bg-green-50 p-6 rounded-xl border border-green-200">
+      <h3 class="font-bold text-green-900 mb-2">✅ Cara cepat: pakai <code>set</code> sebagai “keranjang”</h3>
+      <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700 mb-3">
+        <li>Ambil 1 item dari list.</li>
+        <li>Cek: item ini <b>sudah ada</b> di set belum?</li>
+        <li>Kalau belum → masukkan.</li>
+        <li>Kalau sudah → berarti duplikat.</li>
+      </ul>
+
+      <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+        # O(n) rata-rata — 1 loop saja<br>
+        terlihat = set()<br>
+        for x in data:<br>
+        &nbsp;&nbsp;if x in terlihat:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;print("Duplikat:", x)<br>
+        &nbsp;&nbsp;else:<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;terlihat.add(x)
+      </div>
+
+      <p class="mt-3 font-bold text-green-900">Cukup 1 kali jalan (1 loop) ✅</p>
+    </div>
+  </div>
+
+  <div class="bg-white p-6 rounded-xl border border-slate-200">
+    <h3 class="font-bold mb-2">Kenapa <code>set</code> bisa cepat?</h3>
+    <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
+      <li><code>set</code> memakai struktur mirip “peta lokasi” (hashing), jadi cek <code>x in set</code> biasanya cepat.</li>
+      <li><b>Trade-off:</b> butuh memori lebih, dan <code>set</code> tidak menyimpan urutan.</li>
+      <li><b>Catatan:</b> <code>set</code> otomatis menyimpan <b>nilai unik</b> (tidak ada duplikat).</li>
+    </ul>
+  </div>
+
+  <div class="mt-5 text-sm text-slate-600 text-center">
+    <b>Ringkasnya:</b> kalau kamu sering “cek ada atau tidak” / “deteksi duplikat” → <code>set</code> adalah senjata utama.
+  </div>
+</section>
+
+
+        <!-- 22. EXERCISE 8: Refactor to O(N) -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 8: Cara Cepat</h2>
+                <p class="text-sm mb-4">Gunakan <code>set()</code> untuk mencari duplikat hanya dengan 1 loop saja.</p>
+
+                <div class="editor-container">
+                    <textarea id="code8" class="editor-textarea">
+kartu = [1, 2, 3, 4, 5, 2]
+keranjang = set()
+
+for k in kartu:
+    if k in keranjang:
+        print(f"Duplikat: {k}")
+    else:
+        # Masukkan kartu k ke keranjang
+        ???</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code8" data-out="out8" data-fb="fb8"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code8" data-out="out8" data-fb="fb8"
+                            data-expect="Duplikat" data-kws="add"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out8" class="output-area"></div>
+                </div>
+                <div id="fb8" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 23. Algo Thinking (Clear + SMA) -->
+<section class="slide">
+  <h2 class="text-2xl font-bold mb-2">Trik 5: Pakai Matematika — Kurangi Loop, Pakai Rumus</h2>
+  <p class="text-slate-600 mb-6">
+    Ada kalanya kita tidak perlu menyuruh komputer menjumlah satu-satu.
+    Kalau pola masalahnya jelas, kita bisa ganti <b>O(n)</b> (loop) jadi <b>O(1)</b> (sekali hitung).
+  </p>
+
+  <div class="grid md:grid-cols-2 gap-4 mb-6">
+    <!-- Naive -->
+    <div class="bg-red-50 p-6 rounded-xl border border-red-200">
+      <h3 class="font-bold text-red-800 mb-2">❌ Cara biasa (loop): O(n)</h3>
+      <p class="text-sm text-slate-700 mb-3">
+        Menjumlah 1 sampai N dengan loop butuh N langkah (kalau N = 1.000.000, ya 1 juta iterasi).
+      </p>
+      <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+        total = 0<br>
+        for i in range(1, N+1):<br>
+        &nbsp;&nbsp;total += i
+      </div>
+    </div>
+
+    <!-- Smart -->
+    <div class="bg-green-50 p-6 rounded-xl border border-green-200">
+      <h3 class="font-bold text-green-900 mb-2">✅ Cara pintar (rumus): O(1)</h3>
+      <p class="text-sm text-slate-700 mb-3">
+        Pakai rumus jumlah deret aritmetika. Cukup hitung sekali.
+      </p>
+      <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+        total = N * (N + 1) // 2
+      </div>
+      <p class="text-xs text-green-900 mt-3">
+        Catatan: <code>//</code> itu pembagian bulat (hasilnya pasti integer).
+      </p>
+    </div>
+  </div>
+
+  <div class="bg-yellow-50 p-6 rounded-xl border border-yellow-200 mb-6">
+    <h3 class="font-bold mb-2">Kenapa rumusnya benar?</h3>
+    <p class="text-sm text-slate-700 mb-3">
+      Pasangkan angka dari ujung:
+      <code>1 + N</code>, <code>2 + (N-1)</code>, <code>3 + (N-2)</code>, ...<br>
+      Setiap pasangan jumlahnya sama: <b>(N+1)</b>.
+    </p>
+    <ul class="list-disc pl-5 text-sm text-slate-700 space-y-1">
+      <li>Kalau N genap → ada <b>N/2</b> pasangan → total = <b>(N/2) × (N+1)</b></li>
+      <li>Kalau N ganjil → konsepnya sama, tetap jatuh ke rumus yang sama</li>
+    </ul>
+  </div>
+
+  <div class="font-mono bg-slate-100 p-4 rounded text-center">
+    Rumus: <b>N × (N + 1) / 2</b>
+    <div class="text-xs text-slate-500 mt-2">
+      Contoh: N = 1.000.000 → total = <b>500000500000</b>
+    </div>
+  </div>
+
+  <div class="mt-5 text-sm text-slate-600 text-center">
+    <b>Mindset algoritma:</b> sebelum nulis loop, tanya dulu: “Ada pola/rumus yang bisa memotong langkah?”
+  </div>
+</section>
+
+
+        <!-- 24. EXERCISE 9: Gauss Formula -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Latihan 9: Trik Matematika</h2>
+                <p class="text-sm mb-4">Hitung jumlah 1 sampai 100 dengan rumus <code>n * (n+1) // 2</code>.</p>
+
+                <div class="editor-container">
+                    <textarea id="code9" class="editor-textarea">
+n = 100
+
+# Cara Loop (Lambat)
+# total = 0
+# for ...
+
+# Cara Rumus (Cepat)
+total = ???
+print(total)</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code9" data-out="out9" data-fb="fb9"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code9" data-out="out9" data-fb="fb9" data-expect="5050"
+                            data-kws="*"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out9" class="output-area"></div>
+                </div>
+                <div id="fb9" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 25. Memoization Intro (Clear + SMA) -->
+<section class="slide">
+  <h2 class="text-2xl font-bold mb-2">Trik 6: Jangan Lupa Ingatan — Memoization</h2>
+  <p class="text-slate-600 mb-6">
+    <b>Memoization</b> = menyimpan hasil perhitungan yang pernah dilakukan, supaya kalau ditanya lagi
+    kita tinggal <b>ambil dari “cache”</b>, bukan hitung ulang dari nol.
+  </p>
+
+  <div class="bg-purple-50 p-6 rounded-xl border border-purple-200 mb-6">
+    <h3 class="font-bold text-purple-900 mb-2">Analogi PR Matematika</h3>
+    <p class="text-sm text-slate-700">
+      Kalau kamu sudah mengerjakan soal No. 5, lalu guru tanya lagi… kamu <b>baca jawabanmu</b> (ingat),
+      bukan mengulang hitung panjang lebar.
+    </p>
+
+    <div class="flex gap-4 overflow-x-auto pb-2 mt-4">
+      <div class="min-w-[220px] bg-slate-100 p-4 rounded-lg text-center">
+        Hitung...<br><span class="text-xs text-slate-500">(butuh waktu)</span><br><b>Hasil: 5</b>
+      </div>
+      <div class="min-w-[220px] bg-slate-100 p-4 rounded-lg text-center">
+        Ditanya lagi...<br><span class="text-xs text-slate-500">(kalau lupa, hitung ulang)</span><br><b>Hasil: 5</b>
+      </div>
+      <div class="min-w-[220px] bg-purple-100 p-4 rounded-lg text-center border-2 border-purple-500 font-bold">
+        Simpan di cache!<br><span class="text-xs font-normal text-purple-900/80">(memoization)</span><br>
+        Langsung jawab <b>5</b> ✅
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <!-- Problem example -->
+    <div class="bg-white p-6 rounded-xl border border-slate-200">
+      <h3 class="font-bold mb-2">Contoh yang sering: Fibonacci</h3>
+      <p class="text-sm text-slate-700 mb-3">
+        Fibonacci klasik sering menghitung nilai yang sama berulang-ulang kalau pakai rekursi.
+      </p>
+      <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+        # Tanpa memoization: banyak hitung ulang<br>
+        def fib(n):<br>
+        &nbsp;&nbsp;if n &lt;= 1: return n<br>
+        &nbsp;&nbsp;return fib(n-1) + fib(n-2)
+      </div>
+      <p class="text-xs text-slate-500 mt-3">
+        Masalahnya: <code>fib(40)</code> bisa memanggil fungsi ribuan–jutaan kali.
+      </p>
+    </div>
+
+    <!-- Memo solution -->
+    <div class="bg-emerald-50 p-6 rounded-xl border border-emerald-200">
+      <h3 class="font-bold text-emerald-900 mb-2">Solusi: simpan hasilnya (cache)</h3>
+      <p class="text-sm text-slate-700 mb-3">
+        Kalau hasil <code>fib(k)</code> sudah pernah dihitung, langsung ambil dari cache.
+      </p>
+      <div class="bg-slate-900 p-4 rounded-lg text-slate-200 font-mono text-sm">
+        cache = {}<br>
+        def fib(n):<br>
+        &nbsp;&nbsp;if n in cache: return cache[n]<br>
+        &nbsp;&nbsp;if n &lt;= 1: return n<br>
+        &nbsp;&nbsp;cache[n] = fib(n-1) + fib(n-2)<br>
+        &nbsp;&nbsp;return cache[n]
+      </div>
+      <p class="text-xs text-emerald-900 mt-3">
+        Efeknya: dari “hitung ulang banyak” → jadi jauh lebih sedikit perhitungan.
+      </p>
+    </div>
+  </div>
+
+  <div class="mt-6 bg-slate-50 p-6 rounded-xl border border-slate-200">
+    <h3 class="font-bold mb-2">Kapan memoization berguna?</h3>
+    <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
+      <li>Ketika fungsi/rumus <b>dipanggil berulang</b> dengan input yang sama.</li>
+      <li>Terutama pada <b>rekursi</b> atau masalah yang punya <b>sub-masalah berulang</b> (Dynamic Programming).</li>
+      <li><b>Trade-off:</b> hemat waktu, tapi memakai <b>memori</b> untuk menyimpan cache.</li>
+    </ul>
+  </div>
+</section>
+
+
+        <!-- 26. Quiz 1 -->
+        <section class="slide">
+            <div class="max-w-xl mx-auto py-10">
+                <h2 class="text-xl font-bold mb-6">Quiz 1: Mana yang lebih cepat?</h2>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="mb-6 text-lg">Mencari nama teman di sekolah?</p>
+                    <div class="space-y-3">
+                        <button onclick="checkQuiz(this, false)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">A.
+                            Tanya satu-satu ke semua murid (Loop)</button>
+                        <button onclick="checkQuiz(this, true)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">B.
+                            Lihat daftar siswa dan langsung ke namanya (Dictionary)</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 27. Quiz 2 -->
+        <section class="slide">
+            <div class="max-w-xl mx-auto py-10">
+                <h2 class="text-xl font-bold mb-6">Quiz 2: Tumpukan Data</h2>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="mb-6 text-lg">Cara paling lambat (bikin komputer pusing) adalah...</p>
+                    <div class="space-y-3">
+                        <button onclick="checkQuiz(this, false)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">A.
+                            Mengambil buku paling atas (O(1))</button>
+                        <button onclick="checkQuiz(this, false)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">B.
+                            Membaca satu buku (O(n))</button>
+                        <button onclick="checkQuiz(this, true)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">C.
+                            Membandingkan setiap halaman buku A dengan buku B (O(N²))</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 28. Quiz 3 -->
+        <section class="slide">
+            <div class="max-w-xl mx-auto py-10">
+                <h2 class="text-xl font-bold mb-6">Quiz 3: Menempel Kata</h2>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <p class="mb-6 text-lg">Kalau mau menempel banyak kata jadi satu kalimat?</p>
+                    <div class="space-y-3">
+                        <button onclick="checkQuiz(this, true)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">A.
+                            Pakai "".join() (Cara Lem)</button>
+                        <button onclick="checkQuiz(this, false)"
+                            class="w-full text-left p-4 rounded-xl border border-slate-200 hover:bg-slate-50 transition">B.
+                            Pakai += (Salin ulang terus)</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 29. Challenge Final -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-xl font-bold mb-2">Final: Bos Terakhir</h2>
+                <p class="text-sm mb-4">Kode ini lambat karena cek list manual. Ubah `daftar_vip` jadi SET agar cepat!
+                </p>
+
+                <div class="editor-container">
+                    <textarea id="code10" class="editor-textarea">
+# Daftar tamu VIP (bayangkan ada 1 juta orang)
+daftar_vip = ["alice", "bob", "charlie", "delta", "echo"]
+# Trik: Ubah jadi set() di sini biar pengecekan instan
+# daftar_vip = ???
+
+tamu = "delta"
+
+# Jika pakai set, baris ini jadi super cepat
+if tamu in daftar_vip:
+    print("Silakan Masuk!")</textarea>
+                    <div class="flex gap-2 p-2 bg-slate-800 border-t border-slate-700">
+                        <button data-action="run" data-code="code10" data-out="out10" data-fb="fb10"
+                            class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-bold">▶
+                            Run</button>
+                        <button data-action="check" data-code="code10" data-out="out10" data-fb="fb10"
+                            data-expect="Silakan Masuk" data-kws="set"
+                            class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold">✓
+                            Check Answer</button>
+                    </div>
+                    <div id="out10" class="output-area"></div>
+                </div>
+                <div id="fb10" class="hidden mt-2"></div>
+            </div>
+        </section>
+
+        <!-- 30. Closing -->
+        <section class="slide">
+            <div class="max-w-2xl mx-auto text-center py-10">
+                <div class="text-6xl mb-4">🏆</div>
+                <h1 class="text-3xl font-bold text-slate-900 mb-4">Kamu Jagoan Coding!</h1>
+                <p class="text-lg text-slate-600 mb-8">
+                    Sekarang kamu tahu rahasia programmer hebat: Bukan cuma bisa nulis kode, tapi bisa nulis kode yang
+                    <b>Pintar & Cepat</b>.
+                </p>
+                <div class="p-6 bg-white border border-slate-200 rounded-2xl">
+                    <h3 class="font-bold mb-2">Ingat Mantra Ini:</h3>
+                    <ul class="text-left space-y-2 text-slate-600 text-sm">
+                        <li>🚀 Cari barang di Dictionary/Set, bukan List.</li>
+                        <li>🚀 Kalau sudah ketemu, Stop (Break)!</li>
+                        <li>🚀 Jangan lakukan hal yang sama berulang-ulang (Loop Ganda).</li>
+                        <li>🚀 Pakai Lem (.join) untuk menggabungkan kata.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation Script -->
+    <script>
+        const overlay = document.getElementById('accessOverlay');
+        const input = document.getElementById('accessCodeInput');
+        const btn = document.getElementById('accessBtn');
+        const error = document.getElementById('accessError');
+        const CODE = 'RGMDSHS25';
+
+        function checkCode() {
+            if (input.value.toUpperCase().trim() === CODE) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+            } else {
+                error.classList.remove('hidden');
+            }
+        }
+        btn.addEventListener('click', checkCode);
+        input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+        const slides = document.querySelectorAll('.slide');
+        const bar = document.getElementById('bar');
+        const counter = document.getElementById('counter');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            // Stop previous animations if needed
+            isAnimatingSearch = false; // flag to stop async loops
+
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (index + slides.length) % slides.length;
+            const newSlide = slides[currentSlide];
+            newSlide.classList.add('active');
+
+            // Auto Animate Logic
+            const animType = newSlide.getAttribute('data-animate');
+            if (animType === 'search') {
+                setTimeout(animateSearch, 500); // Small delay for smooth entry
+            } else if (animType === 'sort') {
+                setTimeout(() => {
+                    initSort(); // Reset first
+                    animateSort();
+                }, 500);
+            }
+
+            document.getElementById('btnPrev').disabled = currentSlide === 0;
+            document.getElementById('btnNext').disabled = currentSlide === slides.length - 1;
+            document.getElementById('btnPrev').style.opacity = currentSlide === 0 ? '0.4' : '1';
+            document.getElementById('btnNext').style.opacity = currentSlide === slides.length - 1 ? '0.4' : '1';
+
+            counter.innerText = currentSlide + 1;
+            bar.style.width = ((currentSlide + 1) / slides.length * 100) + '%';
+            window.scrollTo(0, 0);
+        }
+
+        document.getElementById('btnNext').addEventListener('click', () => showSlide(currentSlide + 1));
+        document.getElementById('btnPrev').addEventListener('click', () => showSlide(currentSlide - 1));
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+            if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+        });
+
+        function checkQuiz(btn, isCorrect) {
+            const parent = btn.parentElement;
+
+            Array.from(parent.children).forEach(b => {
+                b.className = "w-full text-left p-4 rounded-xl border border-slate-200 opacity-50 cursor-not-allowed";
+                b.disabled = true;
+            });
+
+            btn.classList.remove('opacity-50');
+            btn.classList.remove('border-slate-200');
+
+            if (isCorrect) {
+                btn.classList.add('bg-green-100', 'border-green-500', 'text-green-800');
+            } else {
+                btn.classList.add('bg-red-100', 'border-red-500', 'text-red-800');
+            }
+        }
+
+        /* --- ANIMATIONS --- */
+        let isAnimatingSearch = false; // Control flag
+
+        // Linear Search Animation
+        async function animateSearch() {
+            isAnimatingSearch = true;
+            const container = document.getElementById('searchDest');
+            const items = container.children;
+
+            // Reset
+            for (let item of items) {
+                item.className = "item-box w-12 h-12 border-2 border-slate-200 bg-white grid place-items-center rounded-lg text-2xl";
+                item.classList.remove("scanning", "found");
+            }
+
+            for (let i = 0; i < items.length; i++) {
+                if (!isAnimatingSearch) return; // Stop if slide changed
+
+                items[i].classList.add("scanning");
+                await new Promise(r => setTimeout(r, 600)); // Delay
+
+                if (items[i].getAttribute("data-target")) {
+                    items[i].classList.remove("scanning");
+                    items[i].classList.add("found");
+                    return;
+                }
+
+                items[i].classList.remove("scanning");
+            }
+        }
+
+        
+        async function animateSort() {
+            // Simple check to prevent double animation not perfect but okay for this context
+            if (sortContainer.getAttribute('data-running') === 'true') return;
+            sortContainer.setAttribute('data-running', 'true');
+
+            let steps = 0;
+            let n = sortArr.length;
+
+            for (let i = 0; i < n; i++) {
+                for (let j = 0; j < n - i - 1; j++) {
+                    if (!document.querySelector('.slide.active[data-animate="sort"]')) {
+                        sortContainer.setAttribute('data-running', 'false');
+                        return; // Stop if slide changed
+                    }
+
+                    steps++;
+                    sortStatus.innerText = `Steps: ${steps}`;
+
+                    renderSort([j, j + 1], n - i);
+                    await new Promise(r => setTimeout(r, 300));
+
+                    if (sortArr[j] > sortArr[j + 1]) {
+                        let temp = sortArr[j];
+                        sortArr[j] = sortArr[j + 1];
+                        sortArr[j + 1] = temp;
+                        renderSort([j, j + 1], n - i);
+                        await new Promise(r => setTimeout(r, 300));
+                    }
+                }
+            }
+            sortArr[0] = 99;
+            renderSort([], 0);
+            sortStatus.innerText = `Steps: ${steps} (Selesai!)`;
+            sortContainer.setAttribute('data-running', 'false');
+        }
+
+    </script>
+</body>
+
+</html>
