@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sesi 29: Modular Design</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        slate: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        body {
+            background-color: #f8fafc;
+            color: #0f172a;
+            overflow: hidden;
+        }
+
+        .slide {
+            display: none;
+            padding: 2rem;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Premium Components */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .shiny-text {
+            background: linear-gradient(to right, #4f46e5, #9333ea, #db2777);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-nav {
+            @apply px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-100 transition disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold uppercase tracking-wider text-slate-600;
+        }
+
+        /* Code Editor */
+        .editor-container {
+            position: relative;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            background: #1e293b;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 150px;
+            background: #0f172a;
+            color: #a5b4fc;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 1rem;
+            outline: none;
+            border: none;
+            resize: none;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .output-area {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            border-top: 1px solid #334155;
+            min-height: 3rem;
+            white-space: pre-wrap;
+        }
+
+        /* Code Flow Visual */
+        .code-flow {
+            position: relative;
+            border-radius: 0.5rem;
+            background: #0b1220;
+            border: 1px solid #1f2a44;
+        }
+
+        .code-flow::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 0%, rgba(99, 102, 241, 0.12) 50%, transparent 100%);
+            transform: translateX(-60%);
+            animation: codeFlow 3s linear infinite;
+            pointer-events: none;
+        }
+
+        .code-scan {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+            animation: scanLine 2.8s ease-in-out infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes codeFlow {
+            to {
+                transform: translateX(60%);
+            }
+        }
+
+        @keyframes scanLine {
+            0% {
+                top: 8%;
+                opacity: 0.2;
+            }
+
+            50% {
+                top: 88%;
+                opacity: 0.9;
+            }
+
+            100% {
+                top: 8%;
+                opacity: 0.2;
+            }
+        }
+
+        /* NEW ANIMATIONS FOR SLIDE 4 */
+        .monolith-scroll {
+            animation: infiniteScroll 5s linear infinite;
+        }
+
+        @keyframes infiniteScroll {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(-50%);
+            }
+        }
+
+        .modular-block {
+            opacity: 0.4;
+            filter: blur(1px);
+            transition: all 0.3s;
+        }
+
+        .modular-block.active {
+            opacity: 1;
+            filter: blur(0);
+            transform: scale(1.02);
+            border-color: #4ade80;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.2);
+        }
+
+        .modular-line {
+            width: 2px;
+            background: #334155;
+            margin: 0 auto;
+            height: 10px;
+            transition: all 0.3s;
+        }
+
+        .modular-line.active {
+            background: #4ade80;
+            height: 20px;
+            box-shadow: 0 0 10px #4ade80;
+        }
+
+        .syntax-kw {
+            color: #c084fc;
+            font-weight: bold;
+        }
+
+        /* Keyword */
+        .syntax-str {
+            color: #a5b4fc;
+        }
+
+        /* String */
+        .syntax-fn {
+            color: #60a5fa;
+        }
+
+        /* Function */
+        .syntax-com {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        /* Comment */
+
+        /* SLIDE 6: ROCKET ANIMATION */
+        @keyframes rocketShake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-2px) rotate(-1deg);
+            }
+
+            75% {
+                transform: translateX(2px) rotate(1deg);
+            }
+        }
+
+        @keyframes rocketFly {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(-120vh);
+            }
+        }
+
+        @keyframes fireBurn {
+            0% {
+                height: 10px;
+                opacity: 0.8;
+            }
+
+            100% {
+                height: 40px;
+                opacity: 1;
+            }
+        }
+
+        .rocket-idle {
+            animation: rocketShake 2s infinite ease-in-out;
+        }
+
+        .rocket-launching {
+            animation: rocketFly 3s ease-in forwards;
+        }
+
+        .fire {
+            width: 10px;
+            height: 10px;
+            background: #f59e0b;
+            border-radius: 50%;
+            margin: 0 auto;
+            transition: all 0.3s;
+        }
+
+        .fire.active {
+            background: #ef4444;
+            width: 20px;
+            box-shadow: 0 0 20px #ef4444;
+            animation: fireBurn 0.2s infinite alternate;
+        }
+
+        /* SLIDE 7: MAPPING INTERACTION */
+        .concept-card {
+            transition: all 0.3s;
+            border-right: 4px solid transparent;
+        }
+
+        .concept-card:hover {
+            transform: translateX(10px);
+            background: rgba(30, 41, 59, 0.8);
+            border-right-color: #6366f1;
+        }
+
+        .code-block-item {
+            transition: all 0.3s;
+            opacity: 0.5;
+            filter: grayscale(1);
+            transform: scale(0.95);
+        }
+
+        .code-block-item.active {
+            opacity: 1;
+            filter: grayscale(0);
+            transform: scale(1);
+            border-color: #6366f1;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+        }
+
+        /* SLIDE 10-12 ANIMATIONS */
+        @keyframes stampPop {
+            0% {
+                transform: scale(2);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(0.9);
+                opacity: 1;
+            }
+
+            75% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .stamp-mark {
+            animation: stampPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .robot-svg-path {
+            transition: all 0.5s ease;
+        }
+
+        @keyframes conveyorBase {
+            from {
+                background-position: 0 0;
+            }
+
+            to {
+                background-position: 40px 0;
+            }
+        }
+
+        .conveyor-belt {
+            background: repeating-linear-gradient(90deg, #334155 0px, #334155 2px, #1e293b 2px, #1e293b 40px);
+            animation: conveyorBase 1s linear infinite;
+        }
+
+        .conveyor-paused {
+            animation-play-state: paused;
+        }
+
+        @keyframes itemMove {
+            from {
+                left: -50px;
+            }
+
+            to {
+                left: 100%;
+            }
+        }
+
+        .factory-item {
+            position: absolute;
+            bottom: 20px;
+            animation: itemMove 4s linear forwards;
+        }
+
+        /* SLIDE 14-16 ANIMATIONS */
+        @keyframes rumble {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            25% {
+                transform: rotate(5deg);
+            }
+
+            75% {
+                transform: rotate(-5deg);
+            }
+
+            100% {
+                transform: rotate(0deg);
+            }
+        }
+
+        .rumbling {
+            animation: rumble 0.2s infinite;
+        }
+
+        .drawer-content {
+            transition: max-height 0.3s ease-out;
+            max-height: 0;
+            overflow: hidden;
+        }
+
+        .drawer-content.open {
+            max-height: 100px;
+        }
+
+        .car-token {
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes dizzySpin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .robot-dizzy {
+            animation: dizzySpin 0.5s linear infinite;
+        }
+
+        .robot-normal {
+            animation: bounce 1s infinite;
+        }
+
+        .scanner-beam {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80;
+            animation: scanDown 2s infinite;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @keyframes scanDown {
+            0% {
+                top: 0;
+                opacity: 0.5;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        /* SLIDE 18: FOLDER SORT */
+        .file-icon {
+            position: absolute;
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .file-icon:hover {
+            transform: scale(1.1) rotate(5deg);
+            z-index: 20;
+        }
+
+        .folder-target {
+            transition: all 0.3s;
+        }
+
+        .folder-target:hover {
+            transform: scale(1.05);
+            border-color: #6366f1;
+        }
+
+        .folder-target.active-drop {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #6366f1;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .draggable-item {
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.2s;
+        }
+
+        .draggable-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+
+        .drop-zone {
+            transition: all 0.3s;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #6366f1;
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .drop-zone.filled {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+            color: #4ade80;
+        }
+
+        /* Mission Box Styling */
+        .mission-box {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid #10b981;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .mission-title {
+            color: #10b981;
+            font-weight: 800;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mission-text {
+            color: #d1fae5;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* Robot Parts */
+        .robot-part {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #1e293b;
+            border: 2px solid #475569;
+            border-radius: 0.75rem;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .robot-part[data-type="head"] {
+            border-color: #60a5fa;
+        }
+
+        .robot-part[data-type="body"] {
+            border-color: #a78bfa;
+        }
+
+        .robot-part[data-type="leg"] {
+            border-color: #34d399;
+        }
+    </style>
+
+    <!-- PyScript Controller -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            if not hasattr(el, "getAttribute"): return
+            
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            if not code_id: return
+
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            code_val = code_el.value
+            
+            out_el.innerText = "Running..."
+            fb_el.classList.add("hidden")
+
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            try:
+                scope = {}
+                exec(code_val, scope)
+                result = capture.getvalue().strip()
+                out_el.innerText = result if result else "[No Output]"
+                
+                if action == "check":
+                    expect = el.getAttribute("data-expect")
+                    test = el.getAttribute("data-test")
+                    passed = True
+                    reasons = []
+                    
+                    if expect and passed:
+                        if expect.lower() not in result.lower():
+                            passed = False; reasons.append(f"Output harus ada: '{expect}'")
+                    
+                    if test and passed:
+                        try: exec(test, scope)
+                        except AssertionError: passed = False; reasons.append("Logika masih kurang tepat.")
+                        except Exception as e: passed = False; reasons.append(f"Error logika: {str(e)}")
+
+                    if passed:
+                        fb_el.innerText = "✅ Excellent! Code Berhasil."; fb_el.className = "mt-2 text-sm font-bold text-green-400 block"
+                    else:
+                        fb_el.innerText = "❌ " + "; ".join(reasons); fb_el.className = "mt-2 text-sm font-bold text-red-400 block"
+                        
+            except Exception as e:
+                out_el.innerText = f"⚠️ Error: {str(e)}"
+                fb_el.innerText = "Perbaiki error di kodemu dulu ya."; fb_el.className = "mt-2 text-sm font-bold text-red-400 block"
+                fb_el.classList.remove("hidden")
+            finally: 
+                sys.stdout = old_stdout
+
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Access Overlay -->
+    <div id="accessOverlay"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="glass-panel p-8 w-full max-w-sm text-center shadow-2xl bg-white/90">
+            <h2
+                class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">
+                SESSION 29</h2>
+            <p class="text-slate-500 mb-6 text-sm">Modular Design & Debugging</p>
+            <input id="accessCodeInput" type="text" autocomplete="off" placeholder="CODE..."
+                class="w-full p-3 rounded-lg bg-slate-50 border border-slate-300 text-center font-mono text-slate-800 mb-4 uppercase focus:border-indigo-500 outline-none transition">
+            <button id="accessBtn"
+                class="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-500 transition shadow-lg shadow-indigo-500/20">UNLOCK</button>
+            <p id="accessError" class="text-red-500 text-xs mt-2 hidden">KODE SALAH (Hint: RGMDSHS25)</p>
+        </div>
+    </div>
+
+    <!-- Interface -->
+    <header
+        class="fixed top-0 inset-x-0 h-16 bg-white/80 backdrop-blur z-50 border-b border-slate-200 flex items-center justify-between px-6">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 w-8 h-8 rounded-lg grid place-items-center font-bold text-white">29</div>
+            <div>
+                <div class="font-bold text-sm text-slate-800">Modular Design</div>
+                <div class="text-[10px] text-slate-500">Functions • Reusability • Debugging</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="slideIndicator" class="text-xs font-mono text-slate-500">1 / 20</span>
+        </div>
+    </header>
+
+    <div class="fixed top-16 left-0 w-full h-0.5 bg-slate-200 z-40">
+        <div id="progressBar"
+            class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 w-0 transition-all duration-300"></div>
+    </div>
+
+    <main class="w-full max-w-4xl mx-auto mt-20 mb-20 relative min-h-screen">
+
+        <!-- Slide 1: Hero -->
+        <section class="slide active items-center justify-center text-center">
+            <div
+                class="w-32 h-32 bg-indigo-500/10 rounded-full flex items-center justify-center mb-8 border border-indigo-500/50 shadow-[0_0_50px_rgba(99,102,241,0.3)] animate-pulse">
+                <span class="text-6xl">🧩</span>
+            </div>
+            <h1 class="text-6xl font-black mb-4"><span class="shiny-text">Modular Design</span></h1>
+            <p class="text-xl text-slate-600 max-w-lg mx-auto mb-4">Level Up: Dari Penulis Kode jadi <b>Arsitek
+                    Kode</b>! 🏗️</p>
+            <p class="text-sm text-slate-500 max-w-xl mx-auto mb-8 leading-relaxed">
+                Halo Calon Programmer Hebat! 👋<br>
+                Hari ini kita belajar rahasia bikin aplikasi raksasa (seperti Game atau Robot) tanpa pusing.
+                Kuncinya: <b>Jangan bikin semuanya sekaligus!</b> Tapi rakit pelan-pelan.
+            </p>
+            <div class="glass-panel px-6 py-2 bg-white/50">
+                <code class="text-sm font-mono text-indigo-600">import robot_parts</code>
+            </div>
+        </section>
+
+        <!-- Slide 2: Analogy -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4 text-center text-slate-800">Mainan Lem vs Lego 🧱</h2>
+            <p class="text-sm text-slate-500 mb-8 text-center max-w-2xl mx-auto">
+                Bayangkan kamu punya dua jenis mainan robot. Mana yang lebih asik?
+            </p>
+            <div class="grid grid-cols-2 gap-8 h-full items-center">
+                <div
+                    class="glass-panel p-8 text-center hover:border-red-500/50 transition group h-96 flex flex-col items-center justify-center relative overflow-hidden bg-white/50">
+                    <div class="absolute inset-0 bg-red-100/30 pointer-events-none"></div>
+                    <div class="text-6xl mb-4 grayscale group-hover:grayscale-0 transition duration-500">🗿</div>
+                    <h3 class="text-xl font-bold text-red-500 mb-2">Monolith (Mainan Di-Lem)</h3>
+                    <div
+                        class="text-xs text-slate-600 text-left space-y-3 bg-white/70 p-4 rounded-xl border border-red-200">
+                        <p>❌ <b>Semua nempel jadi satu.</b></p>
+                        <p>❌ Kalau tangan robot patah, kamu <b>nggak bisa ganti tangannya doang</b>. Harus buang satu
+                            robot & beli baru!</p>
+                        <p>❌ Susah banget kalau mau upgrade (misal: ganti kaki jadi roda).</p>
+                    </div>
+                </div>
+                <div
+                    class="glass-panel p-8 text-center hover:border-green-500/50 transition group h-96 flex flex-col items-center justify-center relative overflow-hidden bg-white/50">
+                    <div class="absolute inset-0 bg-green-100/30 pointer-events-none"></div>
+                    <div class="text-6xl mb-4 group-hover:scale-110 transition duration-500">🤖</div>
+                    <h3 class="text-xl font-bold text-green-600 mb-2">Modular (Lego)</h3>
+                    <div
+                        class="text-xs text-slate-600 text-left space-y-3 bg-white/70 p-4 rounded-xl border border-green-200">
+                        <p>✅ <b>Terpisah-pisah (Parts).</b></p>
+                        <p>✅ Kalau tangan rusak? Cabut aja, pasang tangan baru. Robot selamat! 🎉</p>
+                        <p>✅ Bisa tukar-tukar bagian sesuka hati. Keren kan?</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: Function Concept -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4">Function = Bagian Robot 🦾</h2>
+            <p class="text-slate-300 mb-4 max-w-2xl">
+                Di Python, "kepingan lego" itu namanya <b>Function</b> (Fungsi).<br>
+                Satu Function itu seperti satu <b>Special Skill</b>. Dia cuma jago melakukan SATU hal saja.
+            </p>
+
+            <div class="space-y-4">
+                <div
+                    class="glass-panel p-4 flex items-center gap-4 hover:bg-slate-800/50 transition group border-l-4 border-blue-500">
+                    <div class="robot-part group-hover:scale-110 transition shrink-0" data-type="head">👀</div>
+                    <div>
+                        <code class="text-blue-400 font-bold text-lg">def kepala():</code>
+                        <p class="text-xs text-slate-400 mt-1">
+                            Isinya kode untuk <b>Melihat & Bicara</b>. <br>
+                            <i>"Jangan suruh kepala buat jalan ya, dia nggak punya kaki!"</i>
+                        </p>
+                    </div>
+                </div>
+                <div
+                    class="glass-panel p-4 flex items-center gap-4 hover:bg-slate-800/50 transition group border-l-4 border-purple-500">
+                    <div class="robot-part group-hover:scale-110 transition shrink-0" data-type="body">❤️</div>
+                    <div>
+                        <code class="text-purple-400 font-bold text-lg">def badan():</code>
+                        <p class="text-xs text-slate-400 mt-1">
+                            Isinya kode untuk <b>Mesin & Baterai</b>. <br>
+                            <i>"Ini pusat energinya robot."</i>
+                        </p>
+                    </div>
+                </div>
+                <div
+                    class="glass-panel p-4 flex items-center gap-4 hover:bg-slate-800/50 transition group border-l-4 border-green-500">
+                    <div class="robot-part group-hover:scale-110 transition shrink-0" data-type="leg">🦵</div>
+                    <div>
+                        <code class="text-green-400 font-bold text-lg">def kaki():</code>
+                        <p class="text-xs text-slate-400 mt-1">
+                            Isinya kode untuk <b>Maju & Lompat</b>.<br>
+                            <i>"Tugasnya cuma satu: Gerak!"</i>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: Code Comparison (Redesigned) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Visualisasi: Monolith vs Modular 🎨</h2>
+            <p class="text-sm text-slate-400 mb-6 max-w-3xl">
+                Coba rasakan perbedaannya. Monolith (Kiri) terasa berat dan penuh. Modular (Kanan) terasa mengalir dan
+                terstruktur.
+            </p>
+
+            <div class="grid grid-cols-2 gap-8 h-96">
+                <!-- Monolith Visual -->
+                <div class="glass-panel border-red-900/40 relative overflow-hidden flex flex-col group">
+                    <div class="absolute inset-0 bg-red-950/20 z-0"></div>
+                    <div
+                        class="relative z-10 p-4 border-b border-red-500/20 bg-red-950/30 flex justify-between items-center">
+                        <span class="text-xs font-bold text-red-400 uppercase tracking-widest">⚠️ Monolith Code</span>
+                        <span class="text-[10px] text-red-300 animate-pulse">Processing Heavy Load...</span>
+                    </div>
+
+                    <!-- Scrolling Code -->
+                    <div class="relative flex-1 overflow-hidden opacity-70">
+                        <div
+                            class="monolith-scroll p-4 font-mono text-[10px] leading-relaxed text-red-200/60 whitespace-nowrap">
+                            <!-- Repeated dummy code for effect -->
+                            print("INIT_SYSTEM_CORE_V9"); var x = 999; check_memory();<br>
+                            if error > 0: panic(); else: continue_process();<br>
+                            load_assets(); verify_integrity(); connect_db();<br>
+                            print("WARNING: CPU TEMP HIGH"); cooling_system = False;<br>
+                            # SPAGHETTI CODE START<br>
+                            a = b + c * d / e; while True: run_forever();<br>
+                            print("User Login"); auth_user(); validate_token();<br>
+                            check_permission(); grant_access(); log_activity();<br>
+                            # ERROR LOCATED HERE? MAYBE? WHO KNOWS!<br>
+                            print("INIT_SYSTEM_CORE_V9"); var x = 999; check_memory();<br>
+                            if error > 0: panic(); else: continue_process();<br>
+                            load_assets(); verify_integrity(); connect_db();<br>
+                            print("WARNING: CPU TEMP HIGH"); cooling_system = False;<br>
+                            # SPAGHETTI CODE START<br>
+                            a = b + c * d / e; while True: run_forever();<br>
+                            print("User Login"); auth_user(); validate_token();<br>
+                            check_permission(); grant_access(); log_activity();<br>
+                            # ERROR LOCATED HERE? MAYBE? WHO KNOWS!<br>
+                            print("INIT_SYSTEM_CORE_V9"); var x = 999; check_memory();<br>
+                            if error > 0: panic(); else: continue_process();<br>
+                            load_assets(); verify_integrity(); connect_db();<br>
+                            print("WARNING: CPU TEMP HIGH"); cooling_system = False;<br>
+                        </div>
+                        <!-- Red Scanline Overlay -->
+                        <div
+                            class="absolute inset-0 bg-gradient-to-b from-transparent via-red-500/10 to-transparent h-1/4 animate-[scanLine_4s_linear_infinite] pointer-events-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modular Visual -->
+                <div class="glass-panel border-green-900/40 relative flex flex-col">
+                    <div class="p-4 border-b border-green-500/20 bg-green-950/30 flex justify-between items-center">
+                        <span class="text-xs font-bold text-green-400 uppercase tracking-widest">✨ Modular Flow</span>
+                        <div class="flex gap-1">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse delay-75"></span>
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse delay-150"></span>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 p-6 relative flex flex-col justify-center items-center" id="modularContainer">
+                        <!-- Block 1 -->
+                        <div
+                            class="modular-block w-64 bg-slate-900 border border-slate-700 p-3 rounded-lg mb-0 text-xs font-mono shadow-lg relative">
+                            <span class="text-[10px] text-blue-400 absolute top-1 right-2">def</span>
+                            <span class="syntax-fn">kepala()</span>:
+                            <div class="pl-4 text-slate-500 text-[10px]">print("Mata OK")</div>
+                        </div>
+
+                        <!-- Line -->
+                        <div class="modular-line"></div>
+
+                        <!-- Block 2 -->
+                        <div
+                            class="modular-block w-64 bg-slate-900 border border-slate-700 p-3 rounded-lg mb-0 text-xs font-mono shadow-lg relative">
+                            <span class="text-[10px] text-purple-400 absolute top-1 right-2">def</span>
+                            <span class="syntax-fn">badan()</span>:
+                            <div class="pl-4 text-slate-500 text-[10px]">print("Mesin OK")</div>
+                        </div>
+
+                        <!-- Line -->
+                        <div class="modular-line"></div>
+
+                        <!-- Main Block -->
+                        <div
+                            class="modular-block w-64 bg-slate-800 border-2 border-slate-600 p-3 rounded-lg text-xs font-mono shadow-xl relative mt-1">
+                            <div class="text-[10px] text-slate-400 mb-1 border-b border-slate-700 pb-1">Main Program
+                            </div>
+                            <span class="syntax-fn">kepala()</span><br>
+                            <span class="syntax-fn">badan()</span>
+                            <div class="text-[10px] text-green-400 mt-1 italic" id="modularStatus">Waiting...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Animation Script for this Slide -->
+            <script>
+                // Modular Code Animation
+                setInterval(() => {
+                    const blocks = document.querySelectorAll('.modular-block');
+                    const lines = document.querySelectorAll('.modular-line');
+                    const status = document.getElementById('modularStatus');
+
+                    if (!blocks.length) return;
+
+                    // Reset
+                    blocks.forEach(b => b.classList.remove('active'));
+                    lines.forEach(l => l.classList.remove('active'));
+                    status.innerText = "Waiting...";
+                    status.className = "text-[10px] text-slate-500 mt-1 italic";
+
+                    // Step 1: Head
+                    setTimeout(() => {
+                        blocks[0].classList.add('active');
+                        status.innerText = "Running kepala()...";
+                        status.className = "text-[10px] text-blue-400 mt-1 italic font-bold";
+                    }, 500);
+
+                    // Step 2: Line 1
+                    setTimeout(() => lines[0].classList.add('active'), 1500);
+
+                    // Step 3: Body
+                    setTimeout(() => {
+                        blocks[1].classList.add('active');
+                        status.innerText = "Running badan()...";
+                        status.className = "text-[10px] text-purple-400 mt-1 italic font-bold";
+                    }, 2000);
+
+                    // Step 4: Line 2
+                    setTimeout(() => lines[1].classList.add('active'), 3000);
+
+                    // Step 5: Main
+                    setTimeout(() => {
+                        blocks[2].classList.add('active');
+                        status.innerText = "All Systems GO! ✅";
+                        status.className = "text-[10px] text-green-400 mt-1 italic font-bold";
+                    }, 3500);
+
+                }, 5000);
+            </script>
+        </section>
+
+        <!-- Slide 5: Interactive Assembly -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Ayo Rakit Robotmu! 🛠️</h2>
+            <p class="text-sm text-slate-400 mb-8">Drag bagian robot ke slot yang sesuai.</p>
+            <p class="text-xs text-slate-400 mb-6">Langkah: seret kepala ke slot Kepala, badan ke Badan, kaki ke L dan
+                R.</p>
+
+            <div class="flex justify-center gap-6 mb-12 min-h-[80px]">
+                <div class="draggable-item robot-part cursor-grab hover:scale-110" draggable="true" data-type="head">👀
+                </div>
+                <div class="draggable-item robot-part cursor-grab hover:scale-110" draggable="true" data-type="body">❤️
+                </div>
+                <div class="draggable-item robot-part cursor-grab hover:scale-110" draggable="true" data-type="leg">🦵
+                </div>
+            </div>
+
+            <div class="w-64 mx-auto flex flex-col gap-2 items-center relative">
+                <div class="drop-zone w-24 h-24 border-2 border-dashed border-slate-600 rounded-xl flex items-center justify-center text-xs text-slate-500"
+                    data-accept="head">Kepala</div>
+                <div class="drop-zone w-32 h-32 border-2 border-dashed border-slate-600 rounded-xl flex items-center justify-center text-xs text-slate-500"
+                    data-accept="body">Badan</div>
+                <div class="flex gap-2">
+                    <div class="drop-zone w-12 h-24 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center text-[8px] text-slate-500"
+                        data-accept="leg">L</div>
+                    <div class="drop-zone w-12 h-24 border-2 border-dashed border-slate-600 rounded-lg flex items-center justify-center text-[8px] text-slate-500"
+                        data-accept="leg">R</div>
+                </div>
+            </div>
+            <div id="assemblyFeedback" class="mt-8 text-center h-8"></div>
+        </section>
+
+        <!-- Slide 6: Decomposition (Rocket Mission) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Decomposition: Misi Roket 🚀</h2>
+            <p class="text-sm text-slate-400 mb-6 max-w-2xl">
+                Bagaimana cara meluncurkan roket? Jangan pusing! Pecah misinya jadi 3 langkah kecil.<br>
+                <span class="text-xs text-indigo-400">Klik tombol urut (1-2-3) untuk menjalankan
+                    fungsi-fungsinya.</span>
+            </p>
+
+            <div class="grid grid-cols-2 gap-8 h-96 items-end">
+                <!-- Control Panel -->
+                <div class="flex flex-col gap-4 self-center">
+                    <div class="glass-panel p-4 border-l-4 border-yellow-500">
+                        <h3 class="text-yellow-400 font-bold text-sm mb-1">LANGKAH 1: BBM</h3>
+                        <p class="text-xs text-slate-400 mb-2">Isi tangki bahan bakar dulu.</p>
+                        <button onclick="rocketAction(1)" id="btnRocket1"
+                            class="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded text-xs font-mono transition">def
+                            isi_bensin()</button>
+                    </div>
+                    <div class="glass-panel p-4 border-l-4 border-blue-500 opacity-50 pointer-events-none transition"
+                        id="panelRocket2">
+                        <h3 class="text-blue-400 font-bold text-sm mb-1">LANGKAH 2: SISTEM</h3>
+                        <p class="text-xs text-slate-400 mb-2">Cek semua mesin & radar.</p>
+                        <button onclick="rocketAction(2)" id="btnRocket2"
+                            class="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded text-xs font-mono transition">def
+                            cek_mesin()</button>
+                    </div>
+                    <div class="glass-panel p-4 border-l-4 border-red-500 opacity-50 pointer-events-none transition"
+                        id="panelRocket3">
+                        <h3 class="text-red-400 font-bold text-sm mb-1">LANGKAH 3: LUNCUR</h3>
+                        <p class="text-xs text-slate-400 mb-2">Hitung mundur dan terbang!</p>
+                        <button onclick="rocketAction(3)" id="btnRocket3"
+                            class="w-full py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded text-xs font-mono transition">def
+                            luncurkan()</button>
+                    </div>
+                </div>
+
+                <!-- Visual Scene -->
+                <div class="glass-panel h-full relative flex items-end justify-center overflow-hidden bg-slate-900/50">
+                    <!-- Stars Background -->
+                    <div
+                        class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30">
+                    </div>
+
+                    <!-- Rocket -->
+                    <div id="theRocket" class="relative z-10 text-center transition-all duration-500"
+                        style="bottom: 20px;">
+                        <div class="text-6xl filter drop-shadow-lg">🚀</div>
+                        <div class="fire mx-auto mt-1" id="rocketFire"></div>
+                    </div>
+
+                    <!-- Status Text -->
+                    <div class="absolute top-4 right-4 text-right">
+                        <div class="text-[10px] text-slate-500">SYSTEM STATUS</div>
+                        <div id="rocketStatus" class="text-xl font-bold font-mono text-red-500 animate-pulse">OFFLINE
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="absolute bottom-0 left-0 h-1 bg-green-500 transition-all duration-500" style="width: 0%"
+                        id="rocketProgress"></div>
+                </div>
+            </div>
+
+            <script>
+                let rocketStep = 0;
+                function rocketAction(step) {
+                    if (step === 1) {
+                        rocketStep = 1;
+                        document.getElementById('rocketStatus').innerText = "FUELING...";
+                        document.getElementById('rocketStatus').className = "text-xl font-bold font-mono text-yellow-500";
+                        document.getElementById('rocketProgress').style.width = "33%";
+                        document.getElementById('btnRocket1').classList.add('bg-green-600', 'text-white', 'border-green-500');
+                        document.getElementById('btnRocket1').innerText = "✓ Selesai";
+                        document.getElementById('btnRocket1').disabled = true;
+
+                        document.getElementById('panelRocket2').classList.remove('opacity-50', 'pointer-events-none');
+                    }
+                    if (step === 2) {
+                        rocketStep = 2;
+                        document.getElementById('rocketStatus').innerText = "SYSTEMS GO";
+                        document.getElementById('rocketStatus').className = "text-xl font-bold font-mono text-blue-500";
+                        document.getElementById('rocketProgress').style.width = "66%";
+                        document.getElementById('theRocket').classList.add('rocket-idle'); // Shake
+                        document.getElementById('btnRocket2').classList.add('bg-green-600', 'text-white', 'border-green-500');
+                        document.getElementById('btnRocket2').innerText = "✓ Selesai";
+                        document.getElementById('btnRocket2').disabled = true;
+
+                        document.getElementById('panelRocket3').classList.remove('opacity-50', 'pointer-events-none');
+                    }
+                    if (step === 3) {
+                        rocketStep = 3;
+                        document.getElementById('rocketStatus').innerText = "LIFTOFF! 🚀";
+                        document.getElementById('rocketStatus').className = "text-xl font-bold font-mono text-green-500";
+                        document.getElementById('rocketProgress').style.width = "100%";
+                        document.getElementById('rocketFire').classList.add('active');
+
+                        setTimeout(() => {
+                            document.getElementById('theRocket').classList.remove('rocket-idle');
+                            document.getElementById('theRocket').classList.add('rocket-launching');
+                        }, 500);
+
+                        document.getElementById('btnRocket3').classList.add('bg-green-600', 'text-white', 'border-green-500');
+                        document.getElementById('btnRocket3').innerText = "✓ Selesai";
+                        document.getElementById('btnRocket3').disabled = true;
+                    }
+                }
+            </script>
+        </section>
+
+        <!-- Slide 7: Concept to Python (Interactive Map) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Dari Bahasa Manusia ke Python 🧠</h2>
+            <p class="text-sm text-slate-400 mb-6">
+                Komputer tidak paham "Masak Mie". Komputer butuh fungsi spesifik.<br>
+                <span class="text-xs text-indigo-400">Arahkan mouse ke kartu kiri untuk melihat terjemahan
+                    kodenya.</span>
+            </p>
+
+            <div class="grid grid-cols-2 gap-12 h-96 items-center">
+
+                <!-- Left: Human Thoughts -->
+                <div class="space-y-4 relative">
+                    <div class="absolute -right-6 top-1/2 -translate-y-1/2 text-2xl text-slate-600 animate-pulse">➡️
+                    </div>
+
+                    <div class="concept-card bg-slate-800 p-4 rounded-lg cursor-pointer flex items-center gap-4"
+                        onmouseenter="highlightCode(1)" onmouseleave="highlightCode(0)">
+                        <span class="text-2xl">🛒</span>
+                        <div>
+                            <div class="font-bold text-slate-200 text-sm">1. Beli Bahannya</div>
+                            <div class="text-[10px] text-slate-500">Input data belanjaan user</div>
+                        </div>
+                    </div>
+
+                    <div class="concept-card bg-slate-800 p-4 rounded-lg cursor-pointer flex items-center gap-4"
+                        onmouseenter="highlightCode(2)" onmouseleave="highlightCode(0)">
+                        <span class="text-2xl">🧮</span>
+                        <div>
+                            <div class="font-bold text-slate-200 text-sm">2. Hitung Totalnya</div>
+                            <div class="text-[10px] text-slate-500">Kalkulasi harga x jumlah</div>
+                        </div>
+                    </div>
+
+                    <div class="concept-card bg-slate-800 p-4 rounded-lg cursor-pointer flex items-center gap-4"
+                        onmouseenter="highlightCode(3)" onmouseleave="highlightCode(0)">
+                        <span class="text-2xl">🧾</span>
+                        <div>
+                            <div class="font-bold text-slate-200 text-sm">3. Cetak Struk</div>
+                            <div class="text-[10px] text-slate-500">Tampilkan hasil ke layar</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Python Code -->
+                <div
+                    class="bg-black/40 p-6 rounded-xl border border-slate-700 font-mono text-xs h-full flex flex-col justify-center space-y-4 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-2 text-[10px] text-slate-500 font-bold tracking-widest">PYTHON
+                        SCRIPT</div>
+
+                    <div id="codeBlock1"
+                        class="code-block-item p-3 border-l-2 border-transparent rounded bg-slate-900/50">
+                        <span class="text-purple-400">def</span> <span class="text-blue-400">beli_bahan</span>():<br>
+                        &nbsp;&nbsp;item = <span class="text-yellow-300">input</span>(<span class="text-green-300">"Mau
+                            beli apa?"</span>)<br>
+                        &nbsp;&nbsp;<span class="text-purple-400">return</span> item
+                    </div>
+
+                    <div id="codeBlock2"
+                        class="code-block-item p-3 border-l-2 border-transparent rounded bg-slate-900/50">
+                        <span class="text-purple-400">def</span> <span
+                            class="text-blue-400">hitung_harga</span>(item):<br>
+                        &nbsp;&nbsp;total = 5000 * 2<br>
+                        &nbsp;&nbsp;<span class="text-purple-400">return</span> total
+                    </div>
+
+                    <div id="codeBlock3"
+                        class="code-block-item p-3 border-l-2 border-transparent rounded bg-slate-900/50">
+                        <span class="text-purple-400">def</span> <span
+                            class="text-blue-400">cetak_struk</span>(total):<br>
+                        &nbsp;&nbsp;<span class="text-yellow-300">print</span>(<span class="text-green-300">"Total:
+                            "</span> + total)<br>
+                        &nbsp;&nbsp;<span class="text-gray-500"># Selesai!</span>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function highlightCode(id) {
+                    // Reset all
+                    document.querySelectorAll('.code-block-item').forEach(el => {
+                        el.classList.remove('active');
+                    });
+
+                    if (id > 0) {
+                        const target = document.getElementById('codeBlock' + id);
+                        target.classList.add('active');
+                    }
+                }
+            </script>
+        </section>
+
+        <!-- Slide 8: Refactoring Example -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-6">Refactoring: Merapikan Kode 🧹</h2>
+            <p class="text-xs text-slate-400 mb-4">Refactoring = merapikan kode tanpa mengubah hasilnya.</p>
+            <div class="grid grid-cols-2 gap-6 text-xs h-96">
+                <div class="glass-panel p-4 border-red-500/30">
+                    <h3 class="text-red-400 font-bold mb-2">BEFORE (Spaghetti Code)</h3>
+                    <pre class="text-slate-500 font-mono">
+# Semua jadi satu
+a = int(input())
+b = int(input())
+op = input()
+
+if op == '+':
+    hasil = a + b
+    print(hasil)
+elif op == '-':
+    hasil = a - b
+    print(hasil)
+else:
+    print("Error")
+                    </pre>
+                </div>
+                <div class="glass-panel p-4 border-green-500/30">
+                    <h3 class="text-green-400 font-bold mb-2">AFTER (Modular)</h3>
+                    <pre class="text-indigo-300 font-mono">
+def hitung(a, b, op):
+    if op == '+': return a + b
+    if op == '-': return a - b
+    return 0
+
+def main():
+    a = int(input())
+    b = int(input())
+    print(hitung(a, b, '+'))
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: Exercise 1 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Latihan 1: Pecah Telur 🥚</h2>
+            <p class="text-sm text-slate-400 mb-4">Pecah kode di bawah menjadi 2 fungsi: `siapkan_wajan()` dan
+                `masak_telur()`.</p>
+            <p class="text-xs text-slate-400 mb-4">Isi kedua fungsi dengan print sederhana, lalu panggil keduanya.</p>
+
+            <div class="editor-container">
+                <textarea id="code1" class="editor-textarea">
+# Ubah kode ini jadi 2 fungsi!
+
+def siapkan_wajan():
+    pass # Tulis print di sini
+
+def masak_telur():
+    pass # Tulis print di sini
+
+# Panggil fungsinya
+siapkan_wajan()
+masak_telur()
+</textarea>
+            </div>
+
+            <div class="flex gap-2 mt-4">
+                <button data-action="run" data-code="code1" data-out="out1" data-fb="fb1"
+                    class="px-4 py-2 bg-indigo-600 rounded-lg text-sm font-bold shadow hover:bg-indigo-500">▶
+                    RUN</button>
+                <button data-action="check" data-code="code1" data-out="out1" data-fb="fb1" data-expect="wajan"
+                    data-test="assert 'siapkan_wajan' in locals() and 'masak_telur' in locals()"
+                    class="px-4 py-2 bg-emerald-600 rounded-lg text-sm font-bold shadow hover:bg-emerald-500">✓
+                    CHECK</button>
+            </div>
+            <div id="out1" class="output-area mt-2 rounded-lg"></div>
+            <div id="fb1" class="hidden"></div>
+        </section>
+
+        <!-- Slide 10: Reusability (Stamp) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Jurus Stempel Cepat ⚡</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">📢 MISSION: BUILD ARMY BADGES</div>
+                <div class="mission-text">
+                    Komandan: "Prajurit! Kita butuh 100 lambang bintang untuk seragam pasukan robot SEKARANG!"<br>
+                    Kamu: "Siap! Tapi kalau gambar satu-satu bisa gempor..."
+                </div>
+            </div>
+
+            <p class="text-sm text-slate-400 mb-6 max-w-2xl">
+                Solusinya? Jangan gambar manual. Buat satu "Stempel" (Function), lalu cetak berkali-kali!
+            </p>
+
+            <div class="grid grid-cols-2 gap-12 h-96 items-center">
+                <!-- Manual Way -->
+                <div
+                    class="glass-panel p-6 text-center opacity-50 relative overflow-hidden h-full flex flex-col items-center justify-center">
+                    <div class="absolute top-2 right-2 text-[10px] text-red-400 uppercase font-bold">Cara Lama (Manual)
+                    </div>
+                    <div class="text-4xl mb-2">✍️</div>
+                    <p class="text-xs text-slate-400 mb-4">Gambar satu-satu...</p>
+                    <div class="grid grid-cols-3 gap-2 w-32 mx-auto">
+                        <span class="text-2xl text-slate-600">★</span>
+                        <span class="text-2xl text-slate-600">★</span>
+                        <span class="text-2xl text-slate-600">★</span>
+                    </div>
+                    <p class="text-[10px] text-red-400 mt-4 italic">"Duh pegel..."</p>
+                </div>
+
+                <!-- Function Way -->
+                <div
+                    class="glass-panel p-6 text-center h-full flex flex-col items-center justify-center relative bg-indigo-900/20 border-indigo-500/50">
+                    <div class="absolute top-2 right-2 text-[10px] text-green-400 uppercase font-bold">Cara Programmer
+                    </div>
+
+                    <button id="stampBtn" onclick="doStamp()"
+                        class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-lg hover:scale-105 transition font-bold mb-6 flex items-center gap-2 mx-auto z-10 relative">
+                        <span>🔨 PAKAI STEMPEL!</span>
+                    </button>
+
+                    <div id="stampArea"
+                        class="w-full h-40 bg-slate-900 rounded-lg border border-slate-700 relative overflow-hidden flex flex-wrap content-start gap-2 p-4">
+                        <div
+                            class="text-[10px] text-slate-600 absolute inset-0 flex items-center justify-center pointer-events-none">
+                            Kertas Kosong</div>
+                    </div>
+
+                    <div class="mt-4 bg-black/50 p-2 rounded text-xs font-mono text-indigo-300 w-full text-left">
+                        <span class="text-purple-400">def</span> <span
+                            class="text-blue-400">stempel_bintang</span>():<br>
+                        &nbsp;&nbsp;<span class="text-yellow-300">print</span>("★")
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function doStamp() {
+                    const area = document.getElementById('stampArea');
+                    if (area.children.length > 20) area.innerHTML = ''; // Reset if full
+
+                    // Create Star
+                    const star = document.createElement('div');
+                    star.className = 'text-2xl text-yellow-400 stamp-mark inline-block';
+                    star.innerText = '★';
+                    area.appendChild(star);
+
+                    // Play Sound Effect (optional visual pulse elsewhere)
+                    const btn = document.getElementById('stampBtn');
+                    btn.classList.add('scale-95');
+                    setTimeout(() => btn.classList.remove('scale-95'), 100);
+                }
+            </script>
+        </section>
+
+        <!-- Slide 11: Parameter (Magic Paint) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Mesin Cat Ajaib 🎨</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">📢 MISSION: CAMOUFLAGE MODE</div>
+                <div class="mission-text">
+                    Komandan: "Kita butuh Robot Merah untuk gurun, Biru untuk laut, dan Ungu untuk malam!"<br>
+                    Masalah: "Masa kita harus bikin 3 pabrik cat berbeda? Boros tempat!"
+                </div>
+            </div>
+
+            <p class="text-sm text-slate-400 mb-6 max-w-2xl">
+                Solusinya? Pakai satu mesin saja, tapi kasih "Input" warna yang dimau. Input itu namanya
+                <b>Parameter</b>.
+            </p>
+
+            <div class="flex gap-8 items-center h-full max-w-4xl mx-auto">
+                <!-- Code Panel -->
+                <div class="w-1/3">
+                    <div class="glass-panel p-4 font-mono text-sm">
+                        <div class="mb-4 border-b border-slate-700 pb-2 text-[10px] text-slate-400">DEFINISI FUNGSI
+                        </div>
+                        <span class="text-purple-400">def</span> <span class="text-blue-400">cat_robot</span>(<span
+                            class="text-orange-400" id="paramText">warna</span>):<br>
+                        &nbsp;&nbsp;<span class="text-slate-500"># Robot berubah warna</span><br>
+                        &nbsp;&nbsp;robot.color = <span class="text-orange-400" id="paramVal">warna</span>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 gap-2">
+                        <button onclick="paintRobot('red')"
+                            class="p-3 bg-red-900/50 hover:bg-red-600 border border-red-500 rounded text-left transition text-xs font-bold flex items-center gap-2 group">
+                            <span class="w-4 h-4 rounded-full bg-red-500 border border-white"></span>
+                            cat_robot("Merah")
+                        </button>
+                        <button onclick="paintRobot('blue')"
+                            class="p-3 bg-blue-900/50 hover:bg-blue-600 border border-blue-500 rounded text-left transition text-xs font-bold flex items-center gap-2 group">
+                            <span class="w-4 h-4 rounded-full bg-blue-500 border border-white"></span>
+                            cat_robot("Biru")
+                        </button>
+                        <button onclick="paintRobot('purple')"
+                            class="p-3 bg-purple-900/50 hover:bg-purple-600 border border-purple-500 rounded text-left transition text-xs font-bold flex items-center gap-2 group">
+                            <span class="w-4 h-4 rounded-full bg-purple-500 border border-white"></span>
+                            cat_robot("Ungu")
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Visual Robot -->
+                <div class="flex-1 glass-panel h-80 flex items-center justify-center relative bg-slate-900/50">
+                    <svg width="200" height="200" viewBox="0 0 100 100" class="drop-shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+                        <!-- Legs -->
+                        <rect x="35" y="80" width="10" height="20" fill="#475569" />
+                        <rect x="55" y="80" width="10" height="20" fill="#475569" />
+                        <!-- Body -->
+                        <rect x="30" y="40" width="40" height="40" rx="5" fill="#334155" class="robot-svg-path"
+                            id="roboBody" stroke="transparent" stroke-width="2" />
+                        <!-- Head -->
+                        <rect x="35" y="20" width="30" height="20" rx="4" fill="#64748b" />
+                        <!-- Eyes -->
+                        <circle cx="45" cy="30" r="3" fill="#00ff00" class="animate-pulse" />
+                        <circle cx="55" cy="30" r="3" fill="#00ff00" class="animate-pulse" />
+                        <!-- Antenna -->
+                        <line x1="50" y1="20" x2="50" y2="10" stroke="#94a3b8" stroke-width="2" />
+                        <circle cx="50" cy="8" r="2" fill="#ef4444" class="animate-ping" />
+                    </svg>
+                    <div class="absolute bottom-4 text-center w-full text-xs text-slate-400">
+                        Hasil: Robot warna <span id="colorName" class="font-bold text-white">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function paintRobot(color) {
+                    const body = document.getElementById('roboBody');
+                    const label = document.getElementById('colorName');
+                    const pText = document.getElementById('paramText');
+                    const pVal = document.getElementById('paramVal');
+
+                    if (color === 'red') {
+                        body.setAttribute('fill', '#ef4444');
+                        body.setAttribute('stroke', '#fca5a5');
+                        label.innerText = '"Merah"';
+                        label.className = 'font-bold text-red-400';
+                        pVal.innerText = '"Merah"'; pVal.className = 'text-red-400 font-bold';
+                    } else if (color === 'blue') {
+                        body.setAttribute('fill', '#3b82f6');
+                        body.setAttribute('stroke', '#93c5fd');
+                        label.innerText = '"Biru"';
+                        label.className = 'font-bold text-blue-400';
+                        pVal.innerText = '"Biru"'; pVal.className = 'text-blue-400 font-bold';
+                    } else {
+                        body.setAttribute('fill', '#a855f7');
+                        body.setAttribute('stroke', '#d8b4fe');
+                        label.innerText = '"Ungu"';
+                        label.className = 'font-bold text-purple-400';
+                        pVal.innerText = '"Ungu"'; pVal.className = 'text-purple-400 font-bold';
+                    }
+                }
+            </script>
+        </section>
+
+        <!-- Slide 12: Loop Factory -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Pabrik Robot Otomatis 🏭</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">📢 MISSION: MASS PRODUCTION</div>
+                <div class="mission-text">
+                    Komandan: "Pasukan musuh mendekat! Produksi 1000 robot secepatnya!"<br>
+                    Kamu: "Kalau klik tombol 1000 kali, jari saya putus, Ndan..."
+                </div>
+            </div>
+
+            <p class="text-sm text-slate-400 mb-6 max-w-2xl">
+                Solusinya? Gunakan <b>Looping</b>. Suruh komputer menekan tombol "Buat Robot" berulang-ulang untukmu.
+            </p>
+
+            <div class="glass-panel p-6 border-b-4 border-slate-700 relative overflow-hidden h-64 mb-6">
+                <!-- Conveyor Belt -->
+                <div class="absolute bottom-0 left-0 right-0 h-8 conveyor-belt conveyor-paused" id="belt"></div>
+
+                <!-- Items Container -->
+                <div id="factoryLine" class="absolute inset-0 pointer-events-none"></div>
+
+                <!-- Machine -->
+                <div
+                    class="absolute left-0 bottom-8 w-24 h-40 bg-slate-700 border-r-4 border-slate-600 flex items-center justify-center z-20">
+                    <div class="text-4xl animate-bounce">🏗️</div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex gap-8 items-center justify-center">
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-700">
+                    <label class="block text-xs text-slate-400 mb-2">Mau bikin berapa?</label>
+                    <input type="range" id="loopRange" min="1" max="5" value="3" class="w-32 accent-indigo-500"
+                        oninput="document.getElementById('loopVal').innerText = this.value">
+                    <span id="loopVal" class="text-xl font-bold text-indigo-400 ml-2">3</span> Robot
+                </div>
+
+                <div class="text-center">
+                    <div class="font-mono text-xs bg-black/50 p-2 rounded mb-2 text-left">
+                        <span class="text-purple-400">for</span> i <span class="text-purple-400">in</span> <span
+                            class="text-yellow-300">range</span>(<span id="codeCount"
+                            class="text-red-400">3</span>):<br>
+                        &nbsp;&nbsp;<span class="text-blue-400">buat_robot</span>()
+                    </div>
+                    <button onclick="startFactory()"
+                        class="px-8 py-2 bg-green-600 hover:bg-green-500 rounded-lg font-bold shadow-lg shadow-green-500/20 transition">▶
+                        MULAI PRODUKSI</button>
+                </div>
+            </div>
+
+            <script>
+                function startFactory() {
+                    const count = document.getElementById('loopRange').value;
+                    const belt = document.getElementById('belt');
+                    const line = document.getElementById('factoryLine');
+                    const codeLabel = document.getElementById('codeCount');
+
+                    codeLabel.innerText = count;
+                    line.innerHTML = '';
+                    belt.classList.remove('conveyor-paused');
+
+                    let produced = 0;
+                    const interval = setInterval(() => {
+                        if (produced >= count) {
+                            clearInterval(interval);
+                            setTimeout(() => belt.classList.add('conveyor-paused'), 2000);
+                            return;
+                        }
+
+                        const item = document.createElement('div');
+                        item.className = 'factory-item text-4xl';
+                        item.innerText = '🤖';
+                        line.appendChild(item);
+
+                        produced++;
+                    }, 800);
+                }
+            </script>
+        </section>
+
+        <!-- Slide 13: Exercise 2 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Latihan 2: Pabrik Kotak 📦</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">⚡ CHALLENGE: SUPPLY CRATES</div>
+                <div class="mission-text">
+                    Kita butuh kotak suplai untuk bekal para robot. <br>
+                    Tugasmu: Buat fungsi `cetak_kotak()` dan produksi 3 kotak menggunakan loop!
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-400 mb-4">Target Output: Tiga baris "[ ]"</p>
+
+            <div class="editor-container">
+                <textarea id="code2" class="editor-textarea">
+def cetak_kotak():
+    print("[ ]")
+
+# Tulis kodemu di bawah ini untuk memanggilnya 3x
+</textarea>
+            </div>
+
+            <div class="flex gap-2 mt-4">
+                <button data-action="run" data-code="code2" data-out="out2" data-fb="fb2"
+                    class="px-4 py-2 bg-indigo-600 rounded-lg text-sm font-bold shadow hover:bg-indigo-500">▶
+                    RUN</button>
+                <button data-action="check" data-code="code2" data-out="out2" data-fb="fb2" data-expect="[ ]"
+                    data-test="assert code_val.count('cetak_kotak') >= 2"
+                    class="px-4 py-2 bg-emerald-600 rounded-lg text-sm font-bold shadow hover:bg-emerald-500">✓
+                    CHECK</button>
+            </div>
+            <div id="out2" class="output-area mt-2 rounded-lg"></div>
+            <div id="fb2" class="hidden"></div>
+
+            <!-- Bridge to Slide 14 -->
+            <div
+                class="mt-6 p-3 bg-red-900/20 border border-red-500/30 rounded-lg text-xs text-slate-300 flex items-center gap-3">
+                <span class="text-xl">⚠️</span>
+                <div>
+                    <b>BREAKING NEWS:</b> Produksi lancar, TAPI... ada laporan beberapa robot jalannya pincang!
+                    <br><span class="text-red-400 italic">Sepertinya ada error (bug). Ayo kita investigasi di slide
+                        selanjutnya! 👉</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 14: Debugging Intro (Messy Room) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Kamar Berantakan vs Laci Rapi 🧹</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">🚨 ALERT: MAINTENANCE CHAOS</div>
+                <div class="mission-text">
+                    Komandan: "Salah satu robot rusak kakinya! Cari manual perbaikannya di gudang!"<br>
+                    Masalah: Gudangnya super berantakan (Monolith Code). Cari satu hal bisa seharian!
+                </div>
+            </div>
+
+            <p class="text-sm text-slate-400 mb-6 max-w-2xl">
+                Kalau kode kita rapi (Modular), mencari error (Bug) itu secepat membuka laci yang ada labelnya.
+            </p>
+
+            <div class="grid grid-cols-2 gap-12 h-96">
+                <!-- Monolith Side -->
+                <div class="glass-panel p-6 relative flex flex-col items-center justify-center border-red-500/30">
+                    <div class="absolute top-2 left-2 text-[10px] text-red-500 font-bold uppercase">Monolith
+                        (Berantakan)</div>
+                    <div id="messyPile" class="text-6xl mb-4 transition-all duration-300">⛰️</div>
+                    <p class="text-xs text-slate-500 text-center mb-4">Tumpukan Baju, Buku, Mainan...</p>
+                    <button onclick="rummagePile()" id="btnRummage"
+                        class="px-4 py-2 bg-red-900/50 hover:bg-red-800 border border-red-700 rounded text-xs">🔍 Cari
+                        Kaos Kaki</button>
+                    <div id="monolithResult" class="mt-4 text-xs font-bold text-red-400 opacity-0 transition">Belum
+                        ketemu...</div>
+                </div>
+
+                <!-- Modular Side -->
+                <div class="glass-panel p-6 relative flex flex-col items-center justify-start border-green-500/30">
+                    <div class="absolute top-2 left-2 text-[10px] text-green-500 font-bold uppercase">Modular (Rapi)
+                    </div>
+
+                    <div class="w-full space-y-2 mt-8">
+                        <!-- Drawer 1 -->
+                        <div class="bg-slate-800 rounded border border-slate-700 overflow-hidden">
+                            <button onclick="toggleDrawer('d1')"
+                                class="w-full px-4 py-2 text-left text-xs font-bold flex justify-between bg-slate-700 text-slate-300 hover:bg-slate-600">
+                                <span>📁 Laci Baju</span> <span>▼</span>
+                            </button>
+                            <div id="d1" class="drawer-content bg-slate-900 p-2 text-center text-2xl">👕 👖 👗</div>
+                        </div>
+                        <!-- Drawer 2 -->
+                        <div class="bg-slate-800 rounded border border-slate-700 overflow-hidden">
+                            <button onclick="toggleDrawer('d2')"
+                                class="w-full px-4 py-2 text-left text-xs font-bold flex justify-between bg-slate-700 text-slate-300 hover:bg-slate-600">
+                                <span>📁 Laci Kaos Kaki</span> <span>▼</span>
+                            </button>
+                            <div id="d2" class="drawer-content bg-slate-900 p-2 text-center text-2xl">🧦 🧦 🧦</div>
+                        </div>
+                        <!-- Drawer 3 -->
+                        <div class="bg-slate-800 rounded border border-slate-700 overflow-hidden">
+                            <button onclick="toggleDrawer('d3')"
+                                class="w-full px-4 py-2 text-left text-xs font-bold flex justify-between bg-slate-700 text-slate-300 hover:bg-slate-600">
+                                <span>📁 Laci Buku</span> <span>▼</span>
+                            </button>
+                            <div id="d3" class="drawer-content bg-slate-900 p-2 text-center text-2xl">📚 📕 📖</div>
+                        </div>
+                        <p class="text-[10px] text-green-400 text-center mt-2 italic" id="modularMsg">Klik laci yang
+                            benar!</p>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function rummagePile() {
+                    const pile = document.getElementById('messyPile');
+                    const res = document.getElementById('monolithResult');
+                    const btn = document.getElementById('btnRummage');
+
+                    btn.disabled = true;
+                    pile.classList.add('rumbling');
+                    res.style.opacity = '1';
+                    res.innerText = "Mencari... (Susah banget)";
+
+                    setTimeout(() => {
+                        pile.classList.remove('rumbling');
+                        res.innerText = "Ketemu! 🧦 (Tapi lama kan?)";
+                        res.className = "mt-4 text-xs font-bold text-yellow-400 opacity-1";
+                        btn.disabled = false;
+                    }, 3000); // 3 seconds delay
+                }
+
+                function toggleDrawer(id) {
+                    document.querySelectorAll('.drawer-content').forEach(d => d.classList.remove('open'));
+                    document.getElementById(id).classList.add('open');
+
+                    if (id === 'd2') {
+                        document.getElementById('modularMsg').innerText = "LANGSUNG KETEMU! 🧦 (Cepat)";
+                        document.getElementById('modularMsg').className = "text-center mt-2 font-bold text-green-400 animate-bounce";
+                    }
+                }
+            </script>
+
+            <!-- Bridge to Slide 15 -->
+            <div
+                class="mt-6 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-xs text-slate-300 flex items-center gap-3">
+                <span class="text-xl">🗺️</span>
+                <div>
+                    <b>NEXT STEP:</b> Oke, laci sudah rapi. Tapi robotnya masih nyasar entah kemana.
+                    <br><span class="text-blue-400 italic">Kita butuh alat pelacak (GPS) untuk tahu "Jejak Langkah" si
+                        robot. 👉</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 15: Tracing (GPS) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">GPS Kode (Tracing) 📍</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">🕵️ MISSION: TRACK THE ERROR</div>
+                <div class="mission-text">
+                    Robot pembersih nyasar ke selokan! Kenapa dia belok ke sana?<br>
+                    Kita harus cek "Rekaman GPS" (Tracing) baris per baris untuk tahu di mana dia salah belok.
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-400 mb-6">
+                Tracing itu membaca urutan jalan kode untuk menemukan kapan error terjadi.
+            </p>
+
+            <div class="grid grid-cols-2 gap-8 h-96">
+                <!-- Code Panel -->
+                <div class="glass-panel p-4 flex flex-col">
+                    <div class="font-mono text-xs space-y-2 flex-1">
+                        <div id="gpsLine1" class="p-2 rounded bg-slate-800/50 transition border-l-4 border-transparent">
+                            <span class="text-purple-400">def</span> <span
+                                class="text-blue-400">jalankan_mobil</span>():
+                        </div>
+                        <div id="gpsLine2" class="p-2 rounded ml-4 transition border-l-4 border-transparent">
+                            <span class="text-yellow-300">nyalakan_mesin</span>()
+                        </div>
+                        <div id="gpsLine3" class="p-2 rounded ml-4 transition border-l-4 border-transparent">
+                            <span class="text-yellow-300">maju</span>(100)
+                        </div>
+                        <div id="gpsLine4" class="p-2 rounded ml-4 transition border-l-4 border-transparent">
+                            <span class="text-yellow-300">belok_kanan</span>()
+                        </div>
+                        <div id="gpsLine5"
+                            class="p-2 rounded bg-slate-800/50 mt-4 transition border-l-4 border-transparent">
+                            <span class="text-blue-400">jalankan_mobil</span>()
+                        </div>
+                    </div>
+                    <button onclick="gpsStep()"
+                        class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 rounded font-bold mt-4 shadow-lg">➡️
+                        LANGKAH SELANJUTNYA</button>
+                </div>
+
+                <!-- Map Panel -->
+                <div class="glass-panel relative bg-slate-800 overflow-hidden flex items-center justify-center">
+                    <!-- Roads -->
+                    <div class="absolute w-4 h-full bg-slate-600"></div>
+                    <div class="absolute w-full h-4 bg-slate-600 top-1/2 -translate-y-1/2"></div>
+
+                    <!-- Car -->
+                    <div id="gpsCar" class="car-token text-4xl absolute transition-all duration-500 z-10"
+                        style="bottom: 20px; left: 50%; transform: translateX(-50%);">
+                        🚗
+                    </div>
+
+                    <!-- Status Overlay -->
+                    <div id="gpsStatus"
+                        class="absolute top-4 bg-black/70 px-4 py-2 rounded text-xs font-mono text-green-400 font-bold">
+                        Menunggu...
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                let gStep = 0;
+                function gpsStep() {
+                    const car = document.getElementById('gpsCar');
+                    const status = document.getElementById('gpsStatus');
+
+                    // Reset highlights
+                    for (let i = 1; i <= 5; i++) {
+                        document.getElementById('gpsLine' + i).className = document.getElementById('gpsLine' + i).className.replace('bg-indigo-900 border-indigo-500', '');
+                    }
+
+                    if (gStep === 0) {
+                        document.getElementById('gpsLine5').classList.add('bg-indigo-900', 'border-indigo-500');
+                        status.innerText = "Memanggil fungsi utama...";
+                    }
+                    else if (gStep === 1) {
+                        document.getElementById('gpsLine1').classList.add('bg-indigo-900', 'border-indigo-500');
+                        status.innerText = "Masuk ke definisi fungsi...";
+                    }
+                    else if (gStep === 2) {
+                        document.getElementById('gpsLine2').classList.add('bg-indigo-900', 'border-indigo-500');
+                        status.innerText = "Mesin Menyala! ⚡";
+                        car.classList.add('animate-bounce');
+                    }
+                    else if (gStep === 3) {
+                        document.getElementById('gpsLine3').classList.add('bg-indigo-900', 'border-indigo-500');
+                        status.innerText = "Maju kedepan...";
+                        car.classList.remove('animate-bounce');
+                        car.style.bottom = "50%";
+                    }
+                    else if (gStep === 4) {
+                        document.getElementById('gpsLine4').classList.add('bg-indigo-900', 'border-indigo-500');
+                        status.innerText = "Belok Kanan...";
+                        car.style.transform = "translateX(-50%) rotate(90deg)";
+                        setTimeout(() => { car.style.left = "90%"; }, 500);
+                    }
+                    else {
+                        status.innerText = "Selesai! Reset.";
+                        car.style.left = "50%"; car.style.bottom = "20px"; car.style.transform = "translateX(-50%) rotate(0deg)";
+                        gStep = -1;
+                    }
+
+                    gStep++;
+                }
+            </script>
+
+            <!-- Bridge to Slide 16 -->
+            <div
+                class="mt-6 p-3 bg-green-900/20 border border-green-500/30 rounded-lg text-xs text-slate-300 flex items-center gap-3">
+                <span class="text-xl">🏥</span>
+                <div>
+                    <b>TRACKING COMPLETE:</b> Kita sudah tahu lokasinya! Ternyata dia salah belok.
+                    <br><span class="text-green-400 italic">Sekarang bawa dia ke Bengkel (Rumah Sakit) untuk diperbaiki
+                        bagian yang rusak. 👉</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 16: Bug Hunt (Interactive) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Rumah Sakit Robot 🏥</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">🚑 EMERGENCY: ROBOT DOWN!</div>
+                <div class="mission-text">
+                    Robot pembersih tadi sudah sampai di RS. Dia muter-muter nggak jelas.<br>
+                    Dokter: "Tenang! Karena desainnya <b>Modular</b>, kita nggak perlu ganti robot baru. Cukup diagnosa
+                    perkepala/kaki."
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-400 mb-6 text-center">
+                Kegiatan mencari dan memperbaiki kerusakan sistem ini disebut <b>DEBUGGING</b>.
+            </p>
+
+            <div class="grid grid-cols-2 gap-8 h-96 items-center">
+                <!-- Patient -->
+                <div class="glass-panel h-full flex flex-col items-center justify-center relative bg-slate-900/50">
+                    <div class="absolute inset-0 bg-red-500/10 animate-pulse pointer-events-none" id="emergencyLight">
+                    </div>
+                    <div id="patientRobot" class="text-8xl robot-dizzy transition-all duration-500">
+                        🤖
+                    </div>
+                    <div id="patientStatus"
+                        class="mt-8 px-4 py-2 bg-red-900 rounded text-red-200 font-bold text-xs animate-pulse">
+                        STATUS: CRITICAL ERROR
+                    </div>
+                </div>
+
+                <!-- Doctor Interface -->
+                <div class="flex flex-col gap-4">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase">1. DIAGNOSA (SCAN)</h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="scanPart('head')"
+                            class="p-4 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-center text-xs group">
+                            <div class="text-2xl mb-1 group-hover:scale-110 transition">👀</div> Kepala
+                        </button>
+                        <button onclick="scanPart('body')"
+                            class="p-4 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-center text-xs group">
+                            <div class="text-2xl mb-1 group-hover:scale-110 transition">❤️</div> Badan
+                        </button>
+                        <button onclick="scanPart('leg')"
+                            class="p-4 bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 text-center text-xs group">
+                            <div class="text-2xl mb-1 group-hover:scale-110 transition">🦵</div> Kaki
+                        </button>
+                    </div>
+                    <div id="scanResult" class="h-10 text-xs text-center font-mono py-2 text-slate-400">...Menunggu
+                        Scan...</div>
+
+                    <h3 class="text-xs font-bold text-slate-400 uppercase mt-4">2. TINDAKAN</h3>
+                    <div class="glass-panel p-4 font-mono text-xs opacity-50 pointer-events-none transition"
+                        id="fixPanel">
+                        <div class="text-red-400 line-through">def jalan(): putar_badan()</div>
+                        <div class="text-green-400 hidden" id="fixedCode">def jalan(): maju_lurus()</div>
+                        <button onclick="fixCode()"
+                            class="w-full mt-2 py-2 bg-green-600 hover:bg-green-500 text-white rounded font-bold shadow-lg animate-pulse">
+                            💉 OPERASI (FIX CODE)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function scanPart(part) {
+                    const res = document.getElementById('scanResult');
+
+                    if (part === 'leg') {
+                        res.innerText = "⚠️ ERROR DITEMUKAN: Fungsi jalan() memanggil putar_badan()!";
+                        res.className = "h-10 text-xs text-center font-mono py-2 text-red-400 font-bold bg-red-900/30 rounded";
+                        document.getElementById('fixPanel').classList.remove('opacity-50', 'pointer-events-none');
+                    } else {
+                        res.innerText = "✅ Bagian ini Normal. Coba cek yang lain.";
+                        res.className = "h-10 text-xs text-center font-mono py-2 text-green-400 font-bold bg-green-900/30 rounded";
+                        document.getElementById('fixPanel').classList.add('opacity-50', 'pointer-events-none');
+                    }
+                }
+
+                function fixCode() {
+                    document.getElementById('patientRobot').classList.remove('robot-dizzy');
+                    document.getElementById('patientRobot').classList.add('robot-normal'); // Add walk/bounce animation
+                    document.getElementById('emergencyLight').remove();
+
+                    document.getElementById('patientStatus').innerText = "STATUS: HEALTHY & HAPPY";
+                    document.getElementById('patientStatus').className = "mt-8 px-4 py-2 bg-green-600 rounded text-white font-bold text-xs";
+
+                    document.querySelector('.line-through').style.display = 'none';
+                    document.getElementById('fixedCode').classList.remove('hidden');
+
+                    // Celebration confetti?
+                    const res = document.getElementById('scanResult');
+                    res.innerText = "🎉 OPERASI BERHASIL! Robot sembuh.";
+                    res.className = "h-10 text-xs text-center font-mono py-2 text-green-400 font-bold";
+                }
+            </script>
+
+            <!-- Bridge to Slide 17 -->
+            <div
+                class="mt-6 p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg text-xs text-slate-300 flex items-center gap-3">
+                <span class="text-xl">👩‍💻</span>
+                <div>
+                    <b>SKILL UNLOCKED:</b> Kamu sudah paham konsep Debugging Robot.
+                    <br><span class="text-purple-400 italic">Sekarang giliran <b>Kode Python asli</b> yang sakit. Yuk
+                        jadi Dokter Kode beneran! 👉</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 17: Exercise 3 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Latihan 3: Fix The Typo 🔧</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">🛠️ REPAIR: WEAPON SYSTEM FAIL</div>
+                <div class="mission-text">
+                    Kita mau ambil senjata "Excalibur" buat robot. Tapi kodenya error!<br>
+                    Tugasmu: Perbaiki nama fungsi yang salah panggil agar senjata bisa diambil.
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-400 mb-4">Ini latihan debug paling umum: cek nama fungsi (NameError).</p>
+
+            <div class="editor-container">
+                <textarea id="code3" class="editor-textarea">
+def ambil_pedang():
+    return "Excalibur"
+
+# Perbaiki typo di baris bawah ini!
+senjata = ambil_pedag() 
+print(senjata)
+</textarea>
+            </div>
+
+            <div class="flex gap-2 mt-4">
+                <button data-action="run" data-code="code3" data-out="out3" data-fb="fb3"
+                    class="px-4 py-2 bg-indigo-600 rounded-lg text-sm font-bold shadow hover:bg-indigo-500">▶
+                    DEBUG</button>
+                <button data-action="check" data-code="code3" data-out="out3" data-fb="fb3" data-expect="Excalibur"
+                    data-test="assert 'ambil_pedang()' in code_val or 'ambil_pedang' in code_val"
+                    class="px-4 py-2 bg-emerald-600 rounded-lg text-sm font-bold shadow hover:bg-emerald-500">✓
+                    CHECK</button>
+            </div>
+            <div id="out3" class="output-area mt-2 rounded-lg"></div>
+            <div id="fb3" class="hidden"></div>
+
+            <!-- Bridge to Slide 18 -->
+            <div
+                class="mt-6 p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg text-xs text-slate-300 flex items-center gap-3">
+                <span class="text-xl">🗂️</span>
+                <div>
+                    <b>GREAT JOB:</b> Kode sudah benar, Robot sudah sembuh.
+                    <br><span class="text-yellow-400 italic">Tapi tunggu... Meja kerjanya berantakan banget! Ayo kita
+                        rapikan file-filenya biar nggak pusing. 👉</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 18: File Structure (Interactive) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Menata Rumah Robot 📂</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">🗄️ MISSION: ORGANIZE BLUEPRINTS</div>
+                <div class="mission-text">
+                    Komandan: "Pabrik kita kacau balau! File ada di mana-mana!"<br>
+                    Tugasmu: Rapikan file-file project ke dalam folder yang sesuai standard industri.
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-400 mb-6 text-center max-w-2xl mx-auto">
+                Tujuan: belajar struktur folder & file sederhana untuk proyek modular.
+            </p>
+
+            <div class="glass-panel p-6 h-96 relative overflow-hidden bg-slate-900/50" id="desktopArea">
+                <!-- Background Grid -->
+                <div
+                    class="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px]">
+                </div>
+
+                <!-- Folders (Targets) -->
+                <div class="absolute top-4 right-4 flex flex-col gap-4 z-0">
+                    <!-- Assets Folder -->
+                    <div class="folder-target glass-panel p-4 w-64 border-l-4 border-yellow-400 bg-slate-800/80 backdrop-blur-md flex items-center gap-4 relative group"
+                        data-type="assets">
+                        <div class="text-4xl pointer-events-none">📁</div>
+                        <div class="pointer-events-none">
+                            <div class="font-bold text-yellow-400 text-sm">assets/</div>
+                            <div class="text-[10px] text-slate-400">Gudang: Gambar, Suara, Video</div>
+                        </div>
+                        <div
+                            class="absolute inset-0 bg-yellow-400/10 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                        </div>
+                    </div>
+
+                    <!-- SRC Folder -->
+                    <div class="folder-target glass-panel p-4 w-64 border-l-4 border-blue-400 bg-slate-800/80 backdrop-blur-md flex items-center gap-4 relative group"
+                        data-type="src">
+                        <div class="text-4xl pointer-events-none">📁</div>
+                        <div class="pointer-events-none">
+                            <div class="font-bold text-blue-400 text-sm">src/</div>
+                            <div class="text-[10px] text-slate-400">Bengkel: Kode Utama (.py)</div>
+                        </div>
+                        <div
+                            class="absolute inset-0 bg-blue-400/10 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                        </div>
+                    </div>
+
+                    <!-- Docs Folder -->
+                    <div class="folder-target glass-panel p-4 w-64 border-l-4 border-green-400 bg-slate-800/80 backdrop-blur-md flex items-center gap-4 relative group"
+                        data-type="docs">
+                        <div class="text-4xl pointer-events-none">📁</div>
+                        <div class="pointer-events-none">
+                            <div class="font-bold text-green-400 text-sm">docs/</div>
+                            <div class="text-[10px] text-slate-400">Perpustakaan: Manual & Catatan</div>
+                        </div>
+                        <div
+                            class="absolute inset-0 bg-green-400/10 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scattered Files -->
+                <div id="scatteredFiles" class="absolute inset-0 pointer-events-none">
+                    <!-- Generating via JS for positions, but structure here -->
+                </div>
+
+                <!-- Action Button -->
+                <div class="absolute bottom-6 left-6 z-20">
+                    <p class="text-xs text-slate-400 max-w-xs bg-slate-900/80 p-3 rounded-lg border border-slate-700">
+                        <b>Misi:</b> Seret file yang berantakan ke folder yang benar!<br>
+                        (Gambar → assets, Code → src, Teks → docs)
+                    </p>
+                    <button onclick="resetFiles()" id="btnResetFiles"
+                        class="hidden mt-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg shadow-lg font-bold transition">
+                        <span>🔄 BERMAIN LAGI</span>
+                    </button>
+                </div>
+
+                <!-- Feedback Text -->
+                <div id="folderFeedback" class="absolute bottom-6 right-6 text-right max-w-md hidden">
+                    <h3 class="text-green-400 font-bold text-lg mb-1">Woohoo! Rapi! ✨</h3>
+                    <p class="text-xs text-slate-300">
+                        Sekarang kalau mau cari gambar robot, langsung ke <b>assets/</b>.<br>
+                        Mau edit codingan, langsung ke <b>src/</b>.<br>
+                        Kerja jadi lebih cepat & profesional! 😎
+                    </p>
+                </div>
+            </div>
+
+            <script>
+                const filesData = [
+                    { id: 'f1', name: 'robot.png', type: 'assets', icon: '🖼️', color: 'text-yellow-200' },
+                    { id: 'f2', name: 'main.py', type: 'src', icon: '🐍', color: 'text-blue-200' },
+                    { id: 'f3', name: 'guide.txt', type: 'docs', icon: '📄', color: 'text-green-200' },
+                    { id: 'f4', name: 'boom.mp3', type: 'assets', icon: '🎵', color: 'text-yellow-200' },
+                    { id: 'f5', name: 'utils.py', type: 'src', icon: '🐍', color: 'text-blue-200' },
+                    { id: 'f6', name: 'bg.jpg', type: 'assets', icon: '🖼️', color: 'text-yellow-200' }
+                ];
+
+                let sortedCount = 0;
+
+                function initFiles() {
+                    const container = document.getElementById('scatteredFiles');
+                    container.innerHTML = '';
+                    sortedCount = 0;
+                    document.getElementById('btnResetFiles').classList.add('hidden');
+                    document.getElementById('folderFeedback').classList.add('hidden');
+
+                    filesData.forEach((f, i) => {
+                        const el = document.createElement('div');
+                        el.id = f.id;
+                        el.className = `file-icon flex flex-col items-center p-2 rounded bg-slate-800/80 border border-slate-600 backdrop-blur w-20 text-center shadow-lg ${f.color} cursor-grab active:cursor-grabbing hover:scale-110 transition-transform pointer-events-auto`;
+                        el.innerHTML = `<div class="text-2xl mb-1 pointer-events-none">${f.icon}</div><div class="text-[10px] font-mono leading-tight break-all pointer-events-none">${f.name}</div>`;
+                        el.setAttribute('draggable', 'true');
+                        el.setAttribute('data-type', f.type);
+
+                        // Random Position (Left side mostly)
+                        const randTop = 20 + Math.random() * 60; // 20% to 80%
+                        const randLeft = 5 + Math.random() * 40; // 5% to 45%
+                        const randRot = -15 + Math.random() * 30;
+
+                        el.style.top = randTop + '%';
+                        el.style.left = randLeft + '%';
+                        el.style.transform = `rotate(${randRot}deg)`;
+
+                        // Drag Events
+                        el.addEventListener('dragstart', (e) => {
+                            e.dataTransfer.setData('bg_id', f.id);
+                            e.dataTransfer.setData('type', f.type);
+                            setTimeout(() => el.classList.add('invisible'), 0);
+                        });
+
+                        el.addEventListener('dragend', (e) => {
+                            el.classList.remove('invisible');
+                        });
+
+                        container.appendChild(el);
+                    });
+                }
+
+                setTimeout(initFiles, 100);
+
+                // Drop Zones Logic
+                document.querySelectorAll('.folder-target').forEach(zone => {
+                    zone.addEventListener('dragover', (e) => {
+                        e.preventDefault(); // Allow drop
+                        zone.classList.add('active-drop');
+                    });
+
+                    zone.addEventListener('dragleave', (e) => {
+                        zone.classList.remove('active-drop');
+                    });
+
+                    zone.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        zone.classList.remove('active-drop');
+
+                        const type = e.dataTransfer.getData('type');
+                        const bgId = e.dataTransfer.getData('bg_id');
+                        const targetType = zone.getAttribute('data-type');
+
+                        if (type === targetType) {
+                            // Correct Drop
+                            const fileEl = document.getElementById(bgId);
+                            fileEl.style.transition = 'all 0.5s ease';
+
+                            // Move visually to center of folder then vanish
+                            const zRect = zone.getBoundingClientRect();
+                            const cRect = document.getElementById('desktopArea').getBoundingClientRect();
+
+                            fileEl.style.top = (zRect.top - cRect.top + 20) + 'px';
+                            fileEl.style.left = (zRect.left - cRect.left + 20) + 'px';
+                            fileEl.style.opacity = '0';
+                            fileEl.style.transform = 'scale(0)';
+
+                            // Success Feedback (Sound/Visual)
+                            zone.style.transform = "scale(1.1)";
+                            setTimeout(() => zone.style.transform = "scale(1)", 200);
+
+                            sortedCount++;
+                            if (sortedCount === filesData.length) {
+                                setTimeout(() => {
+                                    document.getElementById('folderFeedback').classList.remove('hidden');
+                                    document.getElementById('folderFeedback').classList.add('animate-bounce');
+                                    document.getElementById('btnResetFiles').classList.remove('hidden');
+                                }, 500);
+                            }
+                        } else {
+                            // Wrong Drop
+                            zone.classList.add('border-red-500');
+                            setTimeout(() => zone.classList.remove('border-red-500'), 500);
+                        }
+                    });
+                });
+
+                function resetFiles() {
+                    initFiles();
+                }
+            </script>
+
+            <!-- Bridge to Slide 19 -->
+            <div
+                class="mt-6 p-3 bg-indigo-900/20 border border-indigo-500/30 rounded-lg text-xs text-slate-300 flex items-center gap-3">
+                <span class="text-xl">🏁</span>
+                <div>
+                    <b>MISSION READY:</b> Robot Army siap, Gudang Rapi, Sistem Debugging OK.
+                    <br><span class="text-indigo-400 italic">Waktunya PELUNCURAN FINAL! Semua unit ke posisi! 👉</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 19: Final Project -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Final Mission: Master Builder 🏆</h2>
+
+            <div class="mission-box">
+                <div class="mission-title">🚀 FINAL TEST: LAUNCH SEQUENCE</div>
+                <div class="mission-text">
+                    Robot Induk sudah siap. Sekarang saatnya uji coba sistem terakhir!<br>
+                    Ikuti instruksi komandan untuk memanggil fungsi-fungsi vital.
+                </div>
+            </div>
+
+            <p class="text-xs text-slate-400 mb-4">Gabungkan semua tujuan: modular, reusable, debugging ringan, dan
+                struktur file.</p>
+            <div class="grid grid-cols-2 gap-6 h-full">
+                <div class="space-y-4">
+                    <div class="glass-panel p-4">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase mb-2">Blueprint</h3>
+                        <ul class="text-sm list-disc pl-4 space-y-2 text-slate-300">
+                            <li>Buat fungsi `sapa_bos()` yang print "Siap Bos!"</li>
+                            <li>Buat fungsi `lapor_status()` yang print "Semua Aman"</li>
+                            <li>Panggil kedua fungsi tersebut.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div>
+                    <div class="editor-container h-64">
+                        <textarea id="codeFinal" class="editor-textarea">
+# Tulis kodemu di sini
+def sapa_bos():
+    pass
+
+def lapor_status():
+    pass
+
+# Panggil di sini
+</textarea>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <button data-action="run" data-code="codeFinal" data-out="outFinal" data-fb="fbFinal"
+                            class="w-full px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg text-sm font-bold shadow-lg hover:scale-[1.02] transition">🚀
+                            LAUNCH ROBOT</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="outFinal" class="output-area mt-4 rounded-lg"></div>
+            <div id="fbFinal" class="hidden"></div>
+            <!-- Hidden check logic injected for button logic to pick up -->
+            <div class="hidden" id="finalCheck" data-action="check" data-code="codeFinal" data-fb="fbFinal"
+                data-test="assert 'sapa_bos' in locals() and 'lapor_status' in locals()"></div>
+        </section>
+
+        <!-- Slide 20: Closing -->
+        <section class="slide items-center justify-center text-center">
+            <h2
+                class="text-6xl font-black mb-6 text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-600">
+                MISSION COMPLETE</h2>
+            <p class="text-2xl text-slate-300 mb-12">Kamu sudah menguasai Modular Design!</p>
+
+            <div class="grid grid-cols-4 gap-4 mb-12 w-full max-w-4xl">
+                <div class="glass-panel p-4 flex flex-col items-center">
+                    <span class="text-2xl mb-2 text-green-400">✓</span>
+                    <span class="text-xs">Decomposition</span>
+                </div>
+                <div class="glass-panel p-4 flex flex-col items-center">
+                    <span class="text-2xl mb-2 text-green-400">✓</span>
+                    <span class="text-xs">Reusability (DRY)</span>
+                </div>
+                <div class="glass-panel p-4 flex flex-col items-center">
+                    <span class="text-2xl mb-2 text-green-400">✓</span>
+                    <span class="text-xs">Debugging</span>
+                </div>
+                <div class="glass-panel p-4 flex flex-col items-center">
+                    <span class="text-2xl mb-2 text-green-400">✓</span>
+                    <span class="text-xs">File Structure</span>
+                </div>
+            </div>
+
+            <div class="glass-panel px-8 py-3 rounded-full border border-indigo-500/30">
+                <span class="text-xs text-slate-400 mr-2">NEXT SESSION CODE:</span>
+                <span class="font-mono font-bold text-indigo-400 tracking-widest">RGMDSHS25</span>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation -->
+    <footer
+        class="fixed bottom-0 inset-x-0 h-16 bg-slate-900/80 backdrop-blur border-t border-slate-800 flex items-center justify-between px-8 z-50">
+        <button id="btnPrev" class="btn-nav" onclick="changeSlide(-1)">PREVIOUS</button>
+        <button id="btnNext" class="btn-nav bg-indigo-600 border-indigo-500 hover:bg-indigo-500 text-white"
+            onclick="changeSlide(1)">NEXT STEP</button>
+    </footer>
+
+    <script>
+        let curr = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('progressBar');
+        const slideIndicator = document.getElementById('slideIndicator');
+
+        /* Init */
+        function init() {
+            // Access Code
+            const btn = document.getElementById('accessBtn');
+            const inp = document.getElementById('accessCodeInput');
+            const overlay = document.getElementById('accessOverlay');
+
+            btn.onclick = () => {
+                if (inp.value.trim().toUpperCase() === 'RGMDSHS25') {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.remove(), 500);
+                } else {
+                    document.getElementById('accessError').classList.remove('hidden');
+                }
+            };
+
+            updateUI();
+        }
+
+        function changeSlide(dir) {
+            const next = curr + dir;
+            if (next >= 0 && next < slides.length) {
+                slides[curr].classList.remove('active');
+                curr = next;
+                slides[curr].classList.add('active');
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            progressBar.style.width = ((curr + 1) / slides.length) * 100 + "%";
+            slideIndicator.innerText = `${curr + 1} / ${slides.length}`;
+            document.getElementById('btnPrev').disabled = curr === 0;
+            document.getElementById('btnNext').innerText = curr === slides.length - 1 ? "FINISH" : "NEXT STEP";
+            document.getElementById('btnNext').disabled = curr === slides.length - 1;
+        }
+
+        document.addEventListener('keydown', e => {
+            if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+            if (e.key === 'ArrowRight') changeSlide(1);
+            if (e.key === 'ArrowLeft') changeSlide(-1);
+        });
+
+        /* Drag & Drop Logic */
+        const zones = document.querySelectorAll('.drop-zone');
+        zones.forEach(z => {
+            z.addEventListener('dragover', e => { e.preventDefault(); z.classList.add('drag-over'); });
+            z.addEventListener('dragleave', () => z.classList.remove('drag-over'));
+            z.addEventListener('drop', e => {
+                e.preventDefault();
+                z.classList.remove('drag-over');
+                const type = e.dataTransfer.getData('type');
+                if (type === z.getAttribute('data-accept')) {
+                    z.classList.add('filled');
+                    z.innerText = type === 'head' ? '👀' : (type === 'body' ? '❤️' : '🦵');
+                    checkAssembly();
+                }
+            });
+        });
+
+        document.querySelectorAll('.draggable-item').forEach(d => {
+            d.addEventListener('dragstart', e => e.dataTransfer.setData('type', e.target.getAttribute('data-type')));
+        });
+
+        function checkAssembly() {
+            const filled = Array.from(zones).filter(z => z.classList.contains('filled'));
+            if (filled.length === 4) {
+                const fb = document.getElementById('assemblyFeedback');
+                fb.innerText = "ROBOT SIAP! 🤖✨";
+                fb.className = "text-center mt-8 h-8 text-xl font-bold text-green-400 animate-bounce";
+            }
+        }
+
+        /* Wheel Factory Animation */
+        function runWheelFactory() {
+            const track = document.getElementById('wheelTrack');
+            const w = document.createElement('div');
+            w.innerText = '🛞';
+            w.className = 'text-4xl absolute left-0 animate-spin';
+            w.style.transition = 'left 2s linear';
+            track.appendChild(w);
+            setTimeout(() => w.style.left = '90%', 50);
+            setTimeout(() => w.remove(), 2000);
+        }
+
+        /* Bug Detective */
+        function checkBug(part) {
+            const fb = document.getElementById('bugFb');
+            if (part === 'leg') {
+                fb.innerText = "✅ TEPAT! Kakinya error, perbaiki fungsi kaki().";
+                fb.className = "text-center mt-4 h-8 text-sm font-bold text-green-400";
+            } else {
+                fb.innerText = "❌ Bukan ini. Cari yang perilakunya aneh.";
+                fb.className = "text-center mt-4 h-8 text-sm font-bold text-red-400";
+            }
+        }
+
+        /* Tracing Logic */
+        let tStep = 0;
+        const steps = [
+            { id: 'line4', hl: true }, // print Mulai
+            { id: 'line5', hl: true }, // call
+            { id: 'line1', hl: true }, // def
+            { id: 'line2', hl: true }, // print Halo
+            { id: 'line5', hl: false }, // back
+            { id: 'line6', hl: true }  // print Selesai
+        ];
+        function nextTrace() {
+            // reset
+            document.querySelectorAll('[id^=line]').forEach(l => {
+                l.style.opacity = '0.5'; l.style.fontWeight = 'normal';
+            });
+
+            if (tStep >= steps.length) tStep = 0;
+            const s = steps[tStep];
+            const el = document.getElementById(s.id);
+
+            el.style.opacity = '1';
+            el.style.fontWeight = 'bold';
+            document.getElementById('tracePointer').style.top = (el.offsetTop + 8) + 'px';
+
+            tStep++;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
