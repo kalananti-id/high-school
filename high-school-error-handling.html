@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sesi 31: Error Handling & Safety Nets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        slate: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        .slide {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* IDE Styles */
+        .editor-container {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .editor-header {
+            background: #0f172a;
+            color: #94a3b8;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 180px;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            border: none;
+            outline: none;
+            resize: none;
+            line-height: 1.6;
+        }
+
+        .output-area {
+            background: #0f172a;
+            color: #a5b4fc;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            border-top: 1px solid #334155;
+            min-height: 3.5rem;
+            white-space: pre-wrap;
+        }
+
+        /* Micro-Interactions */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .interactive-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .interactive-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1);
+            border-color: #818cf8;
+        }
+
+        .interactive-card:active {
+            transform: scale(0.98);
+        }
+
+        /* Visuals */
+        .badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            letter-spacing: 0.05em;
+        }
+
+        /* Animations */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-4px);
+            }
+
+            75% {
+                transform: translateX(4px);
+            }
+        }
+
+        .animate-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+    </style>
+
+    <!-- Python Controller -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        import time
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            if el.tagName != "BUTTON": el = el.closest("button")
+            if not el: return
+
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            
+            if not code_id: return
+
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            
+            code_val = code_el.value
+            
+            out_el.innerText = "Running..."
+            if fb_el: fb_el.classList.add("hidden")
+
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            start_time = time.time()
+            
+            try:
+                scope = {}
+                exec(code_val, scope)
+                
+                result = capture.getvalue().strip()
+                elapsed = (time.time() - start_time) * 1000
+                
+                out_el.innerText = result if result else "[No Output]"
+                
+                if action == "check":
+                    expected = el.getAttribute("data-expect")
+                    test_logic = el.getAttribute("data-test")
+                    
+                    passed = True
+                    reasons = []
+                    
+                    if expected and expected.lower() not in result.lower():
+                        passed = False
+                        reasons.append(f"Output kurang tepat. Harusnya ada: '{expected}'")
+
+                    if passed and test_logic:
+                        try:
+                            exec(code_val, scope)
+                            exec(test_logic, scope)
+                        except Exception as e:
+                            passed = False
+                            reasons.append(f"Tes logika gagal: {e}")
+                    
+                    if passed:
+                        if fb_el:
+                            fb_el.innerHTML = f"<div class='flex items-center gap-2'><span class='text-green-500 text-xl'>✓</span> <span>Benar! ({elapsed:.2f}ms)</span></div>"
+                            fb_el.className = "mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 block"
+                    else:
+                        if fb_el:
+                            fb_el.innerHTML = f"<div class='flex items-start gap-2'><span class='text-red-500 text-xl'>×</span> <div>" + "<br>".join(reasons) + "</div></div>"
+                            fb_el.className = "mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 block"
+                        
+            except Exception as e:
+                out_el.innerText = f"Error: {e}"
+                if action == "check" and fb_el:
+                    fb_el.innerHTML = f"<div class='flex items-center gap-2'><span class='text-red-500 text-xl'>⚠️</span> <span>Eits, program error! Cek pesan di atas.</span></div>"
+                    fb_el.className = "mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 block"
+            finally:
+                sys.stdout = old_stdout
+
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-indigo-500 selection:text-white">
+
+    <!-- Access Code Overlay -->
+    <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+            <p class="text-slate-600 mb-4">Masukkan kode kelas untuk memulai</p>
+            <input id="accessCodeInput" type="text" placeholder="Kode..."
+                class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+            <button id="accessBtn"
+                class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka
+                Materi</button>
+            <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div
+                    class="bg-rose-600 text-white w-9 h-9 rounded-xl grid place-items-center font-bold shadow-lg shadow-rose-200">
+                    31</div>
+                <div>
+                    <div class="font-bold text-sm text-slate-900 tracking-tight">Error Handling</div>
+                    <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Exception & Safety Nets
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="slideIndicator"
+                    class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">1/12</span>
+                <button id="btnPrev"
+                    class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 transition disabled:opacity-30 disabled:cursor-not-allowed">←</button>
+                <button id="btnNext"
+                    class="w-8 h-8 rounded-lg bg-rose-600 flex items-center justify-center hover:bg-rose-500 text-white shadow-md shadow-rose-200 transition disabled:opacity-30 disabled:cursor-not-allowed">→</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 py-8 mb-20">
+        <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20">
+            <div id="bar" class="h-full bg-rose-500 transition-all duration-300 shadow-[0_0_10px_rgba(225,29,72,0.5)]"
+                style="width: 5%"></div>
+        </div>
+
+        <!-- SLIDE 1: INTRO -->
+        <section class="slide active">
+            <div class="max-w-4xl mx-auto py-8">
+                <div class="flex items-center gap-8 mb-8">
+                    <div class="flex-1">
+                        <div class="inline-block relative mb-6">
+                            <div class="absolute inset-0 bg-rose-500 blur-2xl opacity-20 animate-pulse rounded-full">
+                            </div>
+                            <div class="relative bg-white p-6 rounded-3xl shadow-xl border border-slate-100">
+                                <div class="text-6xl animate-float">🛡️</div>
+                            </div>
+                        </div>
+                        <h1 class="text-5xl font-black text-slate-900 mb-6 tracking-tight leading-tight">
+                            Building Bulletproof Code: <br><span
+                                class="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-orange-600">Error
+                                Handling</span>
+                        </h1>
+                        <p class="text-lg text-slate-600 leading-relaxed mb-6">
+                            Sehebat apapun kodinganmu, <b>Error itu pasti terjadi</b>. User salah ketik, internet mati,
+                            atau file hilang.
+                            Programmer hebat bukan yang tidak pernah error, tapi yang bisa <b>menangkap dan
+                                menangani</b> error dengan elegan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: SYNTAX VS RUNTIME -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Kenali Musuhmu! 👾</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Syntax Error -->
+                <div class="glass-panel p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition">
+                    <div
+                        class="absolute top-0 right-0 bg-orange-500 text-white text-[10px] uppercase font-bold px-3 py-1 rounded-bl-lg z-10">
+                        Compile Time</div>
+                    <h3 class="font-bold text-slate-900 text-lg mb-2 flex items-center gap-2">📝 Syntax Error</h3>
+                    <p class="text-xs text-slate-500 mb-4">Salah "Tata Bahasa". Program <b>menolak jalan</b> sama
+                        sekali.</p>
+                    <div class="bg-slate-900 rounded-lg p-3 font-mono text-xs border border-slate-800 text-slate-300">
+                        print("Halo" <span class="text-red-400"># Kurang kurung</span>
+                    </div>
+                </div>
+
+                <!-- Exception -->
+                <div class="glass-panel p-6 rounded-xl relative overflow-hidden group hover:shadow-lg transition">
+                    <div
+                        class="absolute top-0 right-0 bg-red-600 text-white text-[10px] uppercase font-bold px-3 py-1 rounded-bl-lg z-10">
+                        Runtime Time</div>
+                    <h3 class="font-bold text-slate-900 text-lg mb-2 flex items-center gap-2">💣 Exception (Runtime)
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">Program jalan, tapi <b>meledak di tengah</b> karena kejadian
+                        tak terduga.</p>
+                    <div class="bg-slate-900 rounded-lg p-3 font-mono text-xs border border-slate-800 text-slate-300">
+                        x = 10 / 0 <span class="text-red-400"># Matematika mustahil</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: 3 COMMON MONSTERS -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900 text-center">3 Monster Error Paling Sering Muncul</h2>
+
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="interactive-card bg-white p-5 rounded-xl border border-slate-200 text-center group">
+                    <div class="text-4xl mb-2 group-hover:scale-110 transition">🔢</div>
+                    <h3 class="font-bold text-slate-800">ValueError</h3>
+                    <p class="text-xs text-slate-500 mt-2">Salah tipe data yang dipaksa.</p>
+                    <code class="block mt-2 bg-slate-100 p-1 rounded text-[10px]">int("kucing")</code>
+                </div>
+
+                <div class="interactive-card bg-white p-5 rounded-xl border border-slate-200 text-center group">
+                    <div class="text-4xl mb-2 group-hover:scale-110 transition">➗</div>
+                    <h3 class="font-bold text-slate-800">ZeroDivisionError</h3>
+                    <p class="text-xs text-slate-500 mt-2">Membagi angka dengan nol.</p>
+                    <code class="block mt-2 bg-slate-100 p-1 rounded text-[10px]">100 / 0</code>
+                </div>
+
+                <div class="interactive-card bg-white p-5 rounded-xl border border-slate-200 text-center group">
+                    <div class="text-4xl mb-2 group-hover:scale-110 transition">📑</div>
+                    <h3 class="font-bold text-slate-800">IndexError</h3>
+                    <p class="text-xs text-slate-500 mt-2">Mengambil absen siswa yang tidak ada.</p>
+                    <code class="block mt-2 bg-slate-100 p-1 rounded text-[10px]">list[999]</code>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: THE SHIELD (TRY-EXCEPT) -->
+        <section class="slide">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-3xl font-bold mb-4 text-slate-900 text-center">Senjata Kita: Try-Except 🛡️</h2>
+                <p class="text-center text-slate-500 mb-8">Jangan biarkan program crash! Tangkap errornya.</p>
+
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div class="bg-slate-900 rounded-2xl p-6 shadow-2xl skew-y-1">
+                        <div class="font-mono text-sm leading-relaxed">
+                            <span class="text-purple-400 font-bold">try</span>:<br>
+                            &nbsp;&nbsp;<span class="text-slate-500"># Kode berbahaya di sini</span><br>
+                            &nbsp;&nbsp;<span class="text-blue-300">umur</span> = <span
+                                class="text-yellow-300">int</span>(<span class="text-yellow-300">input</span>())<br>
+                            <br>
+                            <span class="text-purple-400 font-bold">except</span> <span
+                                class="text-red-400 font-bold">ValueError</span>:<br>
+                            &nbsp;&nbsp;<span class="text-slate-500"># Penyelamat!</span><br>
+                            &nbsp;&nbsp;<span class="text-yellow-300">print</span>(<span class="text-green-300">"Harus
+                                angka dong!"</span>)
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="flex gap-4 items-start">
+                            <div
+                                class="bg-purple-100 text-purple-700 p-2 rounded-lg font-bold text-xs whitespace-nowrap">
+                                1. TRY</div>
+                            <p class="text-sm text-slate-600">"Coba jalankan kode ini..."</p>
+                        </div>
+                        <div class="flex gap-4 items-start">
+                            <div class="bg-red-100 text-red-700 p-2 rounded-lg font-bold text-xs whitespace-nowrap">2.
+                                ERROR?</div>
+                            <p class="text-sm text-slate-600">Jika ada error, STOP proses di blok Try, langsung lompat
+                                ke Except.</p>
+                        </div>
+                        <div class="flex gap-4 items-start">
+                            <div class="bg-green-100 text-green-700 p-2 rounded-lg font-bold text-xs whitespace-nowrap">
+                                3. EXCEPT</div>
+                            <p class="text-sm text-slate-600">"Tangkap errornya, dan jalankan rencana cadangan". Program
+                                SELAMAT!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: MISSION 1 -->
+        <section class="slide">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="bg-rose-600 text-white px-2 py-1 rounded text-xs font-bold uppercase">Mission 1</span>
+                <h2 class="text-2xl font-bold text-slate-900">Pasang Perisai!</h2>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">Kode di bawah ini akan crash jika user memasukkan huruf. Bungkus
+                dengan <code>try-except ValueError</code>!</p>
+
+            <div class="editor-container shadow-xl">
+                <div class="editor-header">
+                    <span class="text-slate-400">anti_crash.py</span>
+                </div>
+                <textarea id="code_m1" class="editor-textarea">
+# Bungkus kode ini dengan try-except!
+umur = int(input("Masukkan Umur: "))
+print("Umur kamu:", umur)
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="code_m1" data-out="out_m1"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition">▶
+                        Run (Test Crash)</button>
+                    <button data-action="check" data-code="code_m1"
+                        data-test="if 'try' not in code_val or 'except' not in code_val: raise Exception('Mana try-except nya?')"
+                        data-out="out_m1" data-fb="fb_m1"
+                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition">✓
+                        Check Solution</button>
+                </div>
+                <div id="out_m1" class="output-area"></div>
+            </div>
+            <div id="fb_m1" class="hidden mt-2"></div>
+        </section>
+
+        <!-- SLIDE 6: MINI GAME -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4 text-slate-900 text-center">Mini-Game: Catch The Error! 🎣</h2>
+            <p class="text-center text-slate-500 mb-8">Tebak jenis error yang akan muncul dari kode ini.</p>
+
+            <div
+                class="max-w-xl mx-auto bg-slate-900 rounded-2xl p-8 relative overflow-hidden shadow-2xl border border-slate-700 min-h-[350px] flex flex-col items-center">
+                <!-- Question -->
+                <div class="w-full bg-slate-800 p-4 rounded-xl border border-slate-600 font-mono text-sm text-slate-300 mb-6"
+                    id="quiz-code">
+                    print(10 / 0)
+                </div>
+
+                <!-- Feedback -->
+                <div id="quiz-feedback" class="h-10 mb-4 text-center font-bold text-white"></div>
+
+                <!-- Buttons -->
+                <div class="grid grid-cols-2 gap-3 w-full">
+                    <button onclick="checkQuiz('ValueError')"
+                        class="p-3 bg-orange-600 hover:bg-orange-500 text-white rounded-xl font-bold text-xs transition">ValueError</button>
+                    <button onclick="checkQuiz('ZeroDivisionError')"
+                        class="p-3 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-xs transition">ZeroDivisionError</button>
+                    <button onclick="checkQuiz('IndexError')"
+                        class="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs transition">IndexError</button>
+                    <button onclick="checkQuiz('SyntaxError')"
+                        class="p-3 bg-slate-600 hover:bg-slate-500 text-white rounded-xl font-bold text-xs transition">SyntaxError</button>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <button onclick="nextQuiz()" class="text-indigo-600 font-bold hover:underline text-sm">Soal Selanjutnya
+                    →</button>
+            </div>
+
+            <script>
+                const quizzes = [
+                    { code: "print(10 / 0)", ans: "ZeroDivisionError" },
+                    { code: "num = int('halo')", ans: "ValueError" },
+                    { code: "data = [1,2]; print(data[10])", ans: "IndexError" },
+                    { code: "if x == 10", ans: "SyntaxError" }
+                ];
+                let quizIdx = 0;
+
+                function nextQuiz() {
+                    quizIdx = (quizIdx + 1) % quizzes.length;
+                    document.getElementById('quiz-code').innerText = quizzes[quizIdx].code;
+                    document.getElementById('quiz-feedback').innerHTML = "";
+                }
+
+                function checkQuiz(ans) {
+                    const correct = quizzes[quizIdx].ans;
+                    const fb = document.getElementById('quiz-feedback');
+                    if (ans === correct) {
+                        fb.innerHTML = "<span class='text-green-400'>🎉 BENAR! Great job.</span>";
+                    } else {
+                        fb.innerHTML = "<span class='text-red-400'>💀 Salah. Itu adalah " + correct + "</span>";
+                    }
+                }
+            </script>
+        </section>
+
+        <!-- SLIDE 7: CAPTURING MESSAGE (AS E) -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4 text-slate-900">Menangkap Pesan Rahasia (as e) 🕵️</h2>
+            <p class="text-slate-600 mb-6">Kadang kita ingin tahu <i>kenapa</i> error itu terjadi tanpa mematikan
+                program.</p>
+
+            <div
+                class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-6 items-center">
+                <div class="flex-1 bg-slate-900 p-4 rounded-xl text-xs font-mono text-slate-300">
+                    except ValueError <span class="text-yellow-400 font-bold">as e</span>:<br>
+                    &nbsp;&nbsp;print(f"Error: {e}")
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm text-slate-600">
+                        Variable <code>e</code> berisi pesan error asli dari Python. Berguna untuk debugging atau
+                        memberi info detail ke user.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-8 editor-container h-48">
+                <textarea id="code_e" class="editor-textarea h-24">
+try:
+    x = int("Bukan Angka")
+except ValueError as pesan_error:
+    print("Sistem bilang:", pesan_error)
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="code_e" data-out="out_e"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition">▶
+                        Jalankan</button>
+                </div>
+                <div id="out_e" class="output-area h-20"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: THE FULL SQUAD -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Formasi Lengkap: Try-Except-Else-Finally 🤖</h2>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-purple-500">
+                    <div class="text-xs font-bold uppercase text-purple-600 mb-1">1. TRY</div>
+                    <p class="text-xs text-slate-600">Lakukan ini.</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-red-500">
+                    <div class="text-xs font-bold uppercase text-red-600 mb-1">2. EXCEPT</div>
+                    <p class="text-xs text-slate-600">Jalan jika <b>GAGAL</b>.</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-green-500">
+                    <div class="text-xs font-bold uppercase text-green-600 mb-1">3. ELSE</div>
+                    <p class="text-xs text-slate-600">Jalan jika <b>SUKSES</b> (tidak error).</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-l-4 border-orange-500">
+                    <div class="text-xs font-bold uppercase text-orange-600 mb-1">4. FINALLY</div>
+                    <p class="text-xs text-slate-600"><b>SELALU</b> jalan (Wajib). Biasanya untuk bersih-bersih memory.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: PROJECT INTRO -->
+        <section class="slide">
+            <div class="max-w-4xl mx-auto py-8 text-center">
+                <div class="inline-block relative mb-6">
+                    <div class="relative bg-white p-6 rounded-3xl shadow-xl border border-slate-100">
+                        <div class="text-6xl animate-bounce">🧮</div>
+                    </div>
+                </div>
+                <h1 class="text-4xl font-black text-slate-900 mb-4">
+                    Final Project: <span
+                        class="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600">Kalkulator
+                        Anti-Crash</span>
+                </h1>
+                <p class="text-lg text-slate-600 leading-relaxed mb-6">
+                    Kita akan membuat kalkulator yang tidak bisa dihancurkan oleh user iseng.
+                </p>
+                <div class="flex justify-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest">
+                    <span>1. Input Angka</span>
+                    <span>•</span>
+                    <span>2. Validasi Int</span>
+                    <span>•</span>
+                    <span>3. Anti Zero Division</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 10: PROJECT STEP 1 -->
+        <section class="slide">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold uppercase">Step 1</span>
+                <h2 class="text-2xl font-bold text-slate-900">Looping Input</h2>
+            </div>
+            <p class="text-sm text-slate-600 mb-4">Minta input terus menerus sampai user memasukkan angka yang benar.
+                Gunakan <code>while True</code> dan <code>break</code>.</p>
+            <div class="editor-container">
+                <textarea id="p1" class="editor-textarea">
+while True:
+    try:
+        a = float(input("Angka 1: "))
+        b = float(input("Angka 2: "))
+        print("Angka valid. Lanjut!")
+        break # Keluar dari loop
+    except ValueError:
+        print("⚠️ Itu bukan angka! Coba lagi.")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="p1" data-out="op1"
+                        class="px-3 py-1 bg-indigo-600 text-white text-xs rounded">▶ Test Loop</button>
+                </div>
+                <div id="op1" class="output-area"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 11: PROJECT FINAL -->
+        <section class="slide">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold uppercase">Final Step</span>
+                <h2 class="text-2xl font-bold text-slate-900">Gabungkan Logic</h2>
+            </div>
+            <div class="editor-container h-[400px]">
+                <textarea id="final" class="editor-textarea h-[250px]">
+print("=== KALKULATOR AMAN ===")
+
+while True:
+    try:
+        a = float(input("Angka 1: "))
+        op = input("Operator (+ - * /): ")
+        b = float(input("Angka 2: "))
+        
+        result = 0
+        if op == '+': result = a + b
+        elif op == '-': result = a - b
+        elif op == '*': result = a * b
+        elif op == '/': result = a / b # Rawan ZeroDivision!
+        else:
+            print("❌ Operator salah!")
+            continue # Ulangi loop
+            
+        print(f"✅ Hasil: {result}")
+        break
+
+    except ValueError:
+        print("⚠️ Masukkan angka woi!")
+    except ZeroDivisionError:
+        print("⚠️ Jangan bagi dengan NOL!")
+    except Exception as e:
+        print(f"⚠️ Error aneh: {e}")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="final" data-out="ofinal"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded text-sm transition shadow-lg shadow-green-900/50">▶
+                        JALANKAN FINAL</button>
+                </div>
+                <div id="ofinal" class="output-area h-[100px] overflow-y-auto"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 12: WRAP UP -->
+        <section class="slide">
+            <div class="text-center py-20">
+                <div class="text-8xl animate-bounce mb-6">🎓</div>
+                <h1 class="text-5xl font-black text-slate-900 mb-4">Mission Accomplished!</h1>
+                <p class="text-xl text-slate-600 max-w-lg mx-auto">
+                    Kamu sekarang resmi menjadi <b>Defensive Programmer</b>. Kodemu aman, kuat, dan nyaman dipakai user.
+                </p>
+                <div class="mt-8 flex justify-center gap-4">
+                    <button onclick="location.reload()"
+                        class="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition">Ulangi
+                        Materi</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('accessOverlay');
+            const input = document.getElementById('accessCodeInput');
+            const btn = document.getElementById('accessBtn');
+            const error = document.getElementById('accessError');
+            const CODE = 'RGMDSHS25';
+
+            function checkCode() {
+                if (input.value.toUpperCase().trim() === CODE) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.style.display = 'none', 300);
+                } else {
+                    error.classList.remove('hidden');
+                }
+            }
+            if (btn) btn.addEventListener('click', checkCode);
+            if (input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+            const slides = document.querySelectorAll('.slide');
+            const bar = document.getElementById('bar');
+            const ind = document.getElementById('slideIndicator');
+            const btnPrev = document.getElementById('btnPrev');
+            const btnNext = document.getElementById('btnNext');
+            let curr = 0;
+
+            function updateUI() {
+                slides.forEach((s, i) => {
+                    if (i === curr) s.classList.add('active');
+                    else s.classList.remove('active');
+                });
+                bar.style.width = ((curr + 1) / slides.length) * 100 + "%";
+                ind.innerText = `${curr + 1}/${slides.length}`;
+                btnPrev.disabled = curr === 0;
+                btnNext.disabled = curr === slides.length - 1;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            btnPrev.onclick = () => { if (curr > 0) { curr--; updateUI(); } };
+            btnNext.onclick = () => { if (curr < slides.length - 1) { curr++; updateUI(); } };
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+                if (e.key === "ArrowRight") btnNext.click();
+                if (e.key === "ArrowLeft") btnPrev.click();
+            });
+        });
+    </script>
+</body>
+
+</html>
