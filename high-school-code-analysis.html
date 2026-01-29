@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sesi 32: Code Analysis & Debugging</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        slate: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        .slide {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* IDE Styles */
+        .editor-container {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .editor-header {
+            background: #0f172a;
+            color: #94a3b8;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 400px;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            border: none;
+            outline: none;
+            resize: none;
+            line-height: 1.6;
+        }
+
+        .output-area {
+            background: #0f172a;
+            color: #a5b4fc;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            border-top: 1px solid #334155;
+            min-height: 100px;
+            white-space: pre-wrap;
+            margin-top: 0;
+        }
+
+        /* Micro-Interactions */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .interactive-card {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .interactive-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1);
+            border-color: #818cf8;
+        }
+
+        .interactive-card:active {
+            transform: scale(0.98);
+        }
+
+        /* Animations */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+
+    <!-- Python Controller -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        import time
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            if el.tagName != "BUTTON": el = el.closest("button")
+            if not el: return
+
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            
+            if not code_id: return
+
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            
+            code_val = code_el.value
+            
+            out_el.innerText = "Running..."
+            if fb_el: fb_el.classList.add("hidden")
+
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            start_time = time.time()
+            
+            try:
+                scope = {}
+                exec(code_val, scope)
+                
+                result = capture.getvalue().strip()
+                elapsed = (time.time() - start_time) * 1000
+                
+                out_el.innerText = result if result else "[No Output]"
+                
+                if action == "check":
+                    expected = el.getAttribute("data-expect")
+                    test_logic = el.getAttribute("data-test")
+                    
+                    passed = True
+                    reasons = []
+                    
+                    if expected and expected.lower() not in result.lower():
+                        passed = False
+                        reasons.append(f"Output kurang tepat. Harusnya ada: '{expected}'")
+
+                    if passed and test_logic:
+                        try:
+                            exec(code_val, scope)
+                            exec(test_logic, scope)
+                        except Exception as e:
+                            passed = False
+                            reasons.append(f"Review Logic: {e}")
+                    
+                    if passed:
+                        if fb_el:
+                            fb_el.innerHTML = f"<div class='flex items-center gap-2'><span class='text-green-500 text-xl'>✓</span> <span>Bug Fixed! ({elapsed:.2f}ms)</span></div>"
+                            fb_el.className = "mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 block"
+                    else:
+                        if fb_el:
+                            fb_el.innerHTML = f"<div class='flex items-start gap-2'><span class='text-red-500 text-xl'>×</span> <div>" + "<br>".join(reasons) + "</div></div>"
+                            fb_el.className = "mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 block"
+                        
+            except Exception as e:
+                out_el.innerText = f"Error: {e}"
+                if action == "check" and fb_el:
+                    fb_el.innerHTML = f"<div class='flex items-center gap-2'><span class='text-red-500 text-xl'>⚠️</span> <span>Masih Error! Cek pesan di atas.</span></div>"
+                    fb_el.className = "mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 block"
+            finally:
+                sys.stdout = old_stdout
+
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-indigo-500 selection:text-white">
+
+    <!-- Access Code Overlay -->
+    <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+            <p class="text-slate-600 mb-4">Masukkan kode kelas Sesi 32</p>
+            <input id="accessCodeInput" type="text" placeholder="Kode..."
+                class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+            <button id="accessBtn"
+                class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka
+                Materi</button>
+            <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div
+                    class="bg-teal-600 text-white w-9 h-9 rounded-xl grid place-items-center font-bold shadow-lg shadow-teal-200">
+                    32</div>
+                <div>
+                    <div class="font-bold text-sm text-slate-900 tracking-tight">Code Analysis</div>
+                    <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Complex Code &
+                        Debugging</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="slideIndicator"
+                    class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">1/12</span>
+                <button id="btnPrev"
+                    class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 text-slate-600 transition disabled:opacity-30 disabled:cursor-not-allowed">←</button>
+                <button id="btnNext"
+                    class="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center hover:bg-teal-500 text-white shadow-md shadow-teal-200 transition disabled:opacity-30 disabled:cursor-not-allowed">→</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-4 py-8 mb-20">
+        <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20">
+            <div id="bar" class="h-full bg-teal-500 transition-all duration-300 shadow-[0_0_10px_rgba(20,184,166,0.5)]"
+                style="width: 10%"></div>
+        </div>
+
+        <!-- SLIDE 1: INTRO (3 PILLARS) -->
+        <section class="slide active">
+            <div class="max-w-4xl mx-auto py-8">
+                <div class="flex items-center gap-8 mb-8">
+                    <div class="flex-1">
+                        <div class="inline-block relative mb-6">
+                            <div class="absolute inset-0 bg-teal-500 blur-2xl opacity-20 animate-pulse rounded-full">
+                            </div>
+                            <div class="relative bg-white p-6 rounded-3xl shadow-xl border border-slate-100">
+                                <div class="text-6xl animate-spin-slow">⚙️</div>
+                            </div>
+                        </div>
+                        <h1 class="text-5xl font-black text-slate-900 mb-6 tracking-tight leading-tight">
+                            Membedah Isi Mesin Kode: <br><span
+                                class="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Code
+                                Analysis</span>
+                        </h1>
+                        <p class="text-lg text-slate-600 leading-relaxed mb-6">
+                            Pernahkah kamu melihat jam tangan transparan? Di dalamnya ada ratusan gir kecil yang
+                            berputar.
+                            <br><b>Kode Aplikasi juga sama!</b> Hari ini kita akan belajar membongkarnya.
+                        </p>
+                        <div class="bg-teal-50 border-l-4 border-teal-500 p-4 rounded-r-lg">
+                            <p class="text-sm text-teal-800 font-medium">
+                                💡 <b>Fakta Seru:</b> Programmer Senior menghabiskan 70% waktunya untuk MEMBACA kode,
+                                dan cuma 30% untuk MENULIS kode!
+                            </p>
+                        </div>
+                    </div>
+                    <!-- Right Graphic -->
+                    <div class="flex-1 hidden md:block">
+                        <div
+                            class="bg-slate-900 rounded-xl p-6 shadow-2xl skew-y-3 transform border border-slate-700 relative overflow-hidden">
+                            <div class="absolute -right-10 -top-10 text-9xl opacity-10 animate-spin-slow">⚙️</div>
+                            <div class="font-mono text-xs text-yellow-400 mb-2">// Complex Machine</div>
+                            <div class="space-y-3">
+                                <div class="bg-white/10 p-3 rounded border border-white/20">
+                                    <div class="text-[10px] text-slate-400 mb-1">Module A (Roda)</div>
+                                    <div class="w-full h-2 bg-slate-700 rounded overflow-hidden">
+                                        <div class="h-full bg-green-500 w-full animate-pulse"></div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-center text-slate-500">⬇️ Depends On</div>
+                                <div class="bg-white/10 p-3 rounded border border-white/20">
+                                    <div class="text-[10px] text-slate-400 mb-1">Module B (Mesin)</div>
+                                    <div class="w-full h-2 bg-slate-700 rounded overflow-hidden">
+                                        <div class="h-full bg-blue-500 w-full animate-pulse"
+                                            style="animation-delay: 0.5s"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <h3 class="font-bold text-slate-800 mb-4">Kenapa Kode Jadi Rumit? (3 Konsep)</h3>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div
+                            class="glass-panel p-4 rounded-xl border-l-4 border-blue-500 hover:scale-[1.02] transition">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="text-xl">🧩</div>
+                                <div class="text-xs font-bold text-blue-800 uppercase">1. Komposisi</div>
+                            </div>
+                            <p class="text-[10px] text-slate-600">Gabungan banyak bagian.</p>
+                        </div>
+
+                        <div
+                            class="glass-panel p-4 rounded-xl border-l-4 border-purple-500 hover:scale-[1.02] transition">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="text-xl">📦</div>
+                                <div class="text-xs font-bold text-purple-800 uppercase">2. Abstraksi</div>
+                            </div>
+                            <p class="text-[10px] text-slate-600">Sembunyikan detail rumit.</p>
+                        </div>
+
+                        <div
+                            class="glass-panel p-4 rounded-xl border-l-4 border-orange-500 hover:scale-[1.02] transition">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="text-xl">🕸️</div>
+                                <div class="text-xs font-bold text-orange-800 uppercase">3. Ketergantungan</div>
+                            </div>
+                            <p class="text-[10px] text-slate-600">Saling terhubung.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: CONCEPTS WITH ANALOGIES -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">3 Konsep Rumit (Versi Gampang) 🤩</h2>
+            <p class="text-slate-600 mb-8">Kode program itu mirip kehidupan sehari-hari. Yuk kita cocokkan!</p>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- 1. Komposisi -->
+                <div
+                    class="glass-panel p-6 rounded-2xl border-b-4 border-blue-500 hover:-translate-y-2 transition duration-300">
+                    <div class="text-4xl mb-4 text-center">🍔</div>
+                    <h3 class="text-xl font-bold text-slate-800 text-center mb-2">Komposisi</h3>
+                    <div class="bg-blue-50 p-3 rounded-lg text-xs text-blue-800 mb-3 text-center">
+                        <b>Analogi: Burger</b><br>
+                        Burger = Roti + Daging + Keju.
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed text-center">
+                        Kode juga gabungan! Program besar terdiri dari banyak kode kecil yang disusun jadi satu.
+                    </p>
+                </div>
+
+                <!-- 2. Abstraksi -->
+                <div
+                    class="glass-panel p-6 rounded-2xl border-b-4 border-purple-500 hover:-translate-y-2 transition duration-300">
+                    <div class="text-4xl mb-4 text-center">🏧</div>
+                    <h3 class="text-xl font-bold text-slate-800 text-center mb-2">Abstraksi</h3>
+                    <div class="bg-purple-50 p-3 rounded-lg text-xs text-purple-800 mb-3 text-center">
+                        <b>Analogi: Mesin ATM</b><br>
+                        Pencet tombol -> Uang keluar.
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed text-center">
+                        Kita gak perlu tahu ada robot apa di dalam ATM. Di kode, kita pakai fungsi <code>print()</code>
+                        tanpa tahu cara kerjanya.
+                    </p>
+                </div>
+
+                <!-- 3. Ketergantungan -->
+                <div
+                    class="glass-panel p-6 rounded-2xl border-b-4 border-orange-500 hover:-translate-y-2 transition duration-300">
+                    <div class="text-4xl mb-4 text-center">🎮🔌</div>
+                    <h3 class="text-xl font-bold text-slate-800 text-center mb-2">Dependency</h3>
+                    <div class="bg-orange-50 p-3 rounded-lg text-xs text-orange-800 mb-3 text-center">
+                        <b>Analogi: Konsol & Listrik</b><br>
+                        Game putus kalau listrik mati.
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed text-center">
+                        Kode A butuh Kode B. Kalau B error, A juga ikutan mati. Saling nyambung!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Mini Interactive Check -->
+            <div class="mt-8 bg-white p-6 rounded-xl border border-slate-200 shadow-sm text-center">
+                <p class="font-bold text-slate-700 mb-4">🧠 Coba Tebak: "Remote TV" itu contoh apa?</p>
+                <div class="flex justify-center gap-4">
+                    <button onclick="alert('❌ Salah! Remote tidak disusun dari TV.')"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm transition">Komposisi</button>
+                    <button
+                        onclick="alert('✅ BENAR! Kita pakai Remote tanpa tahu isi elektronik di dalamnya (Sembunyikan Rumit).')"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-indigo-200 transition">Abstraksi</button>
+                    <button onclick="alert('❌ Kurang tepat.')"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm transition">Dependency</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: ANALYSIS STRATEGY (DETECTIVE THEME) -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Strategi Detektif Kode 🕵️‍♂️</h2>
+            <p class="text-slate-600 mb-6">Bagaimana cara memeriksa kode yang rumit? Jadilah detektif!</p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Abstraksi -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                    <div
+                        class="absolute top-0 right-0 p-4 opacity-10 text-9xl group-hover:scale-110 transition duration-500">
+                        📦</div>
+                    <h3 class="flex items-center gap-2 font-bold text-slate-800 mb-3 text-lg">
+                        <span class="bg-purple-100 p-2 rounded-lg text-2xl">📦</span> Strategi Black Box
+                    </h3>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Jangan bongkar mesinnya dulu! Cek saja <b>Apa yang Masuk</b> dan <b>Apa yang Keluar</b>.
+                    </p>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 font-mono text-xs">
+                        Input: "Ayam Pentung"<br>
+                        Mesin: <span class="bg-slate-800 text-white px-1">Goreng()</span><br>
+                        Output: "Ayam Goreng" <span class="text-green-500">✅ OK</span>
+                    </div>
+                </div>
+
+                <!-- Komposisi -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+                    <div
+                        class="absolute top-0 right-0 p-4 opacity-10 text-9xl group-hover:scale-110 transition duration-500">
+                        🗺️</div>
+                    <h3 class="flex items-center gap-2 font-bold text-slate-800 mb-3 text-lg">
+                        <span class="bg-blue-100 p-2 rounded-lg text-2xl">🗺️</span> Strategi Peta Harta
+                    </h3>
+                    <p class="text-sm text-slate-600 mb-4">
+                        Ikuti jejaknya! Kode berjalan baris demi baris. Buat peta perjalanan data.
+                    </p>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 font-mono text-xs">
+                        Start ➔ Fungsi A ➔ Fungsi B ➔ Finish 🏁
+                        <br><span class="text-slate-400">(Tandai dimana dia tersesat)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: CODE STRUCTURE DEMO -->
+        <section class="slide">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="bg-indigo-600 text-white px-3 py-1 rounded text-xs font-bold uppercase">Contoh Kasus</span>
+                <h2 class="text-2xl font-bold text-slate-900">Analisis Gaji Karyawan 💰</h2>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-4 h-[400px]">
+                <div class="editor-container h-full overflow-y-auto">
+                    <div class="editor-header">structure_analisis.py</div>
+                    <div class="p-4 font-mono text-xs text-slate-300 leading-relaxed">
+                        <span class="text-slate-500"># Level 1: Abstraksi (Detail)</span><br>
+                        <span class="text-purple-400">def</span> <span
+                            class="text-blue-400">hitung_pajak</span>(gaji_kotor):<br>
+                        &nbsp;&nbsp;<span class="text-purple-400">return</span> gaji_kotor * 0.1<br><br>
+
+                        <span class="text-slate-500"># Level 1: Abstraksi (Menggunakan Fungsi Lain)</span><br>
+                        <span class="text-purple-400">def</span> <span
+                            class="text-blue-400">hitung_gaji_bersih</span>(gaji_kotor):<br>
+                        &nbsp;&nbsp;<span class="text-slate-500"># Panggil fungsi lain (Komposisi)</span><br>
+                        &nbsp;&nbsp;pajak = <span class="text-blue-400">hitung_pajak</span>(gaji_kotor)<br>
+                        &nbsp;&nbsp;<span class="text-purple-400">return</span> gaji_kotor - pajak<br><br>
+
+                        <span class="text-slate-500"># Level 0: Komposisi Utama</span><br>
+                        <span class="text-purple-400">def</span> <span
+                            class="text-yellow-400">proses_pembayaran</span>(gaji):<br>
+                        &nbsp;&nbsp;hasil = <span class="text-blue-400">hitung_gaji_bersih</span>(gaji)<br>
+                        &nbsp;&nbsp;<span class="text-yellow-400">print</span>(f"Gaji dibayar: {hasil}")<br><br>
+
+                        <span class="text-slate-500"># Analisis dimulai dari sini:</span><br>
+                        <span class="text-yellow-400">proses_pembayaran</span>(5000)
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="bg-indigo-50 p-4 rounded-xl text-sm border border-indigo-100">
+                        <p class="font-bold text-indigo-800 mb-2">🔍 Langkah Analisis:</p>
+                        <ol class="list-decimal list-inside space-y-2 text-indigo-700 text-xs">
+                            <li>Start di <code>proses_pembayaran(5000)</code>.</li>
+                            <li>Masuk ke <code>hitung_gaji_bersih</code>.</li>
+                            <li>Masuk ke <code>hitung_pajak</code>. Hitung 5000 * 0.1 = 500.</li>
+                            <li>Kembali ke <code>gaji_bersih</code>. Hitung 5000 - 500 = 4500.</li>
+                            <li>Kembali ke <code>proses</code>. Print 4500.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: DEBUGGING CYCLE (5 STEPS) -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900 text-center">Siklus Debugging (5 Tahap) 🔄</h2>
+            <div class="relative max-w-2xl mx-auto">
+                <div class="absolute left-[20px] top-0 bottom-0 w-1 bg-slate-200"></div>
+
+                <div class="space-y-6">
+                    <div class="relative pl-12 group">
+                        <div
+                            class="absolute left-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center font-bold text-red-600 border-4 border-white shadow-sm z-10 group-hover:scale-110 transition">
+                            1</div>
+                        <h3 class="font-bold text-slate-800">Reproduksi (Reproduce)</h3>
+                        <p class="text-xs text-slate-600">Pastikan error bisa diulang secara konsisten.</p>
+                    </div>
+                    <div class="relative pl-12 group">
+                        <div
+                            class="absolute left-0 w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center font-bold text-orange-600 border-4 border-white shadow-sm z-10 group-hover:scale-110 transition">
+                            2</div>
+                        <h3 class="font-bold text-slate-800">Lokalisasi (Localize)</h3>
+                        <p class="text-xs text-slate-600">Tentukan baris mana yang salah (Pakai Print/Breakpoint).</p>
+                    </div>
+                    <div class="relative pl-12 group">
+                        <div
+                            class="absolute left-0 w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center font-bold text-yellow-600 border-4 border-white shadow-sm z-10 group-hover:scale-110 transition">
+                            3</div>
+                        <h3 class="font-bold text-slate-800">Diagnosis</h3>
+                        <p class="text-xs text-slate-600">Pahami KENAPA salah (Logic error? Variable salah?).</p>
+                    </div>
+                    <div class="relative pl-12 group">
+                        <div
+                            class="absolute left-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center font-bold text-blue-600 border-4 border-white shadow-sm z-10 group-hover:scale-110 transition">
+                            4</div>
+                        <h3 class="font-bold text-slate-800">Perbaikan (Fix)</h3>
+                        <p class="text-xs text-slate-600">Ubah kode untuk memperbaiki bug.</p>
+                    </div>
+                    <div class="relative pl-12 group">
+                        <div
+                            class="absolute left-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center font-bold text-green-600 border-4 border-white shadow-sm z-10 group-hover:scale-110 transition">
+                            5</div>
+                        <h3 class="font-bold text-slate-800">Verifikasi (Verify)</h3>
+                        <p class="text-xs text-slate-600">Test ulang! Pastikan tidak ada bug baru (Regresi).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: DEBUGGER TOOLS -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Alat Bedah: Debugger Interaktif 🛠️</h2>
+            <p class="mb-6 text-slate-600">Debugger memungkinkan kita menghentikan waktu dan melihat isi otak komputer.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="glass-panel p-6 rounded-xl border-l-4 border-red-500">
+                    <h3 class="font-bold text-red-700 mb-2">🛑 Breakpoint</h3>
+                    <p class="text-sm text-slate-600">Titik henti. Program akan berjalan normal lalu <b>PAUSE</b> tepat
+                        di baris yang kamu tandai.</p>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl border-l-4 border-indigo-500">
+                    <h3 class="font-bold text-indigo-700 mb-2">👣 Stepping (Langkah)</h3>
+                    <ul class="text-xs text-slate-700 space-y-3">
+                        <li class="flex gap-2">
+                            <span class="font-bold bg-indigo-100 px-2 rounded">Step Over</span>
+                            <span>Lompati fungsi (Anggap selesai).</span>
+                        </li>
+                        <li class="flex gap-2">
+                            <span class="font-bold bg-indigo-100 px-2 rounded">Step Into</span>
+                            <span>Masuk ke dalam detail fungsi.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            <span class="font-bold bg-indigo-100 px-2 rounded">Step Out</span>
+                            <span>Keluar cepat dari fungsi saat ini.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 6: UNIT TESTING CONCEPTS -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Mencegah Bug: Unit Testing 🛡️</h2>
+            <div class="bg-white p-6 rounded-2xl shadow-xl border border-slate-200 text-center max-w-2xl mx-auto">
+                <p class="text-slate-600 mb-6">
+                    Unit Testing adalah pengujian bagian terkecil (fungsi) untuk memastikan outputnya benar.
+                </p>
+
+                <h3 class="font-bold text-slate-800 mb-4 bg-slate-50 p-2 rounded">Konsep Dasar Test Case</h3>
+
+                <div class="flex justify-center items-center gap-4 text-sm">
+                    <div class="space-y-1">
+                        <div class="font-bold text-blue-600">Known Input</div>
+                        <div class="bg-blue-50 border border-blue-200 p-2 rounded">Input: 100</div>
+                    </div>
+                    <div class="text-lg">➜</div>
+                    <div class="space-y-1">
+                        <div class="font-bold text-slate-600">Function</div>
+                        <div class="bg-slate-100 border border-slate-200 p-2 rounded">x * 2</div>
+                    </div>
+                    <div class="text-lg">➜</div>
+                    <div class="space-y-1">
+                        <div class="font-bold text-green-600">Expected Output</div>
+                        <div class="bg-green-50 border border-green-200 p-2 rounded">Harapan: 200</div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-red-50 text-red-800 p-3 rounded-lg text-sm font-bold border border-red-200">
+                    Jika Actual Output ≠ Expected Output, maka ada BUG! 🪲
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: PROJECT BUG HUNT -->
+        <section class="slide">
+            <div class="text-center py-6">
+                <h1 class="text-4xl font-black text-slate-900 mb-2">Aktivitas: Bug Hunt 🕵️‍♀️</h1>
+                <p class="text-slate-600 mb-6">Kamu menerima kode, tetapi ada bug di dalamnya. Gunakan teknik
+                    <b>Stepping</b> dan <b>Unit Test</b> manual.</p>
+            </div>
+
+            <div class="flex items-center gap-2 mb-2">
+                <span class="bg-rose-600 text-white px-2 py-1 rounded text-xs font-bold uppercase">Kasus 1</span>
+                <h2 class="text-xl font-bold text-slate-900">Total Harga Bersih (Diskon Error)</h2>
+            </div>
+
+            <div class="editor-container h-auto shadow-2xl">
+                <textarea id="bug1" class="editor-textarea">
+def hitung_diskon(total):
+    if total > 50000:
+        return total * 0.1 # Diskon 10%
+    # BUG: Jika <= 50000, dia return None!
+    # Fix: tambahkan return 0 disini
+
+def hitung_total_bayar(belanjaan):
+    potongan = hitung_diskon(belanjaan)
+    # Ini akan error jika potongan None
+    return belanjaan - potongan 
+
+# Test Case:
+print(f"Beli 20000 -> Bayar {hitung_total_bayar(20000)} (Harapan: 20000)")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="bug1" data-out="out1"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold">▶ Reproduksi
+                        Error</button>
+                    <button data-action="check" data-code="bug1" data-expect="Bayar 20000" data-out="out1" data-fb="fb1"
+                        class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold">✓ Verifikasi
+                        Fix</button>
+                </div>
+                <div id="out1" class="output-area"></div>
+            </div>
+            <div id="fb1" class="hidden mt-2"></div>
+        </section>
+
+        <!-- SLIDE 8: PROJECT CASE 2 -->
+        <section class="slide">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="bg-rose-600 text-white px-2 py-1 rounded text-xs font-bold uppercase">Kasus 2</span>
+                <h2 class="text-xl font-bold text-slate-900">Salah Rumus (Logic Error)</h2>
+            </div>
+            <p class="text-xs text-slate-500 mb-2">Input: 100,000. Expected Output: 110,000 (Pajak 10%). Actual:
+                200,000.</p>
+
+            <div class="editor-container h-auto shadow-2xl">
+                <textarea id="bug2" class="editor-textarea">
+def tambah_pajak(harga):
+    # DIAGNOSIS: Kenapa hasilnya 2x lipat?
+    pajak = harga  # Logic salah! Harusnya harga * 0.1
+    return harga + pajak
+
+print(f"Harga Asli: 100000")
+print(f"Setelah Pajak: {tambah_pajak(100000)}")
+print("Expected: 110000")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="bug2" data-out="out2"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold">▶ Cek Actual
+                        Output</button>
+                    <button data-action="check" data-code="bug2" data-expect="110000" data-out="out2" data-fb="fb2"
+                        class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold">✓ Verifikasi
+                        Fix</button>
+                </div>
+                <div id="out2" class="output-area"></div>
+            </div>
+            <div id="fb2" class="hidden mt-2"></div>
+        </section>
+
+        <!-- SLIDE 9: CHECKOUT QUIZ -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Checkout Quiz 🎫</h2>
+            <div class="grid gap-4 max-w-xl mx-auto">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="font-bold text-slate-800 mb-2">1. Apa itu "Breakpoint"?</p>
+                    <div class="flex gap-2">
+                        <button onclick="alert('❌ Salah. Itu Stop.')" class="bg-slate-100 p-2 rounded text-xs">Mematikan
+                            program.</button>
+                        <button onclick="alert('✅ BENAR! Menjeda program.')"
+                            class="bg-teal-100 text-teal-800 font-bold p-2 rounded text-xs border border-teal-200">Menjeda
+                            program di baris tertentu.</button>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                    <p class="font-bold text-slate-800 mb-2">2. Jika kita ingin masuk detail ke dalam fungsi, pakai?</p>
+                    <div class="flex gap-2">
+                        <button onclick="alert('✅ BENAR!')"
+                            class="bg-blue-100 text-blue-800 font-bold p-2 rounded text-xs border border-blue-200">Step
+                            Into</button>
+                        <button onclick="alert('❌ Salah. Itu melompati.')" class="bg-slate-100 p-2 rounded text-xs">Step
+                            Over</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 10: CLOSING -->
+        <section class="slide">
+            <div class="text-center py-20">
+                <div class="text-8xl animate-bounce mb-6">🏁</div>
+                <h1 class="text-5xl font-black text-slate-900 mb-4">You are a Debugger!</h1>
+                <p class="text-xl text-slate-600 max-w-lg mx-auto mb-8">
+                    Ingat: "Debugging is being the detective in a crime movie where you are also the murderer."
+                </p>
+                <button onclick="location.reload()"
+                    class="px-6 py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-700 transition">Ulangi
+                    Materi</button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('accessOverlay');
+            const input = document.getElementById('accessCodeInput');
+            const btn = document.getElementById('accessBtn');
+            const error = document.getElementById('accessError');
+            const CODE = 'RGMDSHS25';
+
+            function checkCode() {
+                if (input.value.toUpperCase().trim() === CODE) {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.style.display = 'none', 300);
+                } else {
+                    error.classList.remove('hidden');
+                }
+            }
+            if (btn) btn.addEventListener('click', checkCode);
+            if (input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+            const slides = document.querySelectorAll('.slide');
+            const bar = document.getElementById('bar');
+            const ind = document.getElementById('slideIndicator');
+            const btnPrev = document.getElementById('btnPrev');
+            const btnNext = document.getElementById('btnNext');
+            let curr = 0;
+
+            function updateUI() {
+                slides.forEach((s, i) => {
+                    if (i === curr) s.classList.add('active');
+                    else s.classList.remove('active');
+                });
+                bar.style.width = ((curr + 1) / slides.length) * 100 + "%";
+                ind.innerText = `${curr + 1}/${slides.length}`;
+                btnPrev.disabled = curr === 0;
+                btnNext.disabled = curr === slides.length - 1;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            btnPrev.onclick = () => { if (curr > 0) { curr--; updateUI(); } };
+            btnNext.onclick = () => { if (curr < slides.length - 1) { curr++; updateUI(); } };
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+                if (e.key === "ArrowRight") btnNext.click();
+                if (e.key === "ArrowLeft") btnPrev.click();
+            });
+        });
+    </script>
+</body>
+
+</html>
