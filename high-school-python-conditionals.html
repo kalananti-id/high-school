@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sesi 33: Needs vs Wants & Conditionals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        gold: { 400: '#fbbf24', 500: '#f59e0b' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { color-scheme: light; }
+        .slide { display: none; opacity: 0; transition: opacity 0.4s ease-in-out; }
+        .slide.active { display: block; opacity: 1; }
+        .code-font { font-family: 'JetBrains Mono', monospace; }
+        
+        /* IDE Styles */
+        .editor-container { background: #1e293b; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .editor-header { background: #0f172a; color: #94a3b8; padding: 0.5rem 1rem; font-size: 0.75rem; font-family: sans-serif; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+        .editor-textarea { 
+            width: 100%; height: 160px; background: #1e293b; color: #f8fafc; padding: 1rem; 
+            font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; border: none; outline: none; resize: none; line-height: 1.6;
+        }
+        .text-area-tall { height: 250px; }
+        .output-area {
+            background: #0f172a; color: #a5b4fc; padding: 1rem; font-family: 'JetBrains Mono', monospace; 
+            font-size: 0.85rem; border-top: 1px solid #334155; min-height: 3.5rem; white-space: pre-wrap;
+        }
+
+        /* Animations */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+    </style>
+    
+    <!-- Python Controller -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        import time
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            if el.tagName != "BUTTON": el = el.closest("button")
+            if not el: return
+
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            
+            if not code_id: return
+
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            
+            code_val = code_el.value
+            out_el.innerText = "Running..."
+            if fb_el: fb_el.classList.add("hidden")
+
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            try:
+                scope = {}
+                exec(code_val, scope)
+                result = capture.getvalue().strip()
+                out_el.innerText = result if result else "[No Output]"
+                
+                if action == "check":
+                    expected = el.getAttribute("data-expect")
+                    test_logic = el.getAttribute("data-test")
+                    passed = True
+                    reasons = []
+                    
+                    if expected and expected.lower() not in result.lower():
+                        passed = False
+                        reasons.append(f"Output tidak mengandung: '{expected}'")
+
+                    if passed and test_logic:
+                        try:
+                            exec(code_val, scope) 
+                            exec(test_logic, scope)
+                        except Exception as e:
+                            passed = False
+                            reasons.append(f"Logic Alert: {e}")
+                    
+                    if passed:
+                        if fb_el:
+                            fb_el.innerHTML = f"<span class='text-green-600 font-bold'>✓ Benar! Logic kamu tepat.</span>"
+                            fb_el.className = "mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm block"
+                    else:
+                        if fb_el:
+                            fb_el.innerHTML = f"<span class='text-red-600 font-bold'>× Coba lagi:</span> " + " ".join(reasons)
+                            fb_el.className = "mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm block"
+                        
+            except Exception as e:
+                out_el.innerText = f"Error: {e}"
+            finally:
+                sys.stdout = old_stdout
+
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-brand-500 selection:text-white">
+
+    <!-- Access Code Overlay -->
+    <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+            <p class="text-slate-600 mb-4">Masukkan kode kelas Sesi 33</p>
+            <input id="accessCodeInput" type="text" placeholder="Kode..." class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+            <button id="accessBtn" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka Materi</button>
+            <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-brand-600 text-white w-9 h-9 rounded-xl grid place-items-center font-bold shadow-lg shadow-brand-200">33</div>
+                <div>
+                    <div class="font-bold text-sm text-slate-900 tracking-tight">Needs vs Wants</div>
+                    <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Python Conditionals</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="slideIndicator" class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">1/20</span>
+                <button id="btnPrev" class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition">←</button>
+                <button id="btnNext" class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center hover:bg-brand-500 text-white shadow-md transition">→</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-8 mb-20">
+        <!-- Progress Bar -->
+        <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20"><div id="bar" class="h-full bg-brand-500 transition-all duration-300" style="width: 5%"></div></div>
+
+        <!-- SLIDE 1: Title -->
+        <section class="slide active">
+            <div class="py-20 text-center">
+                <div class="text-6xl mb-6 animate-float">🧠 vs 💖</div>
+                <h1 class="text-5xl font-black text-slate-900 mb-6">Smart Decisions:<br><span class="text-brand-600">Needs vs Wants & Logic</span></h1>
+                <p class="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                    Bagaimana mengajarkan komputer untuk membedakan hal yang "PENTING" vs hal yang hanya "INGIN".
+                </p>
+                <div class="mt-8 flex justify-center gap-4">
+                    <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">Python Conditionals</span>
+                    <span class="px-4 py-2 bg-pink-100 text-pink-700 rounded-full text-sm font-bold">Financial Logic</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: The Hook -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Masalah Abadi Manusia 🌍</h2>
+            <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 flex flex-col md:flex-row items-center gap-8">
+                <div class="flex-1 text-center md:text-left">
+                    <h3 class="text-xl font-bold mb-3">The Infinite Wishlist vs Limited Wallet</h3>
+                    <p class="text-slate-600 mb-4">
+                        Di dunia nyata, kita selalu punya banyak keinginan. Gadget baru, makan enak, liburan. 
+                        Tapi sumber daya (uang/waktu) kita TERBATAS.
+                    </p>
+                    <div class="bg-slate-50 p-4 rounded-lg border-l-4 border-brand-500 text-sm">
+                        <b>Pertanyaan Kunci:</b> "Bagaimana kita memutuskan mana yang harus dibeli DULUAN?"
+                    </div>
+                </div>
+                <div class="text-8xl">🤔</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: Concept - Needs -->
+        <section class="slide">
+            <div class="grid md:grid-cols-2 gap-8 items-center h-full">
+                <div>
+                    <h2 class="text-4xl font-bold text-blue-800 mb-2">NEEDS (Kebutuhan)</h2>
+                    <p class="text-lg text-slate-500 font-medium mb-6">"Survival Mode & Functionality"</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-center gap-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                            <span class="text-3xl">🏠</span>
+                            <div>
+                                <b class="block text-blue-900">Mutlak Diperlukan</b>
+                                <span class="text-sm text-blue-700">Tanpa ini, kita tidak bisa hidup atau bekerja.</span>
+                            </div>
+                        </li>
+                        <li class="flex items-center gap-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                            <span class="text-3xl">⚡</span>
+                            <div>
+                                <b class="block text-blue-900">Prioritas Tinggi</b>
+                                <span class="text-sm text-blue-700">Harus dipenuhi SEBELUM memikirkan hal lain.</span>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="mt-6 text-sm text-slate-400">Contoh: Makan, Tempat Tinggal, Internet (untuk sekolah).</div>
+                </div>
+                <div class="bg-blue-100 rounded-3xl p-8 flex items-center justify-center">
+                    <img src="https://images.squarespace-cdn.com/content/v1/5358544be4b0fde632927355/1587649844651-JX9XVUYXSVB0Q4R7AJTX/WantAndNeed.gif" class="rounded-xl shadow-lg w-full object-cover h-64 opacity-80 mix-blend-multiply" alt="Water/Food">
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: Concept - Wants -->
+        <section class="slide">
+            <div class="grid md:grid-cols-2 gap-8 items-center h-full">
+                <div class="order-2 md:order-1 bg-pink-100 rounded-3xl p-8 flex items-center justify-center">
+                    <img src="https://img1.picmix.com/output/stamp/normal/0/4/9/1/2381940_1e7e1.gif" class="rounded-xl shadow-lg w-full object-cover h-64 opacity-80 mix-blend-multiply" alt="Wants/Games">
+                </div>
+                <div class="order-1 md:order-2">
+                    <h2 class="text-4xl font-bold text-pink-800 mb-2">WANTS (Keinginan)</h2>
+                    <p class="text-lg text-slate-500 font-medium mb-6">"Comfort & Happiness"</p>
+                    <ul class="space-y-4">
+                        <li class="flex items-center gap-4 bg-pink-50 p-4 rounded-xl border border-pink-100">
+                            <span class="text-3xl">🍦</span>
+                            <div>
+                                <b class="block text-pink-900">Tambahan (Opsional)</b>
+                                <span class="text-sm text-pink-700">Membuat hidup lebih asik, tapi BUKAN syarat hidup.</span>
+                            </div>
+                        </li>
+                        <li class="flex items-center gap-4 bg-pink-50 p-4 rounded-xl border border-pink-100">
+                            <span class="text-3xl">📉</span>
+                            <div>
+                                <b class="block text-pink-900">Prioritas Rendah</b>
+                                <span class="text-sm text-pink-700">Dipenuhi HANYA JIKA sisa sumber daya masih ada.</span>
+                            </div>
+                        </li>
+                    </ul>
+                    <div class="mt-6 text-sm text-slate-400">Contoh: Netflix Premium, Skin Game, Boba.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: The Bridge -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-8 text-center">Translating Life to Code 🔄</h2>
+            <div class="grid md:grid-cols-3 gap-4 text-center items-center">
+                
+                <!-- Human thought -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="text-4xl mb-3">🧠</div>
+                    <div class="font-bold text-slate-700 mb-2">Pikiran Manusia</div>
+                    <p class="text-sm italic text-slate-500">"Kalau aku lapar, maka aku makan."</p>
+                </div>
+
+                <div class="text-4xl text-brand-500 animate-pulse">➜</div>
+
+                <!-- Python Logic -->
+                <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
+                    <div class="text-4xl mb-3">🐍</div>
+                    <div class="font-bold text-slate-200 mb-2">Python Logic</div>
+                    <code class="text-sm text-green-400 text-left block bg-slate-800 p-2 rounded">
+                        if status == "lapar":<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;makan()
+                    </code>
+                </div>
+
+            </div>
+            <p class="text-center mt-8 max-w-lg mx-auto text-slate-600">
+                Dalam programming, kita menggunakan <b>Conditionals</b> (Percabangan) untuk membuat program bisa "berpikir" dan mengambil keputusan.
+            </p>
+        </section>
+
+        <!-- SLIDE 6: Syntax IF -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4 text-slate-900">Kata Kunci: <code class="text-brand-600">if</code></h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <p class="mb-4 text-slate-600">
+                        <code>if</code> adalah penjaga gerbang. Kode di dalamnya HANYA berjalan jika syaratnya <b>True</b> (Benar).
+                    </p>
+                    <div class="bg-slate-900 p-6 rounded-xl text-white font-mono text-sm leading-8">
+                        <span class="text-purple-400">if</span> <span class="text-blue-400">kondisi_terpenuhi</span>:<br>
+                        <span class="bg-white/10 px-1 rounded text-yellow-300">    </span><span class="text-green-400">lakukan_sesuatu()</span>
+                    </div>
+                    <div class="mt-4 bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400 text-sm text-yellow-800">
+                        ⚠️ <b>Indentation Rules!</b><br>
+                        Di Python, "spasi" itu Wajib! Baris di bawah <code>if</code> harus menjorok ke dalam (biasanya 4 spasi atau 1 Tab).
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-lg border border-slate-100 flex items-center justify-center">
+                    <img src="https://media.geeksforgeeks.org/wp-content/uploads/20191119173322/python-if-else.png" class="max-h-64 opacity-90" alt="Flowchart IF">
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: Interactive Demo 1 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Coba Sendiri: Cek Harga 🏷️</h2>
+            <p class="mb-4 text-sm text-slate-500">Buat program yang mengecek apakah uang kita cukup. Anggap uang kita = 5000.</p>
+            
+            <div class="editor-container">
+                <div class="editor-header"><span>check_price.py</span></div>
+                <textarea id="code_if" class="editor-textarea">
+uang = 5000
+harga_barang = 3000
+
+# Tulis statement if disini:
+# Jika harga_barang kurang dari atau sama dengan uang:
+#     print("Beli sekarang!")
+
+if harga_barang <= uang:
+    print("Beli sekarang!")</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_if" data-out="out_if" data-expect="Beli" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-xs font-bold transition">▶ Run & Check</button>
+                    <div class="ml-auto text-xs text-slate-500 self-center">Hint: Gunakan operator <=</div>
+                </div>
+                <div id="out_if" class="output-area"></div>
+                <div id="fb_if"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: Syntax ELSE -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4">Plan B: <code class="text-brand-600">else</code></h2>
+            <div class="flex gap-8 items-start">
+                <div class="flex-1">
+                    <p class="mb-4 text-slate-600">
+                        Apa yang terjadi jika syarat <b>TIDAK</b> terpenuhi? Kita butuh jalan alternatif.
+                        <code>else</code> menangkap semua kondisi yang gagal di <code>if</code>.
+                    </p>
+                    <div class="bg-slate-900 p-6 rounded-xl text-white font-mono text-sm leading-8">
+                        <span class="text-purple-400">if</span> <span class="text-blue-400">hujan_turun</span>:<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-green-400">buka_payung()</span><br>
+                        <span class="text-purple-400">else</span>:<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-red-400">pakai_topi()</span>
+                    </div>
+                </div>
+                <div class="flex-1 bg-white p-6 rounded-xl border border-slate-200">
+                    <h3 class="font-bold mb-2">Logika Binary</h3>
+                    <div class="flex flex-col gap-2">
+                        <div class="p-3 bg-green-100 text-green-800 rounded">✅ True -> Masuk blok IF</div>
+                        <div class="p-3 bg-red-100 text-red-800 rounded">❌ False -> Masuk blok ELSE</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: Interactive Demo 2 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Challenge: Mahal atau Murah? 💰</h2>
+            <p class="mb-4 text-sm text-slate-500">
+                Lengkapi kode di bawah. Jika harga > 5000, bilang "Mahal banget!". Selain itu (else), bilang "Sikat!".
+            </p>
+            
+            <div class="editor-container">
+                <div class="editor-header"><span>decision_maker.py</span></div>
+                <textarea id="code_else" class="editor-textarea">
+harga = 7500
+
+# Tulis if dan else mu:
+if harga > 5000:
+    print("Mahal banget!")
+# Tulis else dibawah:
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_else" data-out="out_else" data-expect="Mahal" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-bold transition">▶ Run & Check</button>
+                </div>
+                <div id="out_else" class="output-area"></div>
+                <div id="fb_else"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 10: Syntax ELIF -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4 text-slate-900">Banyak Opsi: <code class="text-brand-600">elif</code></h2>
+            <p class="mb-6 text-slate-600 max-w-2xl">
+                Hidup jarang cuma Hitam/Putih. Kadang ada Abu-abu.
+                <code>elif</code> (Else If) digunakan ketika kita punya lebih dari 2 kemungkinan.
+            </p>
+
+            <div class="relative bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div class="absolute -top-3 -right-3 bg-brand-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">3</div>
+                <h3 class="text-lg font-bold mb-2 text-slate-800">Skenario Lampu Lalulintas 🚦</h3>
+                <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono font-bold text-white">
+                    <div class="bg-red-500 py-2 rounded">IF Merah<br>(Stop)</div>
+                    <div class="bg-yellow-500 py-2 rounded">ELIF Kuning<br>(Hati-hati)</div>
+                    <div class="bg-green-500 py-2 rounded">ELSE Hijau<br>(Jalan)</div>
+                </div>
+            </div>
+
+            <div class="mt-6 bg-slate-900 p-4 rounded-xl text-white font-mono text-sm">
+                <span class="text-purple-400">if</span> warna == "merah":<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;stop()<br>
+                <span class="text-purple-400">elif</span> warna == "kuning":<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;siap_siap()<br>
+                <span class="text-purple-400">else</span>:<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;gas_pol()
+            </div>
+        </section>
+
+        <!-- SLIDE 11: Priority Visualizer -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-8 text-center">The Waterfall Effect 🌊</h2>
+            <div class="flex flex-col items-center gap-4 max-w-md mx-auto relative">
+                <div class="w-1 bg-slate-300 absolute h-full z-0 left-1/2 -translate-x-1/2"></div>
+                
+                <div class="z-10 bg-blue-100 p-4 w-full text-center rounded-xl border-2 border-blue-500 shadow-lg relative">
+                    <div class="font-bold text-blue-800">1. Cek IF Pertama</div>
+                    <div class="text-xs text-blue-600">Jika True -> Stop disini!</div>
+                </div>
+
+                <div class="z-10 text-slate-400 bg-white px-2 text-xs">⬇️ (Jika False)</div>
+
+                <div class="z-10 bg-yellow-100 p-4 w-full text-center rounded-xl border-2 border-yellow-500 shadow-lg relative opacity-90">
+                    <div class="font-bold text-yellow-800">2. Cek ELIF</div>
+                    <div class="text-xs text-yellow-600">Jika True -> Stop disini!</div>
+                </div>
+
+                <div class="z-10 text-slate-400 bg-white px-2 text-xs">⬇️ (Jika False)</div>
+
+                <div class="z-10 bg-gray-100 p-4 w-full text-center rounded-xl border-2 border-gray-500 shadow-lg relative opacity-80">
+                    <div class="font-bold text-gray-800">3. Masuk ELSE</div>
+                    <div class="text-xs text-slate-500">Pilihan terakhir (Default)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 12: Short-Circuit Explained -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4">⚠️ Warning: Urutan Itu Penting!</h2>
+            <p class="mb-4 text-slate-600">Python malas. Begitu dia nemu yang BENAR, dia langsung berhenti dan tidak mengecek bawahnya.</p>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-red-50 p-6 rounded-xl border border-red-200">
+                    <h3 class="font-bold text-red-900 border-b border-red-200 pb-2 mb-2">❌ Salah Urutan</h3>
+                    <pre class="text-xs font-mono text-red-800 overflow-x-auto">
+nilai = 95
+# Ini BUG! Python cek > 70 dulu
+if nilai > 70:
+    print("Lulus C") # <-- KEPILIH INI!
+elif nilai > 90:
+    print("Dapat A") # <-- Gak pernah dicek
+                    </pre>
+                </div>
+                <div class="bg-green-50 p-6 rounded-xl border border-green-200">
+                    <h3 class="font-bold text-green-900 border-b border-green-200 pb-2 mb-2">✅ Benar (Spesifik ke Umum)</h3>
+                    <pre class="text-xs font-mono text-green-800 overflow-x-auto">
+nilai = 95
+# Cek yang paling susah dulu
+if nilai > 90:
+    print("Dapat A") # <-- YES!
+elif nilai > 70:
+    print("Lulus C")
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 13: Interactive Demo 3 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Challenge: Grading System 🎓</h2>
+            <p class="mb-4 text-sm text-slate-500">
+                Buat logika nilai:
+                <br>• > 90: "A"
+                <br>• > 80: "B"
+                <br>• Sisanya: "C"
+            </p>
+            
+            <div class="editor-container">
+                <div class="editor-header"><span>grading.py</span></div>
+                <textarea id="code_elif" class="editor-textarea">
+nilai = 85
+
+if nilai > 90:
+    print("A")
+elif nilai > 80:
+    print("B")
+else:
+    print("C")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_elif" data-out="out_elif" data-expect="B" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-bold transition">▶ Jalankan</button>
+                    <button class="bg-slate-700 text-white px-3 py-1 rounded text-xs ml-auto" onclick="document.getElementById('code_elif').value = 'nilai = 95\n' + document.getElementById('code_elif').value;">Coba Nilai 95</button>
+                </div>
+                <div id="out_elif" class="output-area"></div>
+                <div id="fb_elif"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 14: Logic Operators -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">Advanced Logic: <span class="font-mono text-purple-600">and</span>, <span class="font-mono text-purple-600">or</span></h2>
+            <p class="mb-6">Kadang syaratnya lebih dari satu.</p>
+            
+            <div class="space-y-4">
+                <div class="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:scale-105 transition duration-300">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center font-bold text-purple-700 text-xl">AND</div>
+                    <div>
+                        <h4 class="font-bold">Wajib Semua</h4>
+                        <p class="text-sm text-slate-500">True jika KEDUANYA benar.</p>
+                        <code class="text-xs bg-slate-100 px-2 rounded">if lapar and punya_uang:</code>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:scale-105 transition duration-300">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center font-bold text-blue-700 text-xl">OR</div>
+                    <div>
+                        <h4 class="font-bold">Salah Satu Cukup</h4>
+                        <p class="text-sm text-slate-500">True jika SALAH SATU benar.</p>
+                        <code class="text-xs bg-slate-100 px-2 rounded">if haus or bosan:</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 15: Interactive Demo 4 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Operator Logic Check ✅</h2>
+            <p class="mb-4 text-sm text-slate-500">
+                Ibu membolehkan main game JIKA: (hari == "libur") ATAU (tugas == "selesai").
+            </p>
+            
+            <div class="editor-container">
+                <div class="editor-header"><span>permission.py</span></div>
+                <textarea id="code_logic" class="editor-textarea">
+hari = "sekolah"
+tugas = "selesai"
+
+# Gunakan OR
+if hari == "libur" or tugas == "selesai":
+    print("Boleh Main!")
+else:
+    print("Belajar dulu!")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_logic" data-out="out_logic" data-expect="Boleh" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-bold transition">▶ Cek Izin</button>
+                    <button class="bg-slate-700 text-white px-3 py-1 rounded text-xs ml-auto" onclick="document.getElementById('code_logic').value=`hari = 'sekolah'\ntugas = 'belum'\n\nif hari == 'libur' or tugas == 'selesai':\n    print('Boleh Main!')\nelse:\n    print('Belajar dulu!')`">Tes Gagal</button>
+                </div>
+                <div id="out_logic" class="output-area"></div>
+                <div id="fb_logic"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 16: Main Activity Intro -->
+        <section class="slide">
+            <div class="bg-gradient-to-br from-brand-600 to-indigo-700 text-white p-10 rounded-3xl text-center h-full flex flex-col justify-center items-center">
+                <div class="text-6xl mb-6">💰</div>
+                <h1 class="text-4xl font-bold mb-4">Final Project: Budget Advisor</h1>
+                <p class="text-xl opacity-90 mb-8 max-w-xl">
+                    Kita akan membuat program AI sederhana yang bisa menentukan apakah sebuah barang itu:<br>
+                    <span class="font-bold text-yellow-300">Kebutuhan Mendesak</span>, <span class="font-bold text-blue-300">Keinginan Wajar</span>, atau <span class="font-bold text-red-300">Keinginan Mewah</span>.
+                </p>
+                <div class="animate-bounce mt-4">⬇️</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 17: Activity Rules -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">The Rules (Logika Bisnis) 📜</h2>
+            <div class="overflow-hidden rounded-xl border border-slate-200 text-sm">
+                <table class="min-w-full bg-white">
+                    <thead class="bg-slate-100 font-bold text-slate-700">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Kondisi (Syarat)</th>
+                            <th class="px-6 py-3 text-left">Kategori (Hasil)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200">
+                        <tr class="bg-yellow-50">
+                            <td class="px-6 py-4">
+                                Item = "Sewa Rumah" <b>OR</b> "Makanan Pokok"<br>
+                                <b class="text-red-500">AND</b> Harga < 3000
+                            </td>
+                            <td class="px-6 py-4 font-bold text-yellow-700">Kebutuhan Mendesak ⚠️</td>
+                        </tr>
+                        <tr class="bg-blue-50">
+                            <td class="px-6 py-4">
+                                Harga antara 100 - 500<br>
+                                <b class="text-red-500">AND</b> BUKAN "Tagihan Listrik"
+                            </td>
+                            <td class="px-6 py-4 font-bold text-blue-700">Keinginan Wajar 🤔</td>
+                        </tr>
+                        <tr class="bg-slate-50">
+                            <td class="px-6 py-4 text-slate-500">Semua kasus lain (Else)</td>
+                            <td class="px-6 py-4 font-bold text-slate-700">Keinginan Mewah 💎</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mt-4 text-xs text-slate-500 text-center">Data diambil dari modul pembelajaran standar.</p>
+        </section>
+
+        <!-- SLIDE 18: Thinking Step -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">Step 1: Terjemahkan ke Code 🐍</h2>
+            <p class="mb-6 text-slate-600">Sebelum mengetik full code, mari susun logikanya di kepala.</p>
+            
+            <div class="space-y-4 font-mono text-sm">
+                <div class="bg-white p-4 rounded-lg border border-slate-200">
+                    <div class="text-slate-400 mb-1"># Rule 1: Needs</div>
+                    <code>if (item == "Sewa Rumah" <span class="text-purple-600">or</span> item == "Makanan Pokok") <span class="text-purple-600">and</span> harga < 3000:</code>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border border-slate-200">
+                    <div class="text-slate-400 mb-1"># Rule 2: Wants (Reasonable)</div>
+                    <code>elif (harga >= 100 <span class="text-purple-600">and</span> harga <= 500) <span class="text-purple-600">and not</span> item == "Tagihan Listrik":</code>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 19: Final Coding -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Final Code: Budget Advisor 👨‍💻</h2>
+            <div class="editor-container text-area-tall">
+                <div class="editor-header"><span>budget_ai.py</span></div>
+                <textarea id="code_final" class="editor-textarea" style="height: 280px;">
+def tentukan_kategori(item, harga):
+    # ATURAN 1: Kebutuhan Mendesak
+    if (item == "Sewa Rumah" or item == "Makanan Pokok") and harga < 3000:
+        return "Kebutuhan Mendesak"
+    
+    # ATURAN 2: Keinginan Wajar
+    elif (harga >= 100 and harga <= 500) and item != "Tagihan Listrik":
+        return "Keinginan Wajar"
+        
+    # ATURAN 3: Default
+    else:
+        return "Keinginan Mewah"
+
+# Testing
+print("Sewa Rumah (2500):", tentukan_kategori("Sewa Rumah", 2500))
+print("Mainan (200):", tentukan_kategori("Mainan", 200))
+print("Mobil Sport (5000):", tentukan_kategori("Mobil Sport", 5000))
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="code_final" data-out="out_final" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶ Run Analysis</button>
+                    <button class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition" onclick="document.getElementById('code_final').value += '\nprint(\'Es Krim (600):\', tentukan_kategori(\'Es Krim\', 600))'">+ Tes Lain</button>
+                </div>
+                <div id="out_final" class="output-area h-32"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 20: Closing -->
+        <section class="slide">
+            <div class="text-center py-20">
+                <div class="text-8xl mb-6">🎉</div>
+                <h2 class="text-4xl font-bold text-slate-900 mb-4">Mission Complete!</h2>
+                <p class="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+                    Selamat! Kamu baru saja mengajarkan komputer untuk memisahkan "Kebutuhan" dari "Keinginan".
+                    Program ini adalah dasar dari aplikasi keuangan seperti "Money Manager".
+                </p>
+                <div class="p-6 bg-brand-50 rounded-2xl border border-brand-100 inline-block text-left">
+                    <h3 class="font-bold text-brand-800 mb-2">Recap Hari Ini:</h3>
+                    <ul class="space-y-2 text-brand-700 text-sm">
+                        <li>✅ Membedakan Needs vs Wants</li>
+                        <li>✅ Menggunakan <code>if-elif-else</code></li>
+                        <li>✅ Logika operator <code>and / or</code></li>
+                        <li>✅ Membuat fungsi decision maker</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation Logic -->
+    <script>
+        const overlay = document.getElementById('accessOverlay');
+        const input = document.getElementById('accessCodeInput');
+        const btn = document.getElementById('accessBtn');
+        const error = document.getElementById('accessError');
+        const CODE = 'RGMDSHS25';
+
+        function checkCode() {
+            if(input.value.toUpperCase().trim() === CODE) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+            } else {
+                error.classList.remove('hidden');
+            }
+        }
+        if(btn) btn.addEventListener('click', checkCode);
+        if(input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('bar');
+        const slideIndicator = document.getElementById('slideIndicator');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnNext = document.getElementById('btnNext');
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentSlide);
+            });
+            
+            // Update UI
+            const progress = ((currentSlide + 1) / slides.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            slideIndicator.innerText = `${currentSlide + 1}/${slides.length}`;
+            
+            btnPrev.disabled = currentSlide === 0;
+            btnPrev.style.opacity = currentSlide === 0 ? "0.5" : "1";
+            
+            btnNext.disabled = currentSlide === slides.length - 1;
+            btnNext.style.opacity = currentSlide === slides.length - 1 ? "0.5" : "1";
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        btnPrev.addEventListener('click', () => {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        });
+
+        btnNext.addEventListener('click', () => {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        });
+
+        // Initialize
+        updateSlide();
+    </script>
+</body>
+</html>
