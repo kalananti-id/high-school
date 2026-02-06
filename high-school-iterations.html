@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sesi 34: Budgeting & Looping</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        gold: { 400: '#fbbf24', 500: '#f59e0b' }
+                    },
+                    animation: {
+                        'spin-slow': 'spin 3s linear infinite',
+                        'bounce-slow': 'bounce 2s infinite',
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { color-scheme: light; }
+        .slide { display: none; opacity: 0; transition: opacity 0.4s ease-in-out; }
+        .slide.active { display: block; opacity: 1; }
+        .code-font { font-family: 'JetBrains Mono', monospace; }
+        
+        /* IDE Styles */
+        .editor-container { background: #1e293b; border-radius: 0.75rem; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .editor-header { background: #0f172a; color: #94a3b8; padding: 0.5rem 1rem; font-size: 0.75rem; font-family: sans-serif; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; }
+        .editor-textarea { 
+            width: 100%; height: 160px; background: #1e293b; color: #f8fafc; padding: 1rem; 
+            font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; border: none; outline: none; resize: none; line-height: 1.6;
+        }
+        .text-area-tall { height: 250px; }
+        .output-area {
+            background: #0f172a; color: #a5b4fc; padding: 1rem; font-family: 'JetBrains Mono', monospace; 
+            font-size: 0.85rem; border-top: 1px solid #334155; min-height: 3.5rem; white-space: pre-wrap;
+        }
+
+        /* Animations */
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        @keyframes walk { 0% { transform: translateX(0); } 50% { transform: translateX(10px); } 100% { transform: translateX(0); } }
+        .animate-walk { animation: walk 1s ease-in-out infinite; }
+
+        @keyframes fillUp { from { width: 0%; } to { width: 100%; } }
+        .animate-fill { animation: fillUp 2s ease-out forwards; }
+    </style>
+    
+    <!-- Python Controller -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        import time
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            if el.tagName != "BUTTON": el = el.closest("button")
+            if not el: return
+
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            
+            if not code_id: return
+
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            
+            code_val = code_el.value
+            out_el.innerText = "Running..."
+            if fb_el: fb_el.classList.add("hidden")
+
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            try:
+                scope = {}
+                exec(code_val, scope)
+                result = capture.getvalue().strip()
+                out_el.innerText = result if result else "[No Output]"
+                
+                if action == "check":
+                    expected = el.getAttribute("data-expect")
+                    test_logic = el.getAttribute("data-test")
+                    passed = True
+                    reasons = []
+                    
+                    if expected and expected.lower() not in result.lower():
+                        passed = False
+                        reasons.append(f"Output tidak mengandung: '{expected}'")
+
+                    if passed and test_logic:
+                        try:
+                            exec(code_val, scope) 
+                            exec(test_logic, scope)
+                        except Exception as e:
+                            passed = False
+                            reasons.append(f"Logic Alert: {e}")
+                    
+                    if passed:
+                        if fb_el:
+                            fb_el.innerHTML = f"<span class='text-green-600 font-bold'>✓ Benar! Logic kamu tepat.</span>"
+                            fb_el.className = "mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm block"
+                    else:
+                        if fb_el:
+                            fb_el.innerHTML = f"<span class='text-red-600 font-bold'>× Coba lagi:</span> " + " ".join(reasons)
+                            fb_el.className = "mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm block"
+                        
+            except Exception as e:
+                out_el.innerText = f"Error: {e}"
+            finally:
+                sys.stdout = old_stdout
+
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-brand-500 selection:text-white">
+
+    <!-- Access Code Overlay -->
+    <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+            <p class="text-slate-600 mb-4">Masukkan kode kelas Sesi 34</p>
+            <input id="accessCodeInput" type="text" placeholder="Kode..." class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+            <button id="accessBtn" class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka Materi</button>
+            <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="bg-brand-600 text-white w-9 h-9 rounded-xl grid place-items-center font-bold shadow-lg shadow-brand-200">34</div>
+                <div>
+                    <div class="font-bold text-sm text-slate-900 tracking-tight">Looping & Budgeting</div>
+                    <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Python Iterations</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="slideIndicator" class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">1/18</span>
+                <button id="btnPrev" class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition">←</button>
+                <button id="btnNext" class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center hover:bg-brand-500 text-white shadow-md transition">→</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-8 mb-20">
+        <!-- Progress Bar -->
+        <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20"><div id="bar" class="h-full bg-brand-500 transition-all duration-300" style="width: 5%"></div></div>
+
+        <!-- SLIDE 1: Title -->
+        <section class="slide active">
+            <div class="py-20 text-center">
+                <div class="text-6xl mb-6 animate-bounce-slow">🔄</div>
+                <h1 class="text-5xl font-black text-slate-900 mb-6">The Power of<br><span class="text-brand-600">Repetition</span></h1>
+                <p class="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                    Jangan capek mengetik hal yang sama! Biarkan Python melakukannya untukmu.
+                </p>
+                <div class="mt-8 flex justify-center gap-4">
+                    <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">While Loop</span>
+                    <span class="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-bold">For Loop</span>
+                    <span class="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold">Range()</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: What is Budgeting? -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Apa itu Budgeting? 📉</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center h-full">
+                <div>
+                    <p class="text-xl text-slate-600 mb-6 leading-relaxed">
+                        <b>Budgeting</b> bukan soal "pelit", tapi soal <b>kendali</b>. 
+                        Ini adalah rencana how to spend your money sebelum kamu membelanjakannya.
+                    </p>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-red-100 p-3 rounded-full text-red-600 font-bold">❌</div>
+                            <div class="text-slate-600">Terjebak "Impulse Buying"</div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="bg-green-100 p-3 rounded-full text-green-600 font-bold">✅</div>
+                            <div class="text-slate-600">Uang cukup untuk hal PENTING</div>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="bg-blue-100 p-3 rounded-full text-blue-600 font-bold">✅</div>
+                            <div class="text-slate-600">Punya tabungan impian</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-center">
+                    <div class="text-[10rem] animate-float">💸</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: The 50/30/20 Rule -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">Aturan Emas: 50/30/20 🥇</h2>
+            <p class="text-slate-600 mb-8 text-center max-w-2xl mx-auto">Cara paling simpel membagi uang jajan atau pendapatanmu.</p>
+            
+            <div class="grid md:grid-cols-3 gap-4">
+                <!-- Needs -->
+                <div class="bg-blue-50 p-6 rounded-2xl border-t-8 border-blue-500 text-center hover:-translate-y-2 transition duration-300">
+                    <div class="text-5xl mb-4">🏠</div>
+                    <h3 class="text-2xl font-bold text-blue-800 mb-2">50% Needs</h3>
+                    <p class="text-sm text-blue-600">Hal yang WAJIB ada untuk hidup.</p>
+                    <div class="text-xs text-slate-400 mt-2">Makan, Transport, Pulsa Belajar</div>
+                </div>
+
+                <!-- Wants -->
+                <div class="bg-pink-50 p-6 rounded-2xl border-t-8 border-pink-500 text-center hover:-translate-y-2 transition duration-300">
+                    <div class="text-5xl mb-4">🎮</div>
+                    <h3 class="text-2xl font-bold text-pink-800 mb-2">30% Wants</h3>
+                    <p class="text-sm text-pink-600">Hal yang bikin happy (tapi gak wajib).</p>
+                    <div class="text-xs text-slate-400 mt-2">Game, Jajan Boba, Nonton</div>
+                </div>
+
+                <!-- Savings -->
+                <div class="bg-emerald-50 p-6 rounded-2xl border-t-8 border-emerald-500 text-center hover:-translate-y-2 transition duration-300">
+                    <div class="text-5xl mb-4">🐷</div>
+                    <h3 class="text-2xl font-bold text-emerald-800 mb-2">20% Savings</h3>
+                    <p class="text-sm text-emerald-600">Untuk masa depan / Darurat.</p>
+                    <div class="text-xs text-slate-400 mt-2">Tabungan HP Baru, Dana Talangan</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: The Routine of Tracking -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Tantangan Terberat: KONSISTENSI 😫</h2>
+            <div class="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 flex flex-col md:flex-row items-center gap-8">
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold mb-3">The "Accounting" Problem</h3>
+                    <p class="text-slate-600 mb-4">
+                        Punya rencana 50/30/20 itu mudah. Yang susah adalah <b>MENCATATNYA SETIAP HARI</b>.
+                    </p>
+                    <div class="bg-slate-50 p-4 rounded-lg border-l-4 border-slate-400 text-sm italic text-slate-500">
+                        "Hari 1: Catat jajan...<br>
+                        Hari 2: Catat transport...<br>
+                        ...<br>
+                        Hari 365: Catat lagi..."
+                    </div>
+                    <p class="mt-4 text-brand-600 font-bold">
+                        Manusia itu mudah bosan melakukan hal berulang. Tapi Komputer? Mereka SUKA pengulangan!
+                    </p>
+                </div>
+                <div class="text-8xl animate-spin-slow opacity-80">🤖</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: The Bridge - Analogy -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-8 text-center">Translating Life to Code 🔄</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="bg-white p-6 rounded-xl border-l-4 border-brand-500 shadow-sm">
+                    <h3 class="font-bold text-lg mb-2">Kasir Supermarket 🛒</h3>
+                    <p class="text-slate-600 text-sm">
+                        "SELAMA masih ada barang di keranjang, ambil satu, scan barcode, masukkan plastik."
+                    </p>
+                    <div class="mt-4 text-xs font-mono bg-slate-100 p-2 rounded text-slate-500">
+                        Ini adalah <b>Looping</b>! Kita mengulang proses "Scan" sampai keranjang kosong.
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border-l-4 border-purple-500 shadow-sm">
+                    <h3 class="font-bold text-lg mb-2">Nabung Receh 🐖</h3>
+                    <p class="text-slate-600 text-sm">
+                        "SELAMA celengan belum penuh, terus masukkan koin setiap hari."
+                    </p>
+                    <div class="mt-4 text-xs font-mono bg-slate-100 p-2 rounded text-slate-500">
+                        Kondisi berhenti: Celengan Penuh.
+                    </div>
+                </div>
+            </div>
+            <p class="text-center mt-10 text-slate-500 italic">
+                Di Python, kita punya <b>2 cara</b> untuk melakukan pengulangan ini.
+            </p>
+        </section>
+
+        <!-- SLIDE 6: While Loop Concept -->
+        <section class="slide">
+            <h2 class="text-4xl font-bold text-blue-800 mb-6">1. While Loop</h2>
+            <p class="text-lg text-slate-500 font-medium mb-8">"Lakukan SELAMA target belum tercapai"</p>
+            
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="bg-blue-900 p-6 rounded-xl text-white font-mono text-sm leading-8 shadow-xl">
+                    <span class="text-purple-400">while</span> <span class="text-green-400">uang < target_hp_baru</span>:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;menabung(5000)<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;print(<span class="text-yellow-300">"Semangat nabung!"</span>)
+                </div>
+
+                <div class="relative h-64 bg-slate-100 rounded-2xl border border-slate-200 flex items-center justify-center overflow-hidden">
+                    <!-- Progress Bar Animation -->
+                    <div class="w-full max-w-[200px] bg-slate-300 rounded-full h-6 overflow-hidden relative">
+                        <div class="bg-green-500 h-full animate-fill" style="width: 0%; animation-iteration-count: infinite;"></div>
+                    </div>
+                    <div class="absolute mt-12 font-bold text-slate-700 animate-pulse">Menabung...</div>
+                </div>
+            </div>
+            
+            <div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 text-sm text-yellow-800">
+                ⚠️ <b>Penting:</b> Pastikan saldo terus bertambah! Jika saldo tidak pernah berubah, kita akan menabung selamanya (Infinite Loop).
+            </div>
+        </section>
+
+        <!-- SLIDE 4: Demo While Loop -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Demo: Tabungan Target 💰</h2>
+            <p class="mb-4 text-sm text-slate-500">Nabung terus sampai target tercapai.</p>
+            
+            <div class="editor-container">
+                <div class="editor-header"><span>saving_loop.py</span></div>
+                <textarea id="code_while" class="editor-textarea">
+tabungan = 0
+target = 5000
+
+# Loop selama tabungan masih kurang dari target
+while tabungan < target:
+    print(f"Nabung... Saldo: {tabungan}")
+    tabungan = tabungan + 1000
+
+print(f"Target tercapai! Total: {tabungan}")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_while" data-out="out_while" data-expect="Target tercapai" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-xs font-bold transition">▶ Run Simulation</button>
+                </div>
+                <div id="out_while" class="output-area"></div>
+                <div id="fb_while"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: Danger Zone -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4 text-red-600">⚠️ Infinite Loop</h2>
+            <div class="flex flex-col items-center justify-center gap-6 py-10">
+                <div class="w-32 h-32 border-8 border-slate-200 border-t-red-500 rounded-full animate-spin"></div>
+                <p class="text-center max-w-lg text-slate-600">
+                    Jika kondisi selalu <b>True</b>, program akan berputar selamanya sampai komputer hang/crash.
+                </p>
+                <div class="bg-slate-900 p-4 rounded text-xs font-mono text-red-300 w-full max-w-md">
+                    while True:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;print("Aku tidak bisa berhenti!")<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;# Lupa update kondisi :(
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 6: Break & Continue -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">Loop Control: Break vs Continue</h2>
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Break -->
+                <div class="bg-red-50 p-6 rounded-2xl border border-red-100 hover:scale-[1.02] transition">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-red-500 text-white p-2 rounded-lg font-bold">BREAK</div>
+                        <h3 class="font-bold text-red-900">Berhenti Paksa!</h3>
+                    </div>
+                    <p class="text-sm text-red-800 mb-4">Keluar dari loop seketika itu juga, tidak peduli kondisi while/for.</p>
+                    <code class="text-xs bg-white p-2 rounded block border border-red-200">
+                        if uang_habis:<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<b>break</b> 🛑
+                    </code>
+                </div>
+
+                <!-- Continue -->
+                <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 hover:scale-[1.02] transition">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-blue-500 text-white p-2 rounded-lg font-bold">CONTINUE</div>
+                        <h3 class="font-bold text-blue-900">Skip Putaran</h3>
+                    </div>
+                    <p class="text-sm text-blue-800 mb-4">Lewati sisa kode di bawah, langsung lompat ke putaran berikutnya.</p>
+                    <code class="text-xs bg-white p-2 rounded block border border-blue-200">
+                        if tanggal_merah:<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<b>continue</b> ⏭️
+                    </code>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: Demo Break -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Demo: Emergency Stop (Break) 🛑</h2>
+            <p class="mb-4 text-sm text-slate-500">Looping angka, tapi berhenti jika ketemu angka 5.</p>
+            
+            <div class="editor-container">
+                <div class="editor-header"><span>security_check.py</span></div>
+                <textarea id="code_break" class="editor-textarea">
+# Cek angka dari 1 sampai 10
+angka = 1
+
+while angka <= 10:
+    if angka == 5:
+        print("DITEMUKAN ANGKA TERLARANG! BERHENTI!")
+        break # Keluar paksa
+        
+    print(f"Cek angka: {angka} - Aman")
+    angka = angka + 1
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_break" data-out="out_break" data-expect="BERHENTI" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded text-xs font-bold transition">▶ Jalankan Test</button>
+                </div>
+                <div id="out_break" class="output-area"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: For Loop Concept -->
+        <section class="slide">
+            <h2 class="text-4xl font-bold text-purple-800 mb-6">2. For Loop</h2>
+            <p class="text-lg text-slate-500 font-medium mb-8">"Ulangi sejumlah item yang ada"</p>
+            
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div class="bg-purple-900 p-6 rounded-xl text-white font-mono text-sm leading-8 shadow-xl">
+                    <span class="text-pink-400">for</span> hari <span class="text-pink-400">in</span> [<span class="text-yellow-300">"Senin"</span>, <span class="text-yellow-300">"Selasa"</span>, <span class="text-yellow-300">"Rabu"</span>]:<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;sekolah(hari)
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="aspect-square bg-purple-100 rounded-lg flex items-center justify-center font-bold text-purple-700 animate-pulse">Senin</div>
+                    <div class="aspect-square bg-purple-100 rounded-lg flex items-center justify-center font-bold text-purple-700 animate-pulse" style="animation-delay: 0.5s">Selasa</div>
+                    <div class="aspect-square bg-purple-100 rounded-lg flex items-center justify-center font-bold text-purple-700 animate-pulse" style="animation-delay: 1s">Rabu</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: The Range Function -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">Magic Tool: <code class="text-brand-600">range()</code></h2>
+            <div class="space-y-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="bg-slate-100 px-3 py-1 rounded font-mono font-bold">range(5)</div>
+                    <div class="text-slate-600">生成 0, 1, 2, 3, 4 (Stop di N-1)</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="bg-slate-100 px-3 py-1 rounded font-mono font-bold">range(1, 6)</div>
+                    <div class="text-slate-600">Start 1, Stop 6 → 1, 2, 3, 4, 5</div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <div class="bg-slate-100 px-3 py-1 rounded font-mono font-bold">range(0, 10, 2)</div>
+                    <div class="text-slate-600">Step 2 → 0, 2, 4, 6, 8</div>
+                </div>
+            </div>
+            
+            <div class="mt-8 flex justify-center gap-1">
+                <div class="w-10 h-10 bg-brand-500 text-white rounded-full flex items-center justify-center font-bold shadow-lg animate-bounce" style="animation-delay: 0s">0</div>
+                <div class="w-10 h-10 bg-brand-500 text-white rounded-full flex items-center justify-center font-bold shadow-lg animate-bounce" style="animation-delay: 0.1s">1</div>
+                <div class="w-10 h-10 bg-brand-500 text-white rounded-full flex items-center justify-center font-bold shadow-lg animate-bounce" style="animation-delay: 0.2s">2</div>
+                <div class="w-10 h-10 bg-brand-500 text-white rounded-full flex items-center justify-center font-bold shadow-lg animate-bounce" style="animation-delay: 0.3s">3</div>
+                <div class="w-10 h-10 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center font-bold border border-dashed border-gray-400">4</div>
+            </div>
+            <p class="text-center text-xs text-slate-400 mt-2">Ingat! Range berhenti SEBELUM angka stop.</p>
+        </section>
+
+        <!-- SLIDE 10: Demo For Loop -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Demo: Countdown 🚀</h2>
+            <p class="mb-4 text-sm text-slate-500">Hitung mundur dari 10 ke 1 menggunakan range.</p>
+            
+            <div class="editor-container">
+                <div class="editor-header"><span>rocket_launch.py</span></div>
+                <textarea id="code_for" class="editor-textarea">
+# Start: 10, Stop: 0 (biar sampai 1), Step: -1 (Mundur)
+for i in range(10, 0, -1):
+    print(f"T-minus {i}")
+
+print("🚀 BLAST OFF!")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_for" data-out="out_for" data-expect="BLAST OFF" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs font-bold transition">▶ Launch!</button>
+                </div>
+                <div id="out_for" class="output-area h-32"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 11: Project Intro -->
+        <section class="slide">
+            <div class="bg-gradient-to-br from-green-500 to-emerald-700 text-white p-10 rounded-3xl text-center h-full flex flex-col justify-center items-center">
+                <div class="text-6xl mb-6">📅</div>
+                <h1 class="text-4xl font-bold mb-4">Project: Weekly Budget Tracker</h1>
+                <p class="text-xl opacity-90 mb-8 max-w-xl">
+                    Kita akan membuat simulasi pengeluaran selama <b>7 hari</b> berturut-turut.<br>
+                    Di setiap hari, kita bisa mencatat pengeluaran berkali-kali.
+                </p>
+                <div class="flex gap-4">
+                    <div class="bg-white/20 px-4 py-2 rounded-lg backdrop-blur">
+                        <span class="block text-xs uppercase opacity-75">Outer Loop</span>
+                        <span class="font-bold text-lg">For (7 Hari)</span>
+                    </div>
+                    <div class="bg-white/20 px-4 py-2 rounded-lg backdrop-blur">
+                        <span class="block text-xs uppercase opacity-75">Inner Loop</span>
+                        <span class="font-bold text-lg">While (Input)</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 12: Architecture -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-6">Struktur Program 🏗️</h2>
+            <div class="border-l-4 border-slate-300 ml-4 space-y-8 relative">
+                <!-- Day Loop -->
+                <div class="relative pl-8">
+                    <div class="absolute -left-[18px] top-0 bg-purple-500 w-9 h-9 text-white rounded-full flex items-center justify-center font-bold shadow-sm">1</div>
+                    <h3 class="font-bold text-purple-900">Perulangan Hari (1-7)</h3>
+                    <p class="text-sm text-slate-600">Gunakan <code>for hari in range(1, 8):</code></p>
+                </div>
+
+                <!-- Transaction Loop -->
+                <div class="relative pl-8">
+                    <div class="absolute -left-[18px] top-0 bg-blue-500 w-9 h-9 text-white rounded-full flex items-center justify-center font-bold shadow-sm">2</div>
+                    <h3 class="font-bold text-blue-900">Input Pengeluaran</h3>
+                    <p class="text-sm text-slate-600">Di dalam hari itu, gunakan <code>while True:</code> untuk input pengeluaran. Ketik 0 untuk selesai input hari itu.</p>
+                </div>
+
+                <!-- Calculation -->
+                <div class="relative pl-8">
+                    <div class="absolute -left-[18px] top-0 bg-green-500 w-9 h-9 text-white rounded-full flex items-center justify-center font-bold shadow-sm">3</div>
+                    <h3 class="font-bold text-green-900">Update Total</h3>
+                    <p class="text-sm text-slate-600">Tambahkan setiap pengeluaran ke <code>total_mingguan</code>.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 13: Final Code -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Build The Tracker 🛠️</h2>
+            <p class="text-sm text-slate-500 mb-2">Disini kita simulasikan input menggunakan list angka agar bisa berjalan otomatis.</p>
+            <div class="editor-container text-area-tall">
+                <div class="editor-header"><span>weekly_tracker.py</span></div>
+                <textarea id="code_final" class="editor-textarea" style="height: 350px;">
+total_mingguan = 0
+
+# Simulasi Loop Selama 7 Hari
+for hari in range(1, 8):
+    print(f"\n--- HARI KE-{hari} ---")
+    
+    total_harian = 0
+    
+    # Di aplikasi nyata, kita pakai input().
+    # Disini kita simulasi pakai angka acak biar jalan di web:
+    # Anggap user beli 2 barang: harga 5000 dan 10000
+    daftar_belanja = [5000, 10000, 0] # 0 artinya selesai
+    idx_belanja = 0
+    
+    while True:
+        # Simulasi input
+        harga = daftar_belanja[idx_belanja] 
+        idx_belanja += 1
+        
+        if harga == 0:
+            print("Selesai belanja hari ini.")
+            break # Lanjut ke hari berikutnya
+            
+        print(f"Mencatat pengeluaran: Rp {harga}")
+        total_harian += harga
+        
+    print(f"Total pengeluaran hari ke-{hari}: Rp {total_harian}")
+    total_mingguan += total_harian
+
+print(f"\n=============================")
+print(f"TOTAL PENGELUARAN MINGGUAN: Rp {total_mingguan}")
+print(f"=============================")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="code_final" data-out="out_final" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶ Analisis 1 Minggu</button>
+                    <button class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition" onclick="alert('Coba ganti angka di daftar_belanja!')">💡 Tips Edit</button>
+                </div>
+                <div id="out_final" class="output-area h-40"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 14: Closing -->
+        <section class="slide">
+            <div class="text-center py-20">
+                <div class="text-8xl mb-6 animate-bounce">🎉</div>
+                <h2 class="text-4xl font-bold text-slate-900 mb-4">Class Dismissed!</h2>
+                <p class="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+                    Kamu sudah menguasai mantra pengulang: <b>While</b> dan <b>For</b>.
+                    Sekarang kamu bisa menyuruh komputer bekerja 1000x tanpa lelah!
+                </p>
+                <div class="p-6 bg-brand-50 rounded-2xl border border-brand-100 inline-block text-left">
+                    <h3 class="font-bold text-brand-800 mb-2">Checklist Materi:</h3>
+                    <ul class="space-y-2 text-brand-700 text-sm">
+                        <li>✅ While Loop (Perulangan bersyarat)</li>
+                        <li>✅ For Loop & Range (Perulangan terhitung)</li>
+                        <li>✅ Break & Continue (Kontrol jalur)</li>
+                        <li>✅ Nested Loops (Loop di dalam loop)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation Logic -->
+    <script>
+        const overlay = document.getElementById('accessOverlay');
+        const input = document.getElementById('accessCodeInput');
+        const btn = document.getElementById('accessBtn');
+        const error = document.getElementById('accessError');
+        const CODE = 'RGMDSHS25';
+
+        function checkCode() {
+            if(input.value.toUpperCase().trim() === CODE) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+            } else {
+                error.classList.remove('hidden');
+            }
+        }
+        if(btn) btn.addEventListener('click', checkCode);
+        if(input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('bar');
+        const slideIndicator = document.getElementById('slideIndicator');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnNext = document.getElementById('btnNext');
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentSlide);
+            });
+            
+            // Update UI
+            const progress = ((currentSlide + 1) / slides.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            slideIndicator.innerText = `${currentSlide + 1}/${slides.length}`;
+            
+            btnPrev.disabled = currentSlide === 0;
+            btnPrev.style.opacity = currentSlide === 0 ? "0.5" : "1";
+            
+            btnNext.disabled = currentSlide === slides.length - 1;
+            btnNext.style.opacity = currentSlide === slides.length - 1 ? "0.5" : "1";
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        btnPrev.addEventListener('click', () => {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        });
+
+        btnNext.addEventListener('click', () => {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        });
+
+        // Initialize
+        updateSlide();
+    </script>
+</body>
+</html>
