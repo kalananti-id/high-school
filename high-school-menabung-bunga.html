@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sesi 35: Menabung & Bunga Tunggal + Functions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        gold: { 400: '#fbbf24', 500: '#f59e0b' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        .slide {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* IDE Styles */
+        .editor-container {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .editor-header {
+            background: #0f172a;
+            color: #94a3b8;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 160px;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            border: none;
+            outline: none;
+            resize: none;
+            line-height: 1.6;
+        }
+
+        .text-area-tall {
+            height: 250px;
+        }
+
+        .output-area {
+            background: #0f172a;
+            color: #a5b4fc;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            border-top: 1px solid #334155;
+            min-height: 3.5rem;
+            white-space: pre-wrap;
+        }
+
+        /* Animations */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+
+    <!-- Python Controller -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        import time
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            if el.tagName != "BUTTON": el = el.closest("button")
+            if not el: return
+
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            
+            if not code_id: return
+
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            
+            code_val = code_el.value
+            out_el.innerText = "Running..."
+            if fb_el: fb_el.classList.add("hidden")
+
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            try:
+                scope = {}
+                exec(code_val, scope)
+                result = capture.getvalue().strip()
+                out_el.innerText = result if result else "[No Output]"
+                
+                if action == "check":
+                    expected = el.getAttribute("data-expect")
+                    test_logic = el.getAttribute("data-test")
+                    passed = True
+                    reasons = []
+                    
+                    if expected and expected.lower() not in result.lower():
+                        passed = False
+                        reasons.append(f"Output tidak mengandung: '{expected}'")
+
+                    if passed and test_logic:
+                        try:
+                            exec(code_val, scope) 
+                            exec(test_logic, scope)
+                        except Exception as e:
+                            passed = False
+                            reasons.append(f"Logic Alert: {e}")
+                    
+                    if passed:
+                        if fb_el:
+                            fb_el.innerHTML = f"<span class='text-green-600 font-bold'>✓ Benar! Logic kamu tepat.</span>"
+                            fb_el.className = "mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm block"
+                    else:
+                        if fb_el:
+                            fb_el.innerHTML = f"<span class='text-red-600 font-bold'>× Coba lagi:</span> " + " ".join(reasons)
+                            fb_el.className = "mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm block"
+                        
+            except Exception as e:
+                out_el.innerText = f"Error: {e}"
+            finally:
+                sys.stdout = old_stdout
+
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-brand-500 selection:text-white">
+
+    <!-- Access Code Overlay -->
+    <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+            <p class="text-slate-600 mb-4">Masukkan kode kelas Sesi 35</p>
+            <input id="accessCodeInput" type="text" placeholder="Kode..."
+                class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+            <button id="accessBtn"
+                class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka
+                Materi</button>
+            <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div
+                    class="bg-brand-600 text-white w-9 h-9 rounded-xl grid place-items-center font-bold shadow-lg shadow-brand-200">
+                    35</div>
+                <div>
+                    <div class="font-bold text-sm text-slate-900 tracking-tight">Fin. Lit & Functions</div>
+                    <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Python</div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="slideIndicator"
+                    class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">1/18</span>
+                <button id="btnPrev"
+                    class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition">←</button>
+                <button id="btnNext"
+                    class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center hover:bg-brand-500 text-white shadow-md transition">→</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-8 mb-20">
+        <!-- Progress Bar -->
+        <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20">
+            <div id="bar" class="h-full bg-brand-500 transition-all duration-300" style="width: 5%"></div>
+        </div>
+
+        <!-- SLIDE 1: Title -->
+        <section class="slide active">
+            <div class="py-20 text-center">
+                <div class="text-6xl mb-6 animate-float">💸 & 🐍</div>
+                <h1 class="text-5xl font-black text-slate-900 mb-6">Menabung & <br><span class="text-brand-600">Bunga
+                        Tunggal + Functions</span></h1>
+                <p class="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                    Bagaimana membuat "Uang Bekerja Untuk Kita" dan menghitungnya otomatis dengan Python.
+                </p>
+                <div class="mt-8 flex justify-center gap-4">
+                    <span class="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold">Financial
+                        Literacy</span>
+                    <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">Python
+                        Returns</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: Financial Concept -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Uang Bekerja Untuk Kita? 🤔</h2>
+            <div
+                class="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 flex flex-col md:flex-row items-center gap-8">
+                <div class="flex-1 text-center md:text-left">
+                    <p class="text-slate-600 text-lg mb-4">
+                        Saat kamu menabung di bank, bank "meminjam" uangmu untuk diputar kembali. Sebagai imbalannya,
+                        bank memberimu <b>Bunga</b>.
+                    </p>
+                    <div class="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                        <h4 class="font-bold text-blue-900 mb-2">Rumus Bunga Tunggal (Simple Interest):</h4>
+                        <code
+                            class="block bg-white p-3 rounded border border-blue-100 font-mono text-sm text-blue-800 mb-2">
+                            Bunga = Pokok × Suku Bunga × Waktu
+                        </code>
+                        <code class="block bg-white p-3 rounded border border-blue-100 font-mono text-sm text-blue-800">
+                            Total Akhir = Pokok × (1 + Suku Bunga × Waktu)
+                        </code>
+                        <div class="mt-2 text-xs text-blue-500">*Waktu dalam tahun</div>
+                    </div>
+                </div>
+                <div class="text-8xl">🏦</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: Python Function Concept -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">The Perfect Function Analogy ⚙️</h2>
+            <p class="mb-6 text-slate-600">
+                Dalam Python, ini adalah definisi sempurna dari sebuah Fungsi.
+            </p>
+
+            <div class="grid md:grid-cols-3 gap-4 text-center items-center">
+                <!-- Input -->
+                <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm relative">
+                    <div class="text-4xl mb-3">📥</div>
+                    <div class="font-bold text-slate-700 mb-2">INPUT (Parameter)</div>
+                    <p class="text-xs text-slate-500">Pokok, Suku Bunga, Waktu</p>
+                </div>
+
+                <div class="text-4xl text-brand-500 animate-pulse">➜</div>
+
+                <!-- Process -->
+                <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-lg">
+                    <div class="text-4xl mb-3">⚙️</div>
+                    <div class="font-bold text-slate-200 mb-2">PROCESS</div>
+                    <p class="text-xs text-slate-400">Hitung Rumus Matematika</p>
+                </div>
+
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 text-center items-center mt-4">
+                <div class="col-span-1"></div>
+                <div class="text-center">
+                    <div class="text-4xl text-brand-500 animate-pulse rotate-90 md:rotate-0">⬇️</div>
+                </div>
+                <div class="col-span-1"></div>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-4 text-center items-center mt-4">
+                <div class="col-span-1"></div>
+                <!-- Output -->
+                <div class="bg-green-50 p-6 rounded-xl border border-green-200 shadow-sm">
+                    <div class="text-4xl mb-3">📤</div>
+                    <div class="font-bold text-green-800 mb-2">OUTPUT (Return)</div>
+                    <p class="text-xs text-green-600">Total Akhir Tabungan</p>
+                </div>
+                <div class="col-span-1"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: Basic Review -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4">5.3.1 Struktur Fungsi (Revisited) 🔍</h2>
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="font-bold text-lg mb-2">Definisi:</h3>
+                    <div class="bg-slate-900 p-4 rounded-xl text-white font-mono text-sm leading-7">
+                        <span class="text-purple-400">def</span> <span
+                            class="text-yellow-400">sapa_pelanggan</span>(nama):<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-blue-400">print</span>(f"Halo, {nama}!")
+                    </div>
+                    <ul class="mt-4 space-y-2 text-sm text-slate-600">
+                        <li>• <span class="font-mono bg-slate-200 px-1 rounded">nama</span> (di dalam kurung def) adalah
+                            <b>PARAMETER</b>.
+                        </li>
+                        <li>• Variabel penampung nilai yang akan diproses.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg mb-2">Pemanggilan:</h3>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 font-mono text-sm leading-7">
+                        sapa_pelanggan("Andi")
+                    </div>
+                    <ul class="mt-4 space-y-2 text-sm text-slate-600">
+                        <li>• <span class="font-mono bg-slate-200 px-1 rounded">"Andi"</span> (data asli) adalah
+                            <b>ARGUMEN</b>.
+                        </li>
+                        <li>• Data nyata yang dikirim ke fungsi.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: Coding Time 1 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Demo: Sapa Pelanggan 👋</h2>
+            <p class="mb-4 text-sm text-slate-500">Coba buat fungsi sapaan sederhana.</p>
+            <div class="editor-container">
+                <div class="editor-header"><span>basic_func.py</span></div>
+                <textarea id="code_basic" class="editor-textarea">
+def sapa_pelanggan(nama):
+    # Kode kamu disini
+    print(f"Halo, {nama}! Selamat datang kembali.")
+
+# Panggil fungsi
+sapa_pelanggan("Budi")
+sapa_pelanggan("Citra")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_basic" data-out="out_basic" data-expect="Halo"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-xs font-bold transition">▶
+                        Run</button>
+                </div>
+                <div id="out_basic" class="output-area"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 6: Arguments Types -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">Jenis Argumen 🎯</h2>
+            <p class="text-slate-600 mb-6">Saat memanggil fungsi, cara kita memberikan data itu penting.</p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-blue-100 text-blue-700 font-bold px-2 py-1 rounded text-xs">1</span>
+                        <h3 class="font-bold">Argumen Posisi (Default)</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-2">Nilai diberikan <span
+                            class="underline decoration-blue-500 decoration-2">sesuai urutan</span> parameter.</p>
+                    <code class="block bg-slate-50 p-2 rounded text-xs font-mono border border-slate-100">
+                        def tabungan(nama, jumlah): ...<br><br>
+                        tabungan("Budi", 50000) ✅<br>
+                        <span class="text-red-500">tabungan(50000, "Budi") ❌ Error/Aneh</span>
+                    </code>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-purple-100 text-purple-700 font-bold px-2 py-1 rounded text-xs">2</span>
+                        <h3 class="font-bold">Argumen Kata Kunci</h3>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-2">Nilai diberikan dengan <span
+                            class="underline decoration-purple-500 decoration-2">menyebut nama</span>. Urutan tidak
+                        penting!</p>
+                    <code class="block bg-slate-50 p-2 rounded text-xs font-mono border border-slate-100">
+                        tabungan(jumlah=75000, nama="Citra") ✅<br>
+                        <span class="text-green-600"># Hasil tetap benar walau dibalik</span>
+                    </code>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: Coding Time 2 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Demo: Posisi vs Keyword 🔀</h2>
+            <p class="mb-4 text-sm text-slate-500">Perhatikan bagaimana keyword argument membuat kode lebih aman dari
+                kesalahan urutan.</p>
+            <div class="editor-container">
+                <div class="editor-header"><span>args_demo.py</span></div>
+                <textarea id="code_args" class="editor-textarea">
+def info_nasabah(nama, saldo, umur):
+    print(f"Nasabah: {nama} | Umur: {umur} | Saldo: Rp{saldo}")
+
+# 1. Argumen Posisi (Harus hafal urutan!)
+info_nasabah("Andi", 100000, 17)
+
+# 2. Keyword Argument (Bebas acak)
+info_nasabah(umur=25, nama="Budi", saldo=5000000)
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="code_args" data-out="out_args"
+                        class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-bold transition">▶
+                        Run Demo</button>
+                </div>
+                <div id="out_args" class="output-area"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: Default Parameters -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4">Nilai Default (Bantuan Otomatis) 🤖</h2>
+            <div class="flex gap-8 items-center h-[300px]">
+                <div class="flex-1">
+                    <p class="text-lg text-slate-600 mb-4">
+                        Kamu bisa memberikan nilai awal pada parameter. Jika user lupa/malas mengisi argumen, nilai
+                        default ini yang dipakai.
+                    </p>
+                    <div class="bg-slate-900 p-4 rounded-xl text-white font-mono text-sm">
+                        <span class="text-purple-400">def</span> buat_akun(nama, <span
+                            class="text-yellow-400">saldo_awal=0</span>):<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;print(f"{nama} punya {saldo_awal}")
+                    </div>
+                </div>
+                <div class="flex-1 space-y-3">
+                    <div class="bg-green-50 p-4 rounded-lg border-l-4 border-green-500 text-sm">
+                        <b>Skenario 1:</b> User hanya kasih nama.<br>
+                        <code>buat_akun("Dina")</code><br>
+                        <span class="text-slate-500">👉 Saldo otomatis 0.</span>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500 text-sm">
+                        <b>Skenario 2:</b> User kasih nama & saldo.<br>
+                        <code>buat_akun("Eko", 50000)</code><br>
+                        <span class="text-slate-500">👉 Saldo jadi 50000 (0 tertimpa).</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: IMPORTANT - Print vs Return -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-center">Print() vs Return 🥊</h2>
+            <p class="text-center text-slate-600 mb-8 max-w-2xl mx-auto">
+                Ini kesalahan paling umum pemula! Keduanya "mengeluarkan sesuatu", tapi tujuannya beda total.
+            </p>
+
+            <div class="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="bg-slate-800 text-white">
+                            <th class="px-6 py-4 text-left w-1/4">Fitur</th>
+                            <th class="px-6 py-4 text-left w-1/3">print() 📢</th>
+                            <th class="px-6 py-4 text-left w-1/3">return 📦</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 bg-white">
+                        <tr>
+                            <td class="px-6 py-4 font-bold text-slate-700">Tujuan</td>
+                            <td class="px-6 py-4 text-slate-500">Hanya MENAMPILKAN info ke layar (konsol).</td>
+                            <td class="px-6 py-4 text-brand-700 font-medium">MENGIRIMKAN nilai balik ke kode pemanggil.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-4 font-bold text-slate-700">Data Output</td>
+                            <td class="px-6 py-4 text-slate-500">Tidak bisa disimpan dalam variabel. (Nilainya None)
+                            </td>
+                            <td class="px-6 py-4 text-brand-700 font-medium">Bisa disimpan di variabel untuk hitungan
+                                lanjut.</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-4 font-bold text-slate-700">Kontrol</td>
+                            <td class="px-6 py-4 text-slate-500">Fungsi jalan terus sampai habis.</td>
+                            <td class="px-6 py-4 text-brand-700 font-medium">Fungsi BERHENTI (Kill) seketika itu juga.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SLIDE 10: Demo Print vs Return -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Buktikan Sendiri: The Trap 🪤</h2>
+            <p class="mb-4 text-sm text-slate-500">Lihat apa yang terjadi jika kita mencoba menyimpan hasil fungsi yang
+                hanya pakai print.</p>
+            <div class="editor-container">
+                <div class="editor-header"><span>return_vis.py</span></div>
+                <textarea id="code_ret" class="editor-textarea">
+def tambah_print(a, b):
+    print(a + b) # Cuma teriak, tidak memberi
+
+def tambah_return(a, b):
+    return a + b # Memberikan hasil
+
+# Coba simpan
+hasil1 = tambah_print(3, 5)
+hasil2 = tambah_return(3, 5)
+
+print(f"Isi hasil1 (dari print): {hasil1}")
+print(f"Isi hasil2 (dari return): {hasil2}")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="code_ret" data-out="out_ret"
+                        class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-bold transition">▶
+                        Run Comparison</button>
+                </div>
+                <div id="out_ret" class="output-area"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 11: Activity Intro -->
+        <section class="slide">
+            <div
+                class="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-10 rounded-3xl text-center h-full flex flex-col justify-center items-center">
+                <div class="text-6xl mb-6">🧮</div>
+                <h1 class="text-4xl font-bold mb-4">Project: Financial Calculator</h1>
+                <p class="text-xl opacity-90 mb-8 max-w-xl">
+                    Kita akan membangun fungsi <span
+                        class="font-mono bg-white/20 px-2 rounded">kalkulator_bunga_tunggal</span> yang profesional.
+                </p>
+                <div class="grid grid-cols-2 gap-4 text-left text-sm max-w-lg w-full">
+                    <div class="bg-white/10 p-4 rounded-xl border border-white/20">
+                        <b class="block mb-2 text-indigo-200">Specs:</b>
+                        <ul class="list-disc pl-4 space-y-1">
+                            <li>3 Parameter: Pokok, Bunga, Waktu</li>
+                            <li>Gunakan Default Arguments</li>
+                            <li>Gunakan Return (Bukan Print)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 12: Step 1 Define -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Step 1: Definisi Fungsi 🏗️</h2>
+            <p class="mb-4 text-slate-600">
+                Buat fungsi dengan nama <code>kalkulator_bunga_tunggal</code>.
+                <br>Set default: <code>tingkat_bunga = 0.05</code> (5%) dan <code>waktu = 1</code> (1 tahun).
+            </p>
+
+            <div class="editor-container">
+                <div class="editor-header"><span>step1.py</span></div>
+                <textarea id="code_act1" class="editor-textarea">
+# Lengkapi definisi fungsi ini:
+def kalkulator_bunga_tunggal(pokok, tingkat_bunga=0.05, waktu=1):
+    # Sementara pass dulu
+    print(f"Menghitung untuk pokok: {pokok} dengan bunga {tingkat_bunga}")
+
+# Test Case
+kalkulator_bunga_tunggal(1000000) # Pakai default
+kalkulator_bunga_tunggal(1000000, 0.1, 2) # Override default
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="code_act1" data-out="out_act1"
+                        class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-bold transition">▶
+                        Cek Struktur</button>
+                </div>
+                <div id="out_act1" class="output-area"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 13: Step 2 Logic -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Step 2: Implementasi Rumus 🧠</h2>
+            <div class="mb-4 bg-blue-50 p-3 rounded text-blue-800 text-xs font-mono">
+                Rumus: total = pokok * (1 + tingkat_bunga * waktu)
+            </div>
+
+            <div class="editor-container text-area-tall">
+                <div class="editor-header"><span>step2.py</span></div>
+                <textarea id="code_act2" class="editor-textarea" style="height: 220px;">
+def kalkulator_bunga_tunggal(pokok, tingkat_bunga=0.05, waktu=1):
+    # 1. Masukkan rumus disini
+    total = pokok * (1 + tingkat_bunga * waktu)
+    
+    # 2. Return hasilnya (Jangan Print!)
+    return total
+
+# Main Program
+tabungan_budi = kalkulator_bunga_tunggal(2000000) # Default 1 thn
+print(f"Tabungan Budi (1 thn): Rp {tabungan_budi}")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_act2" data-out="out_act2" data-expect="2100000"
+                        class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-bold transition">▶
+                        Verify Math</button>
+                    <div class="ml-auto text-xs text-slate-500 self-center">Expect: 2100000.0</div>
+                </div>
+                <div id="out_act2" class="output-area"></div>
+                <div id="fb_act2"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 14: Final Challenge Scenarios -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Final Analysis: Jangka Panjang 📈</h2>
+            <p class="mb-4 text-sm text-slate-500">
+                Gunakan fungsimu untuk membandingkan menabung 5 tahun vs 10 tahun.
+            </p>
+
+            <div class="editor-container text-area-tall">
+                <div class="editor-header"><span>analysis.py</span></div>
+                <textarea id="code_final" class="editor-textarea" style="height: 280px;">
+def kalkulator_bunga_tunggal(pokok, tingkat_bunga=0.05, waktu=1):
+    return pokok * (1 + tingkat_bunga * waktu)
+
+modal_awal = 5000000
+bunga_bank = 0.06 # 6%
+
+# Skenario 1: 5 Tahun
+hasil_5th = kalkulator_bunga_tunggal(modal_awal, bunga_bank, 5)
+
+# Skenario 2: 10 Tahun
+hasil_10th = kalkulator_bunga_tunggal(modal_awal, bunga_bank, 10)
+
+print(f"Modal Awal: {modal_awal}")
+print(f"Hasil 5 Tahun : {hasil_5th}")
+print(f"Hasil 10 Tahun: {hasil_10th}")
+print(f"Selisih: {hasil_10th - hasil_5th}")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="run" data-code="code_final" data-out="out_final"
+                        class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶ Run
+                        Simulation</button>
+                </div>
+                <div id="out_final" class="output-area h-32"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 15: Closing -->
+        <section class="slide">
+            <div class="text-center py-20">
+                <div class="text-8xl mb-6">🎓</div>
+                <h2 class="text-4xl font-bold text-slate-900 mb-4">Class Dismissed!</h2>
+                <div class="p-6 bg-brand-50 rounded-2xl border border-brand-100 inline-block text-left max-w-xl">
+                    <h3 class="font-bold text-brand-800 mb-2">Summary Sesi 35:</h3>
+                    <ul class="space-y-3 text-brand-700 text-sm">
+                        <li class="flex gap-2 items-start"><span class="text-xl">💰</span> <span><b>Financial:</b> Bunga
+                                Tunggal membuat uang bertumbuh seiring waktu (Time Value of Money).</span></li>
+                        <li class="flex gap-2 items-start"><span class="text-xl">🐍</span> <span><b>Functions:</b> Blok
+                                kode modular yang menerima input dan menghasilkan output.</span></li>
+                        <li class="flex gap-2 items-start"><span class="text-xl">📦</span> <span><b>Return:</b> Kunci
+                                untuk mengambil nilai dari fungsi agar bisa diolah lagi (Bukan cuma print!).</span></li>
+                        <li class="flex gap-2 items-start"><span class="text-xl">⚙️</span> <span><b>Arguments:</b>
+                                Positional, Keyword, dan Default Arguments memberikan fleksibilitas.</span></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation Logic -->
+    <script>
+        const overlay = document.getElementById('accessOverlay');
+        const input = document.getElementById('accessCodeInput');
+        const btn = document.getElementById('accessBtn');
+        const error = document.getElementById('accessError');
+        const CODE = 'RGMDSHS25';
+
+        function checkCode() {
+            if (input.value.toUpperCase().trim() === CODE) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+            } else {
+                error.classList.remove('hidden');
+            }
+        }
+        if (btn) btn.addEventListener('click', checkCode);
+        if (input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('bar');
+        const slideIndicator = document.getElementById('slideIndicator');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnNext = document.getElementById('btnNext');
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentSlide);
+            });
+
+            // Update UI
+            const progress = ((currentSlide + 1) / slides.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            slideIndicator.innerText = `${currentSlide + 1}/${slides.length}`;
+
+            btnPrev.disabled = currentSlide === 0;
+            btnPrev.style.opacity = currentSlide === 0 ? "0.5" : "1";
+
+            btnNext.disabled = currentSlide === slides.length - 1;
+            btnNext.style.opacity = currentSlide === slides.length - 1 ? "0.5" : "1";
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        btnPrev.addEventListener('click', () => {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        });
+
+        btnNext.addEventListener('click', () => {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+                // blok navigasi kalau access overlay masih tampil
+                if (accessOverlay && getComputedStyle(accessOverlay).display !== 'none') return;
+
+                if (e.key === 'ArrowRight' && btnNext && !btnNext.disabled) {
+                    btnNext.click();
+                }
+
+                if (e.key === 'ArrowLeft' && btnPrev && !btnPrev.disabled) {
+                    btnPrev.click();
+                }
+            });
+
+        // Initialize
+        updateSlide();
+    </script>
+</body>
+
+</html>
