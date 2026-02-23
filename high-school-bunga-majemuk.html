@@ -1,0 +1,832 @@
+
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sesi 36: Compound Interest & Loops</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Outfit', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        gold: { 400: '#fbbf24', 500: '#f59e0b' },
+                        money: { 50: '#f0fdf4', 100: '#dcfce7', 600: '#16a34a', 800: '#166534' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        .slide {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.4s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* IDE Styles */
+        .editor-container {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .editor-header {
+            background: #0f172a;
+            color: #94a3b8;
+            padding: 0.5rem 1rem;
+            font-size: 0.75rem;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            height: 160px;
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            border: none;
+            outline: none;
+            resize: none;
+            line-height: 1.6;
+        }
+
+        .text-area-tall {
+            height: 250px;
+        }
+
+        .output-area {
+            background: #0f172a;
+            color: #a5b4fc;
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            border-top: 1px solid #334155;
+            min-height: 3.5rem;
+            white-space: pre-wrap;
+        }
+
+        /* Animations */
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
+
+    <!-- Python Controller -->
+    <script type="py" config='{"packages":[]}'>
+        from pyscript import document
+        from pyodide.ffi.wrappers import add_event_listener
+        import sys
+        import time
+        from io import StringIO
+
+        def handle_click(event):
+            el = event.target
+            if el.tagName != "BUTTON": el = el.closest("button")
+            if not el: return
+            
+            action = el.getAttribute("data-action")
+            if not action: return
+
+            code_id = el.getAttribute("data-code")
+            out_id = el.getAttribute("data-out")
+            fb_id = el.getAttribute("data-fb")
+            
+            if not code_id: return
+
+            code_el = document.getElementById(code_id)
+            out_el = document.getElementById(out_id)
+            fb_el = document.getElementById(fb_id)
+            
+            code_val = code_el.value
+            out_el.innerText = "Running..."
+            if fb_el: fb_el.classList.add("hidden")
+
+            capture = StringIO()
+            old_stdout = sys.stdout
+            sys.stdout = capture
+            
+            try:
+                scope = {}
+                # Pre-defined scope variables if needed
+                exec(code_val, scope)
+                result = capture.getvalue().strip()
+                out_el.innerText = result if result else "[No Output]"
+                
+                if action == "check":
+                    expected = el.getAttribute("data-expect")
+                    test_logic = el.getAttribute("data-test")
+                    passed = True
+                    reasons = []
+                    
+                    if expected:
+                        # Normalize check (remove spaces/lowercase)
+                        res_norm = str(result).lower().replace(" ", "").replace(",", "").replace(".", "")
+                        exp_norm = str(expected).lower().replace(" ", "").replace(",", "").replace(".", "")
+                        if exp_norm not in res_norm:
+                            passed = False
+                            reasons.append(f"Output harus mengandung angka/teks: '{expected}'")
+
+                    if passed and test_logic:
+                        try:
+                            exec(code_val, scope) 
+                            exec(test_logic, scope)
+                        except Exception as e:
+                            passed = False
+                            reasons.append(f"Logic Check Failed: {e}")
+                    
+                    if passed:
+                        if fb_el:
+                            fb_el.innerHTML = f"<span class='text-green-600 font-bold'>✓ Excellent! Logikanya tepat.</span>"
+                            fb_el.className = "mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm block"
+                    else:
+                        if fb_el:
+                            fb_el.innerHTML = f"<span class='text-red-600 font-bold'>× Coba lagi:</span> " + " ".join(reasons)
+                            fb_el.className = "mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm block"
+                        
+            except Exception as e:
+                out_el.innerText = f"Error: {e}"
+            finally:
+                sys.stdout = old_stdout
+
+        add_event_listener(document.body, "click", handle_click)
+    </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-brand-500 selection:text-white">
+
+    <!-- Access Code Overlay -->
+    <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+            <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+            <p class="text-slate-600 mb-4">Masukkan kode kelas Sesi 36</p>
+            <input id="accessCodeInput" type="text" placeholder="Kode..."
+                class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+            <button id="accessBtn"
+                class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka
+                Materi</button>
+            <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div
+                    class="bg-brand-600 text-white w-9 h-9 rounded-xl grid place-items-center font-bold shadow-lg shadow-brand-200">
+                    36</div>
+                <div>
+                    <div class="font-bold text-sm text-slate-900 tracking-tight">Compound Interest</div>
+                    <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Python Loops Simulation
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="slideIndicator"
+                    class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">1/18</span>
+                <button id="btnPrev"
+                    class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition">←</button>
+                <button id="btnNext"
+                    class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center hover:bg-brand-500 text-white shadow-md transition">→</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-8 mb-20">
+        <!-- Progress Bar -->
+        <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20">
+            <div id="bar" class="h-full bg-brand-500 transition-all duration-300" style="width: 5%"></div>
+        </div>
+
+        <!-- SLIDE 1: Title -->
+        <section class="slide active">
+            <div class="py-20 text-center">
+                <div class="text-6xl mb-6 animate-float">💸 vs 💰</div>
+                <h1 class="text-5xl font-black text-slate-900 mb-6">The Magic of<br><span
+                        class="text-brand-600">Compound Interest</span></h1>
+                <p class="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                    Bagaimana membuat uangmu bekerja untukmu menggunakan kekuatan Matematika dan Python Loops.
+                </p>
+                <div class="mt-8 flex justify-center gap-4">
+                    <span class="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold">Financial
+                        Literacy</span>
+                    <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">Python For
+                        Loops</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: Snowball Effect -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6 text-slate-900">Efek Bola Salju ❄️</h2>
+            <div
+                class="bg-white p-8 rounded-2xl shadow-lg border border-slate-100 grid md:grid-cols-2 gap-8 items-center">
+                <div class="text-center">
+                    <div class="text-8xl mb-4">🏔️</div>
+                    <p class="text-slate-400 text-sm">Bola salju kecil digulung...</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3 text-brand-700">The Snowball Effect</h3>
+                    <p class="text-slate-600 mb-4 leading-relaxed">
+                        Bayangkan bola salju yang menggelinding ke bawah bukit.
+                        Awalnya kecil, tapi lama-kelamaan dia menempelkan lebih banyak salju, menjadi makin besar, dan
+                        makin cepat membesar.
+                    </p>
+                    <div class="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500 text-sm text-blue-800">
+                        <b>Konsep Investasi:</b><br>
+                        "Bunga tahun ini akan menjadi MODAL untuk tahun depan."
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 3: Bunga Tunggal vs Majemuk -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-8 text-center">Simple vs Compound Interest ⚔️</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Simple Choice -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm opacity-80">
+                    <h3 class="font-bold text-slate-500 mb-2">Bunga Tunggal (Simple)</h3>
+                    <div class="text-4xl mb-4">🐢 Linear</div>
+                    <ul class="text-sm space-y-2 text-slate-600">
+                        <li>• Bunga dihitung dari Modal Awal saja.</li>
+                        <li>• Tiap tahun dapatnya SAMA.</li>
+                        <li>• Contoh: Modal 1 Jt, Bunga 10%</li>
+                        <li>• Tahun 1: +100k</li>
+                        <li>• Tahun 2: +100k (Tetap)</li>
+                    </ul>
+                </div>
+
+                <!-- Compound Choice -->
+                <div class="bg-money-50 p-6 rounded-2xl border-2 border-green-500 shadow-lg transform scale-105">
+                    <h3 class="font-bold text-green-700 mb-2">Bunga Majemuk (Compound)</h3>
+                    <div class="text-4xl mb-4">🚀 Exponential</div>
+                    <ul class="text-sm space-y-2 text-green-900">
+                        <li>• Bunga dihitung dari Modal + Bunga sebelumnya.</li>
+                        <li>• "Bunga berbunga"</li>
+                        <li>• Tahun 1: +100k (Total 1.1 Jt)</li>
+                        <li>• Tahun 2: +110k (10% dari 1.1 Jt)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: Why Python Loops? -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">Kenapa Pakai Loop? 🔄</h2>
+            <div class="grid md:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="font-bold text-lg mb-2">Rumus Matematika vs Kode</h3>
+                    <p class="mb-4 text-slate-600">
+                        Rumus matematika langsung memberi kita <b>Hasil Akhir</b>. Tapi kadang kita ingin melihat <b>Per
+                            jalanan</b> pertumbuhannya.
+                    </p>
+                    <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 text-sm mb-4">
+                        <code class="text-yellow-800 break-words">Total = Pokok * (1 + Bunga)^Tahun</code>
+                        <div class="text-xs text-yellow-600 mt-1">Hanya keluar 1 angka final. Membosankan! 😴</div>
+                    </div>
+                </div>
+                <div class="bg-slate-900 p-6 rounded-xl text-white">
+                    <h3 class="font-bold text-blue-400 mb-2">Loop Simulation</h3>
+                    <p class="text-sm text-slate-400 mb-4">Dengan loop, kita bisa print saldo setiap tahun:</p>
+                    <code class="text-green-400 font-mono text-xs block">
+                        Tahun 1: Rp 1.100.000<br>
+                        Tahun 2: Rp 1.210.000<br>
+                        Tahun 3: Rp 1.331.000<br>
+                        ...
+                    </code>
+                </div>
+            </div>
+            <p class="text-center mt-6 font-bold text-brand-600">Looping memungkinkan kita melihat "Story" dari uang
+                kita.</p>
+        </section>
+
+        <!-- SLIDE 5: Coding Logic: Updating Variables -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4">The Logic: Update & Accumulate</h2>
+            <div class="flex flex-col gap-4 max-w-2xl mx-auto">
+                <p class="text-center text-slate-600">Kunci dari simulasi adalah memperbarui nilai saldo setiap putaran.
+                </p>
+
+                <div
+                    class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center gap-4">
+                    <div class="text-right">
+                        <div class="text-xs text-slate-500">Saldo Lama</div>
+                        <div class="font-mono font-bold text-xl">1.000.000</div>
+                    </div>
+                    <div class="text-2xl text-green-500">➕</div>
+                    <div class="text-center">
+                        <div class="text-xs text-slate-500">Bunga (10%)</div>
+                        <div class="font-mono font-bold text-xl">100.000</div>
+                    </div>
+                    <div class="text-2xl text-brand-500">➡</div>
+                    <div class="text-left">
+                        <div class="text-xs text-slate-500">Saldo Baru</div>
+                        <div class="font-mono font-bold text-2xl text-brand-600">1.100.000</div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 p-4 rounded-xl text-center">
+                    <code class="text-lg font-mono text-white">saldo = saldo + (saldo * bunga)</code>
+                    <div class="text-slate-400 text-xs mt-2">atau lebih singkat: <span class="text-green-400">saldo +=
+                            saldo * bunga</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 6: Interactive Demo 1 -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Coba Sendiri: Hitung Manual Loop ✍️</h2>
+            <p class="mb-4 text-sm text-slate-500">
+                Lengkapi kode di dalam loop. Hitung bunga, lalu tambahkan ke `uang_sekarang`.
+            </p>
+
+            <div class="editor-container">
+                <div class="editor-header"><span>compound_intro.py</span></div>
+                <textarea id="code_loop1" class="editor-textarea">
+uang_sekarang = 1000
+bunga = 0.1 # 10%
+durasi = 3 # 3 tahun
+
+for tahun in range(1, durasi + 1):
+    # 1. Hitung nominal bunga tahun ini
+    #    Rumus: uang_sekarang dikali bunga
+    nominal_bunga = uang_sekarang * bunga 
+    
+    # 2. Update uang_sekarang (tambahkan bunga)
+    uang_sekarang = uang_sekarang + nominal_bunga
+    
+    print(f"Tahun {tahun}: {uang_sekarang}")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_loop1" data-out="out_loop1" data-expect="1331"
+                        class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-xs font-bold transition">▶
+                        Run Simulation</button>
+                    <div class="ml-auto text-xs text-slate-500 self-center">Target akhir: 1331</div>
+                </div>
+                <div id="out_loop1" class="output-area"></div>
+                <div id="fb_loop1"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 7: Formatting String -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4">Biar Rapi: f-string Formatting 💅</h2>
+            <p class="mb-6 text-slate-600">Output angka desimal seringkali berantakan (contoh: 1331.000000002). Kita
+                perlu merapikannya.</p>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-red-50 p-6 rounded-xl border border-red-200">
+                    <h3 class="font-bold text-red-900 border-b border-red-200 pb-2 mb-2">Tanpa Format</h3>
+                    <code class="block text-red-800 font-mono text-sm mb-2">print(f"Saldo: {uang}")</code>
+                    <div class="bg-white p-2 rounded border border-red-100 text-xs font-mono text-slate-600">
+                        Saldo: 10500.5599999
+                    </div>
+                </div>
+                <div class="bg-green-50 p-6 rounded-xl border border-green-200">
+                    <h3 class="font-bold text-green-900 border-b border-green-200 pb-2 mb-2">Dengan Format</h3>
+                    <code class="block text-green-800 font-mono text-sm mb-2">print(f"Saldo: {uang:,.0f}")</code>
+                    <div class="bg-white p-2 rounded border border-green-100 text-xs font-mono text-slate-600">
+                        Saldo: 10,501 (Dibulatkan & ada Koma)
+                    </div>
+                    <ul class="mt-2 text-xs text-green-700 list-disc ml-4">
+                        <li><b>,</b> : Pemisah ribuan</li>
+                        <li><b>.0f</b> : 0 angka di belakang koma</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 8: Interactive Demo 2 (Formatting) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Challenge: Tampilkan Tabel Rapi 📊</h2>
+            <p class="mb-4 text-sm text-slate-500">
+                Gunakan f-string formatting <code>:,.2f</code> (2 desimal) untuk menampilkan saldo.
+            </p>
+
+            <div class="editor-container">
+                <div class="editor-header"><span>table_format.py</span></div>
+                <textarea id="code_format" class="editor-textarea">
+saldo = 5000000
+bunga = 0.05
+
+print(f"{'Tahun':<10} | {'Saldo (Rp)':<15}")
+print("-" * 30)
+
+for i in range(1, 4):
+    saldo += saldo * bunga
+    # Tampilkan saldo dengan format uang (ada koma ribuan)
+    print(f"{i:<10} | Rp {saldo:,.2f}") 
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_format" data-out="out_format" data-expect="5,788,125"
+                        class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded text-xs font-bold transition">▶
+                        Print Table</button>
+                    <button class="bg-slate-700 text-white px-3 py-1 rounded text-xs ml-auto"
+                        onclick="document.getElementById('code_format').value=`saldo = 2500\nprint(f'{saldo:,.2f}')`">Tes
+                        Singkat</button>
+                </div>
+                <div id="out_format" class="output-area"></div>
+                <div id="fb_format"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: Building the Function -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-4">Level Up: Wrapping in Function 📦</h2>
+            <p class="mb-4 text-slate-600">
+                Supaya bisa dipakai berkali-kali untuk skenario berbeda, kita bungkus logika tadi ke dalam Function.
+            </p>
+
+            <div class="bg-slate-900 p-6 rounded-xl text-white font-mono text-sm leading-7 shadow-lg">
+                <div><span class="text-purple-400">def</span> <span
+                        class="text-blue-400">simulasi_investasi</span>(pokok, bunga, tahun):</div>
+                <div class="pl-4 text-slate-500"># 1. Inisialisasi variabel jalan</div>
+                <div class="pl-4">saldo_saat_ini = pokok</div>
+                <div class="pl-4 mb-2">print(f"Modal Awal: {pokok}")</div>
+
+                <div class="pl-4 text-slate-500"># 2. Mulai Loop</div>
+                <div class="pl-4"><span class="text-purple-400">for</span> t <span class="text-purple-400">in</span>
+                    range(1, tahun + 1):</div>
+                <div class="pl-8">bunga_didapat = saldo_saat_ini * bunga</div>
+                <div class="pl-8">saldo_saat_ini += bunga_didapat</div>
+                <div class="pl-8">print(...)</div>
+                <div class="pl-4 mt-2"><span class="text-purple-400">return</span> saldo_saat_ini</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 10: Interactive Demo 3 (Full Simulation) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Simulasi Investasi Cerdas 🧠</h2>
+            <p class="mb-4 text-sm text-slate-500">
+                Lengkapi fungsi di bawah ini untuk menghitung hasil investasi selama 5 tahun dengan bunga 12%.
+            </p>
+
+            <div class="editor-container text-area-tall">
+                <div class="editor-header"><span>smart_invest.py</span></div>
+                <textarea id="code_func" class="editor-textarea">
+def simulasi_investasi(pokok, bunga, tahun):
+    saldo = pokok
+    print(f"Start: Rp {saldo:,.0f}")
+    
+    for t in range(1, tahun + 1):
+        # Tambahkan bunga tahunan
+        saldo += saldo * bunga
+        print(f"Tahun {t}: Rp {saldo:,.0f}")
+        
+    return saldo
+
+# Skenario: Modal 10 Juta, Bunga 12% (0.12), selama 5 tahun
+hasil_akhir = simulasi_investasi(10000000, 0.12, 5)
+print(f"Total Akhir: Rp {hasil_akhir:,.0f}")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_func" data-out="out_func" data-expect="17,623,417"
+                        class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶ Run
+                        Scenario</button>
+                    <div class="ml-auto text-xs text-slate-500 self-center">Target: ~17.6 Juta</div>
+                </div>
+                <div id="out_func" class="output-area h-32"></div>
+                <div id="fb_func"></div>
+            </div>
+        </section>
+
+        <!-- SLIDE 11: Nested Loops Intro -->
+        <section class="slide">
+            <h2 class="text-3xl font-bold mb-6">Tantangan Baru: Bunga Bulanan 🗓️</h2>
+            <div class="flex flex-col md:flex-row gap-8 items-center">
+                <div class="flex-1">
+                    <p class="text-lg text-slate-700 mb-4">
+                        Bagaimana jika bunga dihitung <b>setiap bulan</b>, tapi kita ingin menjalankan simulasi selama
+                        <b>2 tahun</b>?
+                    </p>
+                    <div class="bg-yellow-50 p-4 rounded-xl border-l-4 border-yellow-500 mb-4">
+                        <h4 class="font-bold text-yellow-800">Nested Loops (Loop dalam Loop)</h4>
+                        <ul class="text-sm list-disc ml-5 mt-2 text-yellow-900">
+                            <li><b>Loop Luar (Outer):</b> Mengatur TAHUN (Tahun 1, Tahun 2...)</li>
+                            <li><b>Loop Dalam (Inner):</b> Mengatur BULAN (Bulan 1 - 12)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div
+                    class="flex-1 bg-white p-6 rounded-xl shadow-lg border border-slate-100 items-center justify-center flex">
+                    <!-- Visual Representation -->
+                    <div class="grid grid-cols-1 gap-2 text-center w-full">
+                        <div class="bg-blue-600 text-white py-2 rounded font-bold">Tahun 1</div>
+                        <div class="grid grid-cols-6 gap-1">
+                            <div class="bg-blue-100 text-[10px] py-1 rounded">B1</div>
+                            <div class="bg-blue-100 text-[10px] py-1 rounded">B2</div>
+                            <div class="bg-blue-100 text-[10px] py-1 rounded">...</div>
+                            <div class="bg-blue-100 text-[10px] py-1 rounded">B12</div>
+                        </div>
+                        <div class="bg-blue-600 text-white py-2 rounded font-bold mt-2">Tahun 2</div>
+                        <div class="grid grid-cols-6 gap-1">
+                            <div class="bg-blue-100 text-[10px] py-1 rounded">B1</div>
+                            <div class="bg-blue-100 text-[10px] py-1 rounded">B2</div>
+                            <div class="bg-blue-100 text-[10px] py-1 rounded">...</div>
+                            <div class="bg-blue-100 text-[10px] py-1 rounded">B12</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 12: Nested Loops Code -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Contoh Nested Loop</h2>
+            <div class="bg-slate-900 p-6 rounded-xl text-white font-mono text-xs leading-6 overflow-x-auto">
+                <pre>
+for tahun in range(1, 3): # Loop 2 kali (2 Tahun)
+    print(f"--- Masuk Tahun {tahun} ---")
+    
+    for bulan in range(1, 13): # Loop 12 kali (12 Bulan)
+        saldo += saldo * bunga_bulanan
+        print(f"Bulan {bulan}: Saldo naik jadi {saldo}")
+</pre>
+            </div>
+            <div class="mt-6 text-center">
+                <p class="text-sm text-slate-500 mb-2">Total Iterasi Perhitungan:</p>
+                <div class="text-4xl font-bold text-brand-600">2 Tahun × 12 Bulan = 24 Kali</div>
+            </div>
+        </section>
+
+        <!-- SLIDE 13: Interactive Demo 4 (Monthly) -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-4">Simulasi Bulanan 📅</h2>
+            <p class="mb-4 text-sm text-slate-500">
+                Selesaikan kode Nested Loop di bawah.
+            </p>
+
+            <div class="editor-container text-area-tall">
+                <div class="editor-header"><span>monthly_compounding.py</span></div>
+                <textarea id="code_nested" class="editor-textarea">
+pokok = 1000000
+bunga_tahunan = 0.12 # 12% per tahun
+bunga_bulanan = bunga_tahunan / 12 # 1% per bulan
+lama_tahun = 1
+
+print(f"Bunga Bulanan: {bunga_bulanan*100:.2f}%")
+
+# Loop Luar: Tahun
+for t in range(1, lama_tahun + 1):
+    
+    # Loop Dalam: 12 Bulan
+    for b in range(1, 13):
+        pokok += pokok * bunga_bulanan
+        
+    print(f"Akhir Tahun {t}: Rp {pokok:,.0f}")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_nested" data-out="out_nested" data-expect="1,126,825"
+                        class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶ Run
+                        Monthly Sim</button>
+                    <div class="ml-auto text-xs text-slate-500 self-center">Hint: 12% / 12 = 1% per bulan</div>
+                </div>
+                <div id="out_nested" class="output-area h-32"></div>
+                <div id="fb_nested"></div>
+            </div>
+        </section>
+
+                <!-- SLIDE 14: Project Intro -->
+        <section class="slide">
+            <div
+                class="bg-gradient-to-br from-gray-900 to-slate-800 text-white p-10 rounded-3xl text-center h-full flex flex-col justify-center items-center">
+                <div class="text-6xl mb-6">⏳</div>
+                <h1 class="text-4xl font-bold mb-4">Final Project: Time Advantage Simulation</h1>
+                <p class="text-xl opacity-90 mb-8 max-w-2xl">
+                    Modal sama, growth rate sama. Bedanya cuma <b>waktu mulai</b>.
+                    Mari buktikan “shock effect” dengan simulasi <b>Start at 18 vs Start at 30</b>.
+                </p>
+                <div class="grid grid-cols-2 gap-4 w-full max-w-2xl">
+                    <div class="bg-white/10 p-5 rounded-2xl border border-white/10">
+                        <div class="text-sm opacity-80 mb-1">Skenario A</div>
+                        <div class="text-2xl font-bold">Start at 18</div>
+                        <div class="text-sm opacity-70">Durasi: 20 tahun</div>
+                    </div>
+                    <div class="bg-gold-500/10 p-5 rounded-2xl border border-gold-500/40">
+                        <div class="text-sm opacity-80 mb-1">Skenario B</div>
+                        <div class="text-2xl font-bold text-gold-400">Start at 30</div>
+                        <div class="text-sm opacity-70">Durasi: 8 tahun</div>
+                    </div>
+                </div>
+                <div class="mt-8 text-sm opacity-80 max-w-2xl">
+                    Target pembelajaran: gunakan <code class="bg-white/10 px-2 py-1 rounded">for loop</code> dan update variabel
+                    <code class="bg-white/10 px-2 py-1 rounded">saldo += saldo * rate</code>.
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 15: Final Code Project -->
+        <section class="slide">
+            <h2 class="text-2xl font-bold mb-2">Final Code: Start 18 vs Start 30 (Shock Simulation)</h2>
+            <p class="text-slate-600 mb-4">
+                Lengkapi bagian <b>TODO</b>, lalu klik <b>Check My Solution</b>. (Boleh print progres per tahun kalau mau.)
+            </p>
+
+            <div class="editor-container" style="height: 430px;">
+                <div class="editor-header"><span>wealth_shock_simulation.py</span></div>
+                <textarea id="code_final" class="editor-textarea" style="height: 300px;">
+# Wealth Builder Shock Simulation (Final Project)
+# Fokus: compound growth dengan loop + perbandingan dua skenario
+
+modal = 5_000_000
+rate = 0.10
+
+tahun_A = 20  # Start at 18
+tahun_B = 8   # Start at 30
+
+# TODO 1: inisialisasi saldo_A dan saldo_B
+saldo_A = modal
+saldo_B = modal
+
+# TODO 2: loop untuk A (20 tahun)
+# for tahun in range(1, tahun_A + 1):
+#     saldo_A += saldo_A * rate
+
+# TODO 3: loop untuk B (8 tahun)
+# for tahun in range(1, tahun_B + 1):
+#     saldo_B += saldo_B * rate
+
+# TODO 4: hitung selisih dan shock factor
+difference = saldo_A - saldo_B
+shock_factor = saldo_A / saldo_B
+
+print("A (Start 18, 20y):", f"{saldo_A:,.0f}")
+print("B (Start 30, 8y) :", f"{saldo_B:,.0f}")
+print("Difference       :", f"{difference:,.0f}")
+print("Shock factor     :", round(shock_factor, 2), "x")
+</textarea>
+                <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+                    <button data-action="check" data-code="code_final" data-out="out_final" data-fb="fb_final"
+                        data-test="
+def dekat(a,b,tol=50000): return abs(a-b) <= tol
+assert dekat(saldo_A, 33637500), f'saldo_A belum tepat: {saldo_A}'
+assert dekat(saldo_B, 10743500), f'saldo_B belum tepat: {saldo_B}'
+assert dekat(difference, 22894000), f'difference belum tepat: {difference}'
+assert 3.0 < shock_factor < 3.2, f'shock_factor tidak wajar: {shock_factor}'
+"
+                        class="px-5 py-2 bg-money-600 hover:bg-money-500 text-white rounded font-bold transition">
+                        ✓ Check My Solution
+                    </button>
+
+                    <button data-action="run" data-code="code_final" data-out="out_final"
+                        class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶ Run</button>
+
+                    <div class="ml-auto text-xs text-slate-400 self-center">
+                        Target kira-kira: A≈33.6 jt, B≈10.7 jt
+                    </div>
+                </div>
+                <div id="out_final" class="output-area h-32"></div>
+                <div id="fb_final" class="hidden"></div>
+            </div>
+
+            <div class="mt-4 p-4 bg-money-50 rounded-2xl border border-money-100 text-sm text-green-800">
+                <b>Diskusi cepat:</b> Modal dan rate sama. Kenapa hasilnya bisa beda jauh? (Hint: jumlah iterasi)
+            </div>
+        </section>
+
+        <!-- SLIDE 16: Closing -->
+        <section class="slide">
+            <div class="text-center py-20">
+                <div class="text-8xl mb-6">🌟</div>
+                <h2 class="text-4xl font-bold text-slate-900 mb-4">You are now a Financial Coder!</h2>
+                <p class="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+                    Kamu suda belajar salah satu konsep terkuat di dunia finansial (Compound Interest) dan cara
+                    mensimulasikannya dengan Python.
+                </p>
+                <div class="p-6 bg-money-50 rounded-2xl border border-money-100 inline-block text-left">
+                    <h3 class="font-bold text-green-800 mb-2">Key Takeaways:</h3>
+                    <ul class="space-y-2 text-green-700 text-sm">
+                        <li>✅ Bunga Majemuk = Bunga berbunga (Exponential)</li>
+                        <li>✅ Loop <code>for</code> digunakan untuk simulasi tahun per tahun</li>
+                        <li>✅ Operator <code>+=</code> untuk akumulasi nilai</li>
+                        <li>✅ Time advantage: lebih lama → hasil jauh lebih besar</li>
+                        <li>✅ Nested Loop untuk perhitungan frekuensi tinggi (bulanan)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Navigation Logic -->
+    <script>
+        const overlay = document.getElementById('accessOverlay');
+        const input = document.getElementById('accessCodeInput');
+        const btn = document.getElementById('accessBtn');
+        const error = document.getElementById('accessError');
+        const CODE = 'RGMDSHS25'; // Password kept same as requested
+
+        function checkCode() {
+            if (input.value.toUpperCase().trim() === CODE) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 300);
+            } else {
+                error.classList.remove('hidden');
+            }
+        }
+        if (btn) btn.addEventListener('click', checkCode);
+        if (input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progressBar = document.getElementById('bar');
+        const slideIndicator = document.getElementById('slideIndicator');
+        const btnPrev = document.getElementById('btnPrev');
+        const btnNext = document.getElementById('btnNext');
+
+        function updateSlide() {
+            slides.forEach((slide, index) => {
+                slide.classList.toggle('active', index === currentSlide);
+            });
+
+            // Update UI
+            const progress = ((currentSlide + 1) / slides.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            slideIndicator.innerText = `${currentSlide + 1}/${slides.length}`;
+
+            btnPrev.disabled = currentSlide === 0;
+            btnPrev.style.opacity = currentSlide === 0 ? "0.5" : "1";
+
+            btnNext.disabled = currentSlide === slides.length - 1;
+            btnNext.style.opacity = currentSlide === slides.length - 1 ? "0.5" : "1";
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        btnPrev.addEventListener('click', () => {
+            if (currentSlide > 0) {
+                currentSlide--;
+                updateSlide();
+            }
+        });
+
+        btnNext.addEventListener('click', () => {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                updateSlide();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+                // blok navigasi kalau access overlay masih tampil
+                if (accessOverlay && getComputedStyle(accessOverlay).display !== 'none') return;
+
+                if (e.key === 'ArrowRight' && btnNext && !btnNext.disabled) {
+                    btnNext.click();
+                }
+
+                if (e.key === 'ArrowLeft' && btnPrev && !btnPrev.disabled) {
+                    btnPrev.click();
+                }
+            });
+
+        // Initialize
+        updateSlide();
+    </script>
+</body>
+
+</html>
