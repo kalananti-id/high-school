@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sesi 38: Transaksi & Pencatatan Keuangan + Lists</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Outfit', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+          colors: {
+            brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+            gold: { 400: '#fbbf24', 500: '#f59e0b' }
+          },
+          animation: {
+            'spin-slow': 'spin 3s linear infinite',
+            'bounce-slow': 'bounce 2s infinite',
+            'pulse-fast': 'pulse 1.5s cubic-bezier(0.4,0,0.6,1) infinite'
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+  <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+    rel="stylesheet">
+
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    .slide {
+      display: none;
+      opacity: 0;
+      transition: opacity .4s ease-in-out;
+    }
+
+    .slide.active {
+      display: block;
+      opacity: 1;
+    }
+
+    .code-font {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* IDE */
+    .editor-container {
+      background: #1e293b;
+      border-radius: .75rem;
+      overflow: hidden;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1);
+    }
+
+    .editor-header {
+      background: #0f172a;
+      color: #94a3b8;
+      padding: .5rem 1rem;
+      font-size: .75rem;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+    }
+
+    .editor-textarea {
+      width: 100%;
+      height: 180px;
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .9rem;
+      border: none;
+      outline: none;
+      resize: none;
+      line-height: 1.6;
+    }
+
+    .text-area-tall {
+      height: 280px;
+    }
+
+    .output-area {
+      background: #0f172a;
+      color: #a5b4fc;
+      padding: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .85rem;
+      border-top: 1px solid #334155;
+      min-height: 3.5rem;
+      white-space: pre-wrap;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+
+    .animate-float {
+      animation: float 3s ease-in-out infinite;
+    }
+  </style>
+
+  <!-- Python Controller (run + check) -->
+  <script type="py" config='{"packages":[]}'>
+from pyscript import document
+from pyodide.ffi.wrappers import add_event_listener
+import sys
+from io import StringIO
+
+def handle_click(event):
+    el = event.target
+    if el.tagName != "BUTTON":
+        el = el.closest("button")
+    if not el:
+        return
+
+    action = el.getAttribute("data-action")
+    if not action:
+        return
+
+    code_id = el.getAttribute("data-code")
+    out_id  = el.getAttribute("data-out")
+    fb_id   = el.getAttribute("data-fb")
+
+    if not code_id:
+        return
+
+    code_el = document.getElementById(code_id)
+    out_el  = document.getElementById(out_id) if out_id else None
+    fb_el   = document.getElementById(fb_id) if fb_id else None
+
+    code_val = code_el.value
+
+    if out_el:
+        out_el.innerText = "Running..."
+    if fb_el:
+        fb_el.classList.add("hidden")
+
+    capture = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = capture
+
+    try:
+        scope = {}
+        exec(code_val, scope)
+        result = capture.getvalue().strip()
+
+        if out_el:
+            out_el.innerText = result if result else "[No Output]"
+
+        if action == "check":
+            expected = el.getAttribute("data-expect") or ""
+            must_have = [s.strip() for s in expected.split("||") if s.strip()]
+            test_logic = el.getAttribute("data-test") or ""
+
+            passed = True
+            reasons = []
+
+            lower_res = (result or "").lower()
+            for token in must_have:
+                if token.lower() not in lower_res:
+                    passed = False
+                    reasons.append(f"Output tidak mengandung: '{token}'")
+
+            if passed and test_logic:
+                try:
+                    # run test against the code's scope
+                    exec(test_logic, scope)
+                except Exception as e:
+                    passed = False
+                    reasons.append(f"Logic Alert: {e}")
+
+            if fb_el:
+                if passed:
+                    fb_el.innerHTML = "<span class='text-green-600 font-bold'>✓ Mantap!</span> Output & logika sudah sesuai."
+                    fb_el.className = "mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm block"
+                else:
+                    fb_el.innerHTML = "<span class='text-red-600 font-bold'>× Coba lagi:</span> " + " ".join(reasons)
+                    fb_el.className = "mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm block"
+
+    except Exception as e:
+        if out_el:
+            out_el.innerText = f"Error: {e}"
+        if fb_el:
+            fb_el.innerHTML = f"<span class='text-red-600 font-bold'>× Error:</span> {e}"
+            fb_el.className = "mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm block"
+    finally:
+        sys.stdout = old_stdout
+
+add_event_listener(document.body, "click", handle_click)
+  </script>
+</head>
+
+<body class="bg-slate-50 text-slate-800 font-sans selection:bg-brand-500 selection:text-white">
+
+  <!-- Access Code Overlay -->
+  <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+    <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-indigo-100">
+      <h2 class="text-2xl font-bold text-indigo-600 mb-2">🔒 Kode Akses</h2>
+      <p class="text-slate-600 mb-4">Masukkan kode kelas Sesi 38</p>
+      <input id="accessCodeInput" type="text" placeholder="Kode..."
+        class="w-full p-3 rounded-xl border border-slate-300 focus:border-indigo-500 outline-none text-center font-mono text-lg uppercase mb-3">
+      <button id="accessBtn"
+        class="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition">Buka
+        Materi</button>
+      <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah!</p>
+      <p class="text-[11px] text-slate-400 mt-4">Tips: gunakan huruf kapital.</p>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div
+          class="bg-brand-600 text-white w-9 h-9 rounded-xl grid place-items-center font-bold shadow-lg shadow-brand-200">
+          38</div>
+        <div>
+          <div class="font-bold text-sm text-slate-900 tracking-tight">Transaksi & Pencatatan Keuangan</div>
+          <div class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Financial Literacy + Python Lists
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="slideIndicator" class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded">1/13</span>
+        <button id="btnPrev"
+          class="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition">←</button>
+        <button id="btnNext"
+          class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center hover:bg-brand-500 text-white shadow-md transition">→</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-8 mb-20">
+    <!-- Progress Bar -->
+    <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20">
+      <div id="bar" class="h-full bg-brand-500 transition-all duration-300" style="width: 7%"></div>
+    </div>
+
+    <!-- SLIDE 1 — Title (Pembukaan 3 menit) -->
+    <section class="slide active">
+      <div class="py-20 text-center">
+        <div class="text-6xl mb-6 animate-float">🧾💸</div>
+        <h1 class="text-5xl font-black text-slate-900 mb-6">
+          Sesi 38<br><span class="text-brand-600">List untuk Transaksi</span>
+        </h1>
+        <p class="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+          Hari ini kita bikin <b>buku besar (ledger)</b> sederhana: simpan pemasukan & pengeluaran, undo transaksi, dan
+          hitung saldo akhir.
+        </p>
+        <div class="mt-8 flex justify-center gap-3 flex-wrap">
+          <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-bold">List []</span>
+          <span class="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-bold">Index 0 / -1</span>
+          <span class="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-bold">append / pop</span>
+          <span class="px-4 py-2 bg-amber-100 text-amber-700 rounded-full text-sm font-bold">sum()</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2 — Keterbatasan Variabel -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-5 text-slate-900">Warm-up: 100 Transaksi = 100 Variabel? 😵‍💫</h2>
+      <div class="grid md:grid-cols-2 gap-6 items-start">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-slate-600 leading-relaxed mb-4">
+            Bayangin kamu nyatet pengeluaran harian. Kalau pakai variabel, jadinya:
+          </p>
+          <div class="bg-slate-900 text-slate-100 rounded-xl p-4 font-mono text-sm leading-6">
+            transaksi1 = -15000<br>
+            transaksi2 = -25000<br>
+            transaksi3 = 50000<br>
+            ... sampai transaksi100 😭
+          </div>
+          <div class="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm">
+            Masalahnya: ribet, susah dijumlah, susah di-update, dan gampang salah.
+          </div>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-2xl border border-brand-100">
+          <h3 class="font-bold text-brand-900 mb-2">Solusi hari ini ✅</h3>
+          <p class="text-slate-700 mb-4">
+            Pakai <b>List</b>: banyak data transaksi disimpan dalam <b>satu</b> variabel.
+          </p>
+          <div class="flex items-center gap-3">
+            <div class="text-5xl">📦</div>
+            <div class="text-sm text-slate-600">
+              <div class="font-bold text-slate-800">ledger = [ ... ]</div>
+              Urutan transaksi tetap rapi dan mudah diolah.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 text-sm text-slate-500">
+        Interaksi cepat: “Kalau kamu punya 100 transaksi, kamu lebih pilih 100 variabel atau 1 list?”
+      </div>
+    </section>
+
+    <!-- SLIDE 3 — Apa itu List -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-6">Apa itu List? 🧠</h2>
+      <div class="grid md:grid-cols-2 gap-6 items-center">
+        <div>
+          <p class="text-lg text-slate-600 leading-relaxed mb-4">
+            <b>List</b> adalah kumpulan data yang <b>terurut</b> dan <b>bisa diubah</b> (mutable).
+          </p>
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex gap-3 items-start">
+              <div class="w-8 h-8 rounded-lg bg-slate-100 grid place-items-center">🧭</div>
+              <div>
+                <div class="font-bold">Terurut</div>
+                <div class="text-sm text-slate-500">Elemen disimpan sesuai urutan masuknya.</div>
+              </div>
+            </div>
+            <div class="flex gap-3 items-start">
+              <div class="w-8 h-8 rounded-lg bg-slate-100 grid place-items-center">🧱</div>
+              <div>
+                <div class="font-bold">Mutable</div>
+                <div class="text-sm text-slate-500">Bisa ditambah, dihapus, atau diubah.</div>
+              </div>
+            </div>
+            <div class="flex gap-3 items-start">
+              <div class="w-8 h-8 rounded-lg bg-slate-100 grid place-items-center">🧩</div>
+              <div>
+                <div class="font-bold">Bisa campur tipe</div>
+                <div class="text-sm text-slate-500">Angka, teks, boolean, dsb bisa satu list.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-slate-900 text-slate-100 rounded-2xl p-6 font-mono text-sm leading-7 shadow-xl">
+          <div class="text-slate-400 text-xs mb-2">Contoh (List transaksi):</div>
+          ledger = [500000, -200000, -50000]<br><br>
+          <div class="text-slate-400 text-xs mb-2">Contoh (List campuran detail):</div>
+          detail = ["Gaji Bulanan", 15000000, "2024-09-01", True]<br><br>
+          <div class="text-slate-400 text-xs mb-2">List kosong:</div>
+          ledger = []
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4 — Sintaks List -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-4">Sintaks Dasar List: [] ✨</h2>
+      <p class="text-slate-600 mb-6">Item di dalam <b>kurung siku</b>, dipisahkan <b>koma</b>.</p>
+
+      <div class="editor-container">
+        <div class="editor-header"><span>list_basic.py</span><span class="text-slate-500">Coba jalankan</span></div>
+        <textarea id="code_list_basic" class="editor-textarea">
+# 1) List transaksi (angka)
+ledger = [500000, -200000, -50000]
+
+# 2) List campuran (opsional)
+detail = ["Gaji", 15000000, "2024-09-01", True]
+
+# 3) List kosong
+aset = []
+
+print("Ledger:", ledger)
+print("Detail:", detail)
+print("Aset:", aset)
+</textarea>
+        <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+          <button data-action="run" data-code="code_list_basic" data-out="out_list_basic"
+            class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶
+            Jalankan</button>
+        </div>
+        <div id="out_list_basic" class="output-area"></div>
+      </div>
+      <div class="mt-4 text-sm text-slate-500">
+        Highlight guru: Ledger pakai angka <b>+</b> (pemasukan) dan <b>-</b> (pengeluaran).
+      </div>
+    </section>
+
+    <!-- SLIDE 5 — Indexing -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-4">Mengakses Data dengan Indeks 🔍</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <h3 class="font-bold mb-2">Aturan penting</h3>
+          <ul class="list-disc ml-5 text-slate-600 text-sm space-y-2">
+            <li>Indeks dimulai dari <b>0</b>.</li>
+            <li>Indeks <b>-1</b> artinya elemen terakhir.</li>
+            <li>Indeks membantu kita ambil item tertentu tanpa mengubah list.</li>
+          </ul>
+
+          <div class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl font-mono text-sm">
+            ledger = [500000, -200000, -50000]<br><br>
+            ledger[0] → 500000<br>
+            ledger[1] → -200000<br>
+            ledger[-1] → -50000
+          </div>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-2xl border border-brand-100">
+          <h3 class="font-bold text-brand-900 mb-2">Mini Tantangan 🎯</h3>
+          <p class="text-slate-700 text-sm mb-4">
+            Dari list ledger, tampilkan transaksi <b>pertama</b> dan <b>terakhir</b>.
+          </p>
+
+          <div class="editor-container">
+            <div class="editor-header"><span>index_challenge.py</span></div>
+            <textarea id="code_index" class="editor-textarea">
+ledger = [500000, -200000, -50000, 100000]
+
+# TODO:
+# 1) simpan transaksi pertama ke variabel pertama
+# 2) simpan transaksi terakhir ke variabel terakhir
+# 3) print seperti contoh:
+#    Pertama: ...
+#    Terakhir: ...
+
+# tulis di bawah ini 👇
+
+</textarea>
+            <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+              <button data-action="check" data-code="code_index" data-out="out_index" data-fb="fb_index"
+                data-expect="pertama:||terakhir:"
+                class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">✓ Cek
+                Jawaban</button>
+              <button class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition"
+                onclick="document.getElementById('code_index').value = `ledger = [500000, -200000, -50000, 100000]\n\npertama = ledger[0]\nterakhir = ledger[-1]\n\nprint(f\"
+                Pertama: {pertama}\")\nprint(f\"Terakhir: {terakhir}\")\n`">Lihat Contoh</button>
+            </div>
+            <div id="out_index" class="output-area"></div>
+            <div id="fb_index"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6 — Mutable (ubah item) -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-4">List itu Mutable: Bisa Diubah ✍️</h2>
+      <p class="text-slate-600 mb-6">
+        Kamu bisa mengganti nilai di indeks tertentu. Contoh: salah input transaksi? Bisa diperbaiki.
+      </p>
+
+      <div class="editor-container">
+        <div class="editor-header"><span>mutable_fix.py</span></div>
+        <textarea id="code_mutable" class="editor-textarea">
+ledger = [500000, -200000, -50000]
+
+print("Sebelum:", ledger)
+
+# Misal transaksi ke-2 seharusnya -250000 (bukan -200000)
+ledger[1] = -250000
+
+print("Sesudah:", ledger)
+</textarea>
+        <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+          <button data-action="run" data-code="code_mutable" data-out="out_mutable"
+            class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶
+            Jalankan</button>
+        </div>
+        <div id="out_mutable" class="output-area"></div>
+      </div>
+
+      <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800">
+        Tips: Jangan lupa, indeks mulai dari 0. “Transaksi ke-2” berarti <b>ledger[1]</b>.
+      </div>
+    </section>
+
+    <!-- SLIDE 7 — append & pop -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-4">Menambah & Menghapus Transaksi ➕➖</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <h3 class="font-bold mb-2">.append(x)</h3>
+          <p class="text-sm text-slate-600 mb-3">Menambah item ke <b>akhir</b> list.</p>
+          <div class="bg-slate-900 text-slate-100 rounded-xl p-4 font-mono text-sm leading-6">
+            ledger = []<br>
+            ledger.append(500000)<br>
+            ledger.append(-200000)<br>
+            print(ledger) # [500000, -200000]
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <h3 class="font-bold mb-2">.pop()</h3>
+          <p class="text-sm text-slate-600 mb-3">Menghapus item <b>terakhir</b> (cocok untuk fitur <b>Undo</b>).</p>
+          <div class="bg-slate-900 text-slate-100 rounded-xl p-4 font-mono text-sm leading-6">
+            ledger = [500000, -200000]<br>
+            ledger.pop()<br>
+            print(ledger) # [500000]
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 text-sm text-slate-500">
+        Interaksi cepat: “Kalau kamu salah input transaksi terakhir, fitur apa yang kamu butuhkan?” → <b>Undo</b> (pop)
+      </div>
+    </section>
+
+    <!-- SLIDE 8 — Demo coding: ledger sederhana -->
+    <section class="slide">
+      <h2 class="text-2xl font-bold mb-3">Demo: Manipulasi Ledger Sederhana 🧾</h2>
+      <p class="text-sm text-slate-500 mb-4">
+        Ikuti alurnya: buat list kosong → append pemasukan/pengeluaran → pop untuk undo → cek urutan data.
+      </p>
+
+      <div class="editor-container">
+        <div class="editor-header"><span>ledger_demo.py</span></div>
+        <textarea id="code_demo" class="editor-textarea text-area-tall">
+ledger = []   # buku besar transaksi
+
+# 1) tambah 2 transaksi
+ledger.append(500000)   # pemasukan
+ledger.append(-200000)  # pengeluaran
+
+print("Setelah 2 transaksi:", ledger)
+
+# 2) tambah 1 transaksi lagi
+ledger.append(-50000)
+print("Tambah 1 transaksi:", ledger)
+
+# 3) undo transaksi terakhir
+ledger.pop()
+print("Setelah undo:", ledger)
+
+# 4) cek transaksi pertama & terakhir
+print("Pertama:", ledger[0])
+print("Terakhir:", ledger[-1])
+</textarea>
+        <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+          <button data-action="run" data-code="code_demo" data-out="out_demo"
+            class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶ Jalankan
+            Demo</button>
+        </div>
+        <div id="out_demo" class="output-area"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9 — Proyek: Buku Besar (Instruksi) -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-4 text-center">Proyek: Aplikasi Buku Besar (Ledger) 💼</h2>
+      <div class="bg-white p-7 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <h3 class="font-bold mb-2">Tugas (20 menit)</h3>
+            <ol class="list-decimal ml-5 text-slate-700 space-y-2">
+              <li>Buat list <b>ledger</b> dengan <b>3 transaksi awal</b>.</li>
+              <li>Gunakan <b>.append()</b> untuk menambah <b>2 transaksi baru</b>.</li>
+              <li>Gunakan <b>.pop()</b> untuk membatalkan transaksi terakhir (fitur <b>Undo</b>).</li>
+              <li>Hitung <b>Saldo Akhir</b> dari semua transaksi (pakai <b>sum()</b> atau loop).</li>
+            </ol>
+            <div class="mt-4 p-3 bg-brand-50 border border-brand-100 rounded-xl text-sm text-brand-900">
+              Aturan data: <b>+</b> pemasukan, <b>-</b> pengeluaran.
+            </div>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+            <h3 class="font-bold mb-2">Contoh Output yang diharapkan</h3>
+            <div class="font-mono text-sm bg-slate-900 text-slate-100 rounded-xl p-4 leading-6">
+              Ledger akhir: [500000, -200000, 100000, -50000]<br>
+              Saldo akhir: 350000
+            </div>
+            <p class="text-xs text-slate-500 mt-3">
+              Angkanya boleh beda, yang penting alurnya benar: <b>append → pop → hitung saldo</b>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10 — Starter Code Project -->
+    <section class="slide">
+      <h2 class="text-2xl font-bold mb-2">Starter Code: Ledger App 🧩</h2>
+      <p class="text-sm text-slate-500 mb-4">Lengkapi bagian TODO, lalu jalankan. (Boleh ganti angka transaksinya.)</p>
+
+      <div class="editor-container">
+        <div class="editor-header"><span>ledger_project.py</span></div>
+        <textarea id="code_project" class="editor-textarea text-area-tall">
+# PROYEK: Aplikasi Buku Besar (Ledger)
+
+# 1) Buat list ledger berisi 3 transaksi awal
+ledger = [500000, -200000, 100000]
+
+# 2) Tambah 2 transaksi baru (append)
+# TODO: tambah pengeluaran -50000
+# TODO: tambah pemasukan 25000
+
+# 3) Undo transaksi terakhir (pop)
+# TODO: batalkan transaksi terakhir
+
+# 4) Hitung saldo akhir
+# TODO: saldo_akhir = ...
+# lalu print: "Ledger akhir: ..." dan "Saldo akhir: ..."
+
+</textarea>
+        <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+          <button data-action="check" data-code="code_project" data-out="out_project" data-fb="fb_project"
+            data-expect="ledger akhir:||saldo akhir:"
+            class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">✓ Cek &
+            Jalankan</button>
+          <button class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs transition"
+            onclick="document.getElementById('code_project').value = `# PROYEK: Aplikasi Buku Besar (Ledger)\n\nledger = [500000, -200000, 100000]\n\nledger.append(-50000)\nledger.append(25000)\n\nledger.pop()  # undo transaksi terakhir (25000)\n\nsaldo_akhir = sum(ledger)\n\nprint(f\"
+            Ledger akhir: {ledger}\")\nprint(f\"Saldo akhir: {saldo_akhir}\")\n`">Lihat Contoh Jawaban</button>
+        </div>
+        <div id="out_project" class="output-area"></div>
+        <div id="fb_project"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11 — Hitung saldo (sum vs loop) -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-4">Ringkasan Saldo: sum() atau loop? 🧮</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <h3 class="font-bold mb-2">Cara 1: sum()</h3>
+          <p class="text-sm text-slate-600 mb-3">Paling cepat kalau datanya angka semua.</p>
+          <div class="bg-slate-900 text-slate-100 rounded-xl p-4 font-mono text-sm leading-6">
+            saldo_akhir = sum(ledger)
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <h3 class="font-bold mb-2">Cara 2: Loop (bonus)</h3>
+          <p class="text-sm text-slate-600 mb-3">Bagus untuk latihan logika.</p>
+          <div class="bg-slate-900 text-slate-100 rounded-xl p-4 font-mono text-sm leading-6">
+            saldo = 0<br>
+            for t in ledger:<br>
+            &nbsp;&nbsp;saldo += t
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 editor-container">
+        <div class="editor-header"><span>saldo_compare.py</span></div>
+        <textarea id="code_saldo" class="editor-textarea">
+ledger = [500000, -200000, 100000, -50000]
+
+# Cara 1
+saldo_sum = sum(ledger)
+
+# Cara 2
+saldo_loop = 0
+for t in ledger:
+    saldo_loop += t
+
+print("Saldo (sum):", saldo_sum)
+print("Saldo (loop):", saldo_loop)
+</textarea>
+        <div class="flex gap-2 p-3 bg-slate-800 border-t border-slate-700">
+          <button data-action="run" data-code="code_saldo" data-out="out_saldo"
+            class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold transition">▶
+            Jalankan</button>
+        </div>
+        <div id="out_saldo" class="output-area"></div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12 — Checkout Quiz (7 menit) -->
+    <section class="slide">
+      <h2 class="text-3xl font-bold mb-4">Checkout Quiz (7 menit) ✅</h2>
+      <p class="text-slate-600 mb-6">
+        Kerjakan quiz di LMS. Fokus ke konsep: <b>indeks</b>, <b>append</b>, dan <b>pop</b>.
+      </p>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200">
+          <h3 class="font-bold mb-3">Topik yang sering jebakan</h3>
+          <ul class="list-disc ml-5 text-sm text-slate-600 space-y-2">
+            <li>Bedanya indeks <b>0</b> dan <b>1</b>.</li>
+            <li>Apa arti <b>ledger[-1]</b>?</li>
+            <li>.append() menambah di <b>akhir</b> list.</li>
+            <li>.pop() menghapus item <b>terakhir</b>.</li>
+          </ul>
+        </div>
+
+        <div class="bg-brand-50 p-6 rounded-2xl border border-brand-100">
+          <h3 class="font-bold text-brand-900 mb-3">Latihan cepat (opsional)</h3>
+          <div class="space-y-3 text-sm">
+            <div class="p-3 bg-white rounded-xl border border-brand-100">
+              Jika <span class="font-mono">ledger = [10, 20, 30]</span>, maka <span class="font-mono">ledger[0]</span> =
+              ?
+            </div>
+            <div class="p-3 bg-white rounded-xl border border-brand-100">
+              Jika <span class="font-mono">ledger = [10, 20, 30]</span>, maka <span class="font-mono">ledger[-1]</span>
+              = ?
+            </div>
+            <div class="p-3 bg-white rounded-xl border border-brand-100">
+              Setelah <span class="font-mono">ledger.append(40)</span>, panjang list jadi berapa?
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 text-sm text-slate-500">
+        Penutup guru: “List = cara paling fleksibel untuk menyimpan urutan kejadian (seperti riwayat transaksi).”
+      </div>
+    </section>
+
+    <!-- SLIDE 13 — Closing -->
+    <section class="slide">
+      <div class="text-center py-20">
+        <div class="text-8xl mb-6 animate-float">🏁</div>
+        <h2 class="text-4xl font-bold text-slate-900 mb-4">Selesai! Kamu sudah punya Ledger App 🎉</h2>
+        <p class="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+          Kamu bisa menyimpan transaksi dalam list, mengubah data, undo transaksi terakhir, dan menghitung saldo akhir.
+        </p>
+
+        <div class="p-6 bg-brand-50 rounded-2xl border border-brand-100 inline-block text-left">
+          <h3 class="font-bold text-brand-800 mb-2">Recap Sesi 38:</h3>
+          <ul class="space-y-2 text-brand-700 text-sm">
+            <li>✅ List sebagai wadah banyak transaksi</li>
+            <li>✅ Indeks: mulai dari 0 dan indeks negatif (-1)</li>
+            <li>✅ Manipulasi list: <b>append</b> & <b>pop</b></li>
+            <li>✅ Ringkasan saldo: <b>sum()</b> / loop</li>
+          </ul>
+        </div>
+
+        <div class="mt-8 text-sm text-slate-500">
+          Next session teaser (opsional): kita bisa bikin ledger yang menyimpan <b>tanggal + deskripsi + jumlah</b>
+          (data lebih kompleks).
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Navigation Logic -->
+  <script>
+    const overlay = document.getElementById('accessOverlay');
+    const input = document.getElementById('accessCodeInput');
+    const btn = document.getElementById('accessBtn');
+    const error = document.getElementById('accessError');
+
+    // Pakai kode yang sama dengan format file contoh (boleh kamu ganti).
+    const CODE = 'RGMDSHS25';
+
+    function checkCode() {
+      if (input.value.toUpperCase().trim() === CODE) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 300);
+      } else {
+        error.classList.remove('hidden');
+      }
+    }
+    if (btn) btn.addEventListener('click', checkCode);
+    if (input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const progressBar = document.getElementById('bar');
+    const slideIndicator = document.getElementById('slideIndicator');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+
+    function updateSlide() {
+      slides.forEach((s, i) => s.classList.toggle('active', i === currentSlide));
+      const progress = ((currentSlide + 1) / slides.length) * 100;
+      progressBar.style.width = `${progress}%`;
+      slideIndicator.innerText = `${currentSlide + 1}/${slides.length}`;
+
+      btnPrev.disabled = currentSlide === 0;
+      btnPrev.style.opacity = currentSlide === 0 ? "0.5" : "1";
+
+      btnNext.disabled = currentSlide === slides.length - 1;
+      btnNext.style.opacity = currentSlide === slides.length - 1 ? "0.5" : "1";
+
+      window.scrollTo(0, 0);
+    }
+
+    btnPrev.addEventListener('click', () => { if (currentSlide > 0) { currentSlide--; updateSlide(); } });
+    btnNext.addEventListener('click', () => { if (currentSlide < slides.length - 1) { currentSlide++; updateSlide(); } });
+
+    document.addEventListener('keydown', (e) => {
+      // blok navigasi kalau overlay masih tampil
+      if (overlay && getComputedStyle(overlay).display !== 'none') return;
+
+      if (e.key === 'ArrowRight' && btnNext && !btnNext.disabled) btnNext.click();
+      if (e.key === 'ArrowLeft' && btnPrev && !btnPrev.disabled) btnPrev.click();
+    });
+
+    updateSlide();
+  </script>
+</body>
+
+</html>
