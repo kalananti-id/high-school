@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sesi 41: Input Sanitization & Data Validation</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            brand: {50:'#eff6ff',100:'#dbeafe',500:'#2563eb',600:'#1d4ed8',900:'#1e3a8a'},
+            cyanish: {50:'#ecfeff',100:'#cffafe',500:'#06b6d4'},
+            gold: {400:'#fbbf24',500:'#f59e0b'},
+            emeraldish: {50:'#ecfdf5',500:'#10b981'}
+          },
+          animation: {
+            'float-soft': 'floatSoft 3s ease-in-out infinite'
+          },
+          boxShadow: {
+            soft: '0 12px 40px rgba(37,99,235,.10)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+  <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root { color-scheme: light; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(37,99,235,.08), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(6,182,212,.08), transparent 18%),
+        #f8fafc;
+    }
+    .slide { display:none; opacity:0; transition: opacity .35s ease-in-out; }
+    .slide.active { display:block; opacity:1; }
+    .editor-container {
+      background:#0f172a; border-radius:1rem; overflow:hidden;
+      box-shadow:0 18px 50px rgba(15,23,42,.18);
+    }
+    .editor-header {
+      background:#020617; color:#94a3b8; padding:.7rem 1rem; font-size:.78rem;
+      display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1e293b;
+    }
+    .editor-textarea {
+      width:100%; min-height:180px; background:#0f172a; color:#e2e8f0; padding:1rem;
+      font-family:'JetBrains Mono', monospace; font-size:.92rem; border:none; outline:none; resize:vertical; line-height:1.65;
+    }
+    .text-area-tall { min-height:300px; }
+    .output-area {
+      background:#020617; color:#c4b5fd; padding:1rem; font-family:'JetBrains Mono', monospace;
+      font-size:.86rem; min-height:3.5rem; white-space:pre-wrap; border-top:1px solid #1e293b;
+    }
+    .glass {
+      background:rgba(255,255,255,.82);
+      backdrop-filter: blur(10px);
+    }
+    .stage-card { transition: transform .18s ease, box-shadow .18s ease; }
+    .stage-card:hover { transform: translateY(-3px); }
+    @keyframes floatSoft {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+  </style>
+
+  <script type="py" config='{"packages":["regex"]}'>
+from pyscript import document
+from pyodide.ffi.wrappers import add_event_listener
+import sys
+from io import StringIO
+
+def handle_click(event):
+    el = event.target
+    if el.tagName != "BUTTON":
+        el = el.closest("button")
+    if not el:
+        return
+
+    action = el.getAttribute("data-action")
+    if not action:
+        return
+
+    code_id = el.getAttribute("data-code")
+    out_id = el.getAttribute("data-out")
+    fb_id = el.getAttribute("data-fb")
+
+    if not code_id:
+        return
+
+    code_el = document.getElementById(code_id)
+    out_el = document.getElementById(out_id) if out_id else None
+    fb_el = document.getElementById(fb_id) if fb_id else None
+
+    code_val = code_el.value
+
+    if out_el:
+        out_el.innerText = "Running..."
+    if fb_el:
+        fb_el.classList.add("hidden")
+
+    capture = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = capture
+
+    try:
+        scope = {}
+        exec(code_val, scope)
+        result = capture.getvalue().strip()
+
+        if out_el:
+            out_el.innerText = result if result else "[No Output]"
+
+        if action == "check":
+            expected = el.getAttribute("data-expect") or ""
+            must_have = [s.strip() for s in expected.split("||") if s.strip()]
+            test_logic = el.getAttribute("data-test") or ""
+
+            passed = True
+            reasons = []
+            lower_res = (result or "").lower()
+
+            for token in must_have:
+                if token.lower() not in lower_res:
+                    passed = False
+                    reasons.append(f"Output tidak mengandung: '{token}'")
+
+            if passed and test_logic:
+                try:
+                    exec(test_logic, scope)
+                except Exception as e:
+                    passed = False
+                    reasons.append(f"Logic Alert: {e}")
+
+            if fb_el:
+                if passed:
+                    fb_el.innerHTML = "<span class='text-green-700 font-bold'>✓ Mantap!</span> Jawabanmu sudah sesuai."
+                    fb_el.className = "mt-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm block"
+                else:
+                    fb_el.innerHTML = "<span class='text-red-600 font-bold'>× Coba lagi:</span> " + " ".join(reasons)
+                    fb_el.className = "mt-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm block"
+
+    except Exception as e:
+        if out_el:
+            out_el.innerText = f"Error: {e}"
+        if fb_el:
+            fb_el.innerHTML = f"<span class='text-red-600 font-bold'>× Error:</span> {e}"
+            fb_el.className = "mt-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm block"
+    finally:
+        sys.stdout = old_stdout
+
+add_event_listener(document.body, "click", handle_click)
+  </script>
+</head>
+<body class="text-slate-800 font-sans selection:bg-brand-500 selection:text-white">
+
+  <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
+    <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-blue-100">
+      <div class="text-4xl mb-3">🔐</div>
+      <h2 class="text-2xl font-extrabold text-brand-600 mb-2">Kode Akses Sesi 41</h2>
+      <p class="text-slate-600 mb-4">Masukkan kode kelas untuk membuka materi keamanan input data.</p>
+      <input id="accessCodeInput" type="text" placeholder="Kode..."
+        class="w-full p-3 rounded-2xl border border-slate-300 focus:border-brand-500 outline-none text-center font-mono text-lg uppercase mb-3">
+      <button id="accessBtn" class="w-full py-3 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-500 transition">Buka Materi</button>
+      <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah. Coba lagi ya.</p>
+      <p class="text-[11px] text-slate-400 mt-4">Gunakan huruf kapital.</p>
+    </div>
+  </div>
+
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="bg-brand-600 text-white w-10 h-10 rounded-2xl grid place-items-center font-extrabold shadow-lg shadow-blue-200">41</div>
+        <div class="min-w-0">
+          <div class="font-bold text-sm text-slate-900 tracking-tight truncate">Input Sanitization & Data Validation</div>
+          <div class="text-[10px] text-slate-500 font-semibold uppercase tracking-[.18em]">Validation • Sanitization • Regex • Security</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="slideIndicator" class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">1/14</span>
+        <button id="btnPrev" class="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition">←</button>
+        <button id="btnNext" class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center hover:bg-brand-500 text-white shadow-md transition">→</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8 pb-20">
+    <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20">
+      <div id="bar" class="h-full bg-brand-500 transition-all duration-300" style="width:7%"></div>
+    </div>
+
+    <section class="slide active">
+      <div class="py-16 md:py-20 text-center">
+        <div class="text-6xl md:text-7xl mb-6 animate-float-soft">🛡️💳⌨️</div>
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-sm font-bold mb-6">Sesi 41 • 60 Menit</div>
+        <h1 class="text-4xl md:text-6xl font-black text-slate-900 leading-tight mb-5">
+          Input Sanitization &<br><span class="text-brand-600">Data Validation</span>
+        </h1>
+        <p class="max-w-3xl mx-auto text-lg md:text-xl text-slate-600 leading-relaxed">
+          Hari ini kita belajar cara memastikan input pengguna <b>bersih</b>, <b>logis</b>, dan <b>aman</b>
+          sebelum diproses oleh aplikasi finansial.
+        </p>
+        <div class="mt-8 flex justify-center gap-3 flex-wrap">
+          <span class="px-4 py-2 bg-cyanish-50 text-cyan-700 rounded-full text-sm font-bold">Validation</span>
+          <span class="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold">Sanitization</span>
+          <span class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm font-bold">try-except</span>
+          <span class="px-4 py-2 bg-amber-50 text-amber-700 rounded-full text-sm font-bold">Regex</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5 text-slate-900">Pembuka: Kenapa Input Harus Dijaga? 🤔</h2>
+      <div class="grid md:grid-cols-2 gap-6 items-start">
+        <div class="glass p-6 rounded-3xl border border-white shadow-soft">
+          <p class="text-slate-600 leading-relaxed mb-4">
+            Dalam aplikasi financial literacy, data seperti jumlah uang, kata sandi, dan deskripsi transaksi
+            adalah data penting. Kalau input salah, hasil perhitungan bisa ikut salah.
+          </p>
+          <div class="bg-slate-900 text-slate-100 rounded-2xl p-5 text-sm leading-7 font-mono">
+            Input kosong ❌<br>
+            Input negatif ❌<br>
+            Format salah ❌<br>
+            Karakter aneh / berbahaya ❌
+          </div>
+          <div class="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-sm">
+            Aplikasi yang aman tidak langsung percaya pada semua input pengguna.
+          </div>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Tujuan pembelajaran ✅</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Membuat input validation untuk keamanan data</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Mencegah input kosong, negatif, atau salah format</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Memahami pentingnya sanitasi input</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Memperbaiki bug akibat input tidak valid</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Studi Kasus: Input “-5000” Bisa Merusak Saldo 💥</h2>
+      <div class="grid md:grid-cols-[1fr_.9fr] gap-6 items-start">
+        <div class="editor-container">
+          <div class="editor-header"><span>bug_transfer.py</span><span class="text-slate-500">Coba jalankan</span></div>
+          <textarea id="code_bug" class="editor-textarea">saldo = 100000
+transfer = -5000
+
+saldo = saldo - transfer
+print("Saldo akhir:", saldo)</textarea>
+          <div class="flex gap-2 p-3 bg-slate-900 border-t border-slate-800">
+            <button data-action="run" data-code="code_bug" data-out="out_bug" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition">▶ Jalankan</button>
+          </div>
+          <div id="out_bug" class="output-area"></div>
+        </div>
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Apa yang salah?</h3>
+          <ul class="list-disc ml-5 text-sm text-slate-700 space-y-2">
+            <li>Nilai transfer negatif seharusnya ditolak.</li>
+            <li>Tanpa validasi, saldo justru bisa bertambah.</li>
+            <li>Ini contoh bug yang muncul karena aplikasi terlalu percaya pada input pengguna.</li>
+          </ul>
+          <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-2xl text-sm text-yellow-800">
+            Karena itu, sebelum data diproses, kita harus mengecek apakah input valid dan aman.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Dua Pilar Keamanan Input 🛡️</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="stage-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-4xl mb-3">✅</div>
+          <div class="font-extrabold text-xl mb-2">Data Validation</div>
+          <p class="text-slate-600 text-sm leading-relaxed">
+            Memastikan data yang dimasukkan sesuai dengan aturan yang ditetapkan,
+            misalnya harus berupa angka, tidak negatif, atau harus punya format tertentu.
+          </p>
+        </div>
+        <div class="stage-card bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-4xl mb-3">🧹</div>
+          <div class="font-extrabold text-xl mb-2">Input Sanitization</div>
+          <p class="text-slate-600 text-sm leading-relaxed">
+            Membersihkan input dari karakter yang mengganggu atau berbahaya
+            sebelum data dipakai lebih lanjut di aplikasi.
+          </p>
+        </div>
+      </div>
+      <div class="mt-5 p-4 bg-slate-900 text-slate-100 rounded-2xl text-sm">
+        Validation memeriksa apakah data <b>sesuai aturan</b>. Sanitization membersihkan data agar <b>lebih aman dan rapi</b>.
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Jenis-Jenis Validasi Data 🔍</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">🔢</div>
+          <div class="font-extrabold mb-2">Validasi Tipe</div>
+          <p class="text-sm text-slate-600">Memastikan data punya tipe yang benar, misalnya int, float, atau str.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">📏</div>
+          <div class="font-extrabold mb-2">Validasi Jangkauan</div>
+          <p class="text-sm text-slate-600">Memastikan nilai masuk akal, misalnya pemasukan &gt; 0 atau persentase 0–100.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">🧩</div>
+          <div class="font-extrabold mb-2">Validasi Format</div>
+          <p class="text-sm text-slate-600">Memastikan data mengikuti pola tertentu, misalnya email, nomor HP, atau password.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Contoh Validasi Format 📋</h2>
+      <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div class="grid grid-cols-3 bg-slate-100 font-bold text-slate-800 text-sm md:text-base">
+          <div class="p-4 border-r border-slate-200">Data</div>
+          <div class="p-4 border-r border-slate-200">Aturan Format</div>
+          <div class="p-4">Tujuan</div>
+        </div>
+        <div class="grid grid-cols-3 text-sm md:text-base">
+          <div class="p-4 border-t border-r border-slate-200 font-semibold">Email</div>
+          <div class="p-4 border-t border-r border-slate-200">Harus mengandung @ dan .</div>
+          <div class="p-4 border-t border-slate-200">Memastikan komunikasi dan verifikasi akun.</div>
+
+          <div class="p-4 border-t border-r border-slate-200 font-semibold">Nomor HP</div>
+          <div class="p-4 border-t border-r border-slate-200">Harus 10–14 digit angka.</div>
+          <div class="p-4 border-t border-slate-200">Untuk komunikasi dan pemulihan akun.</div>
+
+          <div class="p-4 border-t border-r border-slate-200 font-semibold">Password</div>
+          <div class="p-4 border-t border-r border-slate-200">Minimal 8 karakter, huruf besar/kecil, dan angka.</div>
+          <div class="p-4 border-t border-slate-200">Untuk keamanan akun.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Sanitasi Input: Membersihkan Data 🧽</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Stripping</h3>
+          <p class="text-sm text-slate-700 leading-relaxed mb-4">
+            Menghapus spasi ekstra di awal atau akhir input agar data lebih konsisten.
+          </p>
+          <div class="bg-slate-900 text-slate-100 rounded-2xl p-4 text-sm font-mono leading-7">
+            nama = input("Nama: ").strip()
+          </div>
+          <div class="mt-4 p-4 bg-cyan-50 border border-cyan-200 rounded-2xl text-sm text-cyan-800">
+            Cocok untuk membersihkan input yang tidak sengaja berisi spasi.
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Escaping</h3>
+          <p class="text-sm text-slate-700 leading-relaxed mb-4">
+            Mengubah karakter berbahaya menjadi representasi aman agar hanya dibaca sebagai teks.
+          </p>
+          <div class="bg-slate-900 text-slate-100 rounded-2xl p-4 text-sm font-mono leading-7">
+            &lt;script&gt; menjadi &amp;lt;script&amp;gt;
+          </div>
+          <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-800">
+            Ini membantu mencegah karakter tertentu diproses sebagai kode.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-4">Lab: Input Saldo Awal yang Aman 💻</h2>
+      <p class="text-slate-600 mb-5">
+        Kita gabungkan sanitasi dan validasi: pakai <b>.strip()</b>, <b>try-except</b>, dan <b>if</b>.
+      </p>
+
+      <div class="editor-container">
+        <div class="editor-header"><span>saldo_aman.py</span><span class="text-slate-500">Coba jalankan</span></div>
+        <textarea id="code_saldo" class="editor-textarea text-area-tall">def cek_saldo_input(teks_input):
+    saldo_input = teks_input.strip()
+
+    try:
+        saldo = float(saldo_input)
+
+        if saldo < 0:
+            print("Saldo tidak boleh negatif.")
+        else:
+            print("Saldo diterima:", saldo)
+
+    except ValueError:
+        print("Input harus berupa angka.")
+
+cek_saldo_input(" 250000 ")
+cek_saldo_input("-500")
+cek_saldo_input("abc")</textarea>
+        <div class="flex gap-2 p-3 bg-slate-900 border-t border-slate-800">
+          <button data-action="run" data-code="code_saldo" data-out="out_saldo" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition">▶ Jalankan</button>
+        </div>
+        <div id="out_saldo" class="output-area"></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Apa yang Dilakukan Kode Tadi? 🧠</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">1️⃣</div>
+          <div class="font-extrabold mb-2">Sanitasi</div>
+          <p class="text-sm text-slate-600">`.strip()` membersihkan spasi yang tidak perlu di awal dan akhir input.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">2️⃣</div>
+          <div class="font-extrabold mb-2">Validasi Tipe</div>
+          <p class="text-sm text-slate-600">`try-except ValueError` menolak input huruf atau format angka yang salah.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">3️⃣</div>
+          <div class="font-extrabold mb-2">Validasi Jangkauan</div>
+          <p class="text-sm text-slate-600">`if saldo < 0` menolak angka negatif yang tidak logis.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Regex untuk Validasi Format 🔠</h2>
+      <div class="grid md:grid-cols-[1fr_.9fr] gap-6 items-start">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Apa itu regex?</h3>
+          <p class="text-sm text-slate-700 leading-relaxed mb-4">
+            Regex atau regular expression adalah pola yang dipakai untuk memeriksa apakah sebuah teks
+            mengikuti format tertentu.
+          </p>
+          <div class="bg-slate-900 text-slate-100 rounded-2xl p-4 text-sm font-mono leading-7">
+            ^\d{5}$
+          </div>
+          <div class="mt-4 text-sm text-slate-600 space-y-2">
+            <div><b>^</b> = awal string</div>
+            <div><b>\d</b> = digit angka</div>
+            <div><b>{5}</b> = tepat 5 digit</div>
+            <div><b>$</b> = akhir string</div>
+          </div>
+        </div>
+
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Aturan proyek hari ini</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="bg-white p-4 rounded-2xl border border-brand-100">Kode pos Indonesia harus tepat 5 digit</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100">Tidak boleh ada huruf</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100">Tidak boleh kurang atau lebih dari 5 digit</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-4">Proyek: Validasi Kode Pos dengan Regex 📮</h2>
+      <div class="editor-container">
+        <div class="editor-header"><span>validasi_kode_pos.py</span><span class="text-slate-500">Cek fungsi</span></div>
+        <textarea id="code_pos" class="editor-textarea text-area-tall">import re
+
+def validasi_kode_pos(kode_pos_input):
+    # TODO: lengkapi pola regex
+    pola = r""
+
+    if re.match(pola, kode_pos_input):
+        return True
+    else:
+        return False
+
+print(validasi_kode_pos("40123"))
+print(validasi_kode_pos("4012A"))
+print(validasi_kode_pos("1234"))</textarea>
+        <div class="flex gap-2 p-3 bg-slate-900 border-t border-slate-800 flex-wrap">
+          <button
+            data-action="check"
+            data-code="code_pos"
+            data-out="out_pos"
+            data-fb="fb_pos"
+            data-expect="true||false||false"
+            class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition">✓ Cek & Jalankan</button>
+
+          <button class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs transition"
+            onclick="document.getElementById('code_pos').value = `import re
+
+def validasi_kode_pos(kode_pos_input):
+    pola = r\"^\\d{5}$\"
+
+    if re.match(pola, kode_pos_input):
+        return True
+    else:
+        return False
+
+print(validasi_kode_pos(\"40123\"))
+print(validasi_kode_pos(\"4012A\"))
+print(validasi_kode_pos(\"1234\"))`">Lihat Contoh Jawaban</button>
+        </div>
+        <div id="out_pos" class="output-area"></div>
+        <div id="fb_pos"></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Latihan Analisis: Valid atau Tidak? ✅❌</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Contoh input saldo</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200"><b>" 300000 "</b> → perlu <b>strip()</b>, lalu valid</div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200"><b>"-5000"</b> → angka, tapi <b>tidak logis</b></div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200"><b>"abc"</b> → <b>bukan angka</b></div>
+          </div>
+        </div>
+
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Contoh input kode pos</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>40123</b> → valid</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>4012A</b> → tidak valid</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>1234</b> → tidak valid</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Kapan Pakai Apa? 🧭</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">🧹</div>
+          <div class="font-extrabold mb-2">.strip()</div>
+          <p class="text-sm text-slate-600">Untuk membersihkan spasi ekstra dari input teks.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">⚠️</div>
+          <div class="font-extrabold mb-2">try-except</div>
+          <p class="text-sm text-slate-600">Untuk mengecek apakah input bisa diubah ke angka tanpa error.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">🔤</div>
+          <div class="font-extrabold mb-2">re / regex</div>
+          <p class="text-sm text-slate-600">Untuk memeriksa pola format tertentu seperti kode pos, email, atau password.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Kesimpulan Sesi 41 🧾</h2>
+      <div class="bg-slate-900 text-slate-100 rounded-3xl p-7 shadow-xl">
+        <p class="text-lg leading-relaxed">
+          Dengan menggabungkan <b>validasi data</b> (tipe, jangkauan, format) dan
+          <b>sanitasi input</b> (stripping, escaping), kita membangun lapisan pertahanan pertama
+          yang kuat untuk aplikasi financial literacy.
+        </p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6 mt-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Yang perlu diingat</h3>
+          <ul class="list-disc ml-5 text-sm text-slate-700 space-y-2">
+            <li>Input tidak boleh langsung dipercaya.</li>
+            <li>Angka negatif bisa menimbulkan bug.</li>
+            <li>Format data perlu dicek sejak awal.</li>
+            <li>Regex membantu validasi pola data khusus.</li>
+          </ul>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Recap sesi</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">✅ Memahami validation vs sanitization</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">✅ Mencoba validasi saldo awal</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">✅ Belajar regex sederhana</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">✅ Membuat validasi kode pos</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Checkout Quiz & Penutup ✅</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Checkout quiz</h3>
+          <ul class="list-disc ml-5 text-sm text-slate-700 space-y-2">
+            <li>Apa perbedaan validation dan sanitization?</li>
+            <li>Mengapa input <code>-5000</code> berbahaya jika tidak dicek?</li>
+            <li>Apa fungsi <code>.strip()</code>?</li>
+            <li>Kapan kita menggunakan regex?</li>
+          </ul>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Penutup</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Data yang akurat membantu hasil aplikasi lebih benar</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Keamanan dimulai dari input yang rapi dan valid</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 p-4 bg-slate-900 text-slate-100 rounded-2xl text-sm">
+        Penutup: <b>Validasi format seperti kode pos atau email penting untuk memastikan data pengguna akurat sejak awal.</b>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const overlay = document.getElementById('accessOverlay');
+    const input = document.getElementById('accessCodeInput');
+    const btn = document.getElementById('accessBtn');
+    const error = document.getElementById('accessError');
+    const CODE = 'RGMDSHS25';
+
+    function checkCode() {
+      if (input.value.toUpperCase().trim() === CODE) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 300);
+      } else {
+        error.classList.remove('hidden');
+      }
+    }
+
+    if (btn) btn.addEventListener('click', checkCode);
+    if (input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const progressBar = document.getElementById('bar');
+    const slideIndicator = document.getElementById('slideIndicator');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+
+    function updateSlide() {
+      slides.forEach((s, i) => s.classList.toggle('active', i === currentSlide));
+      const progress = ((currentSlide + 1) / slides.length) * 100;
+      progressBar.style.width = `${progress}%`;
+      slideIndicator.innerText = `${currentSlide + 1}/${slides.length}`;
+
+      btnPrev.disabled = currentSlide === 0;
+      btnPrev.style.opacity = currentSlide === 0 ? '.45' : '1';
+      btnNext.disabled = currentSlide === slides.length - 1;
+      btnNext.style.opacity = currentSlide === slides.length - 1 ? '.45' : '1';
+
+      window.scrollTo(0, 0);
+    }
+
+    btnPrev.addEventListener('click', () => {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateSlide();
+      }
+    });
+
+    btnNext.addEventListener('click', () => {
+      if (currentSlide < slides.length - 1) {
+        currentSlide++;
+        updateSlide();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (overlay && getComputedStyle(overlay).display !== 'none') return;
+      if (e.key === 'ArrowRight' && !btnNext.disabled) btnNext.click();
+      if (e.key === 'ArrowLeft' && !btnPrev.disabled) btnPrev.click();
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>
