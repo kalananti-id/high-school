@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sesi 42: Use Case Diagram & Program Flow</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            brand: {50:'#eff6ff',100:'#dbeafe',500:'#2563eb',600:'#1d4ed8',900:'#1e3a8a'},
+            cyanish: {50:'#ecfeff',100:'#cffafe',500:'#06b6d4'},
+            gold: {400:'#fbbf24',500:'#f59e0b'},
+            emeraldish: {50:'#ecfdf5',500:'#10b981'}
+          },
+          animation: {
+            'float-soft': 'floatSoft 3s ease-in-out infinite'
+          },
+          boxShadow: {
+            soft: '0 12px 40px rgba(37,99,235,.10)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+  <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root { color-scheme: light; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(37,99,235,.08), transparent 22%),
+        radial-gradient(circle at bottom right, rgba(6,182,212,.08), transparent 18%),
+        #f8fafc;
+    }
+    .slide { display:none; opacity:0; transition: opacity .35s ease-in-out; }
+    .slide.active { display:block; opacity:1; }
+    .editor-container {
+      background:#0f172a; border-radius:1rem; overflow:hidden;
+      box-shadow:0 18px 50px rgba(15,23,42,.18);
+    }
+    .editor-header {
+      background:#020617; color:#94a3b8; padding:.7rem 1rem; font-size:.78rem;
+      display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1e293b;
+    }
+    .editor-textarea {
+      width:100%; min-height:190px; background:#0f172a; color:#e2e8f0; padding:1rem;
+      font-family:'JetBrains Mono', monospace; font-size:.92rem; border:none; outline:none; resize:vertical; line-height:1.65;
+    }
+    .text-area-tall { min-height:320px; }
+    .output-area {
+      background:#020617; color:#c4b5fd; padding:1rem; font-family:'JetBrains Mono', monospace;
+      font-size:.86rem; min-height:3.5rem; white-space:pre-wrap; border-top:1px solid #1e293b;
+    }
+    .glass {
+      background:rgba(255,255,255,.82);
+      backdrop-filter: blur(10px);
+    }
+    .stage-card { transition: transform .18s ease, box-shadow .18s ease; }
+    .stage-card:hover { transform: translateY(-3px); }
+    .ucd-box {
+      border:2px solid #cbd5e1;
+      border-radius:1.5rem;
+      background:#ffffff;
+    }
+    .oval {
+      border:2px solid #93c5fd;
+      border-radius:999px;
+      background:#eff6ff;
+      padding:.8rem 1rem;
+      font-weight:700;
+      text-align:center;
+    }
+    @keyframes floatSoft {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-7px); }
+    }
+  </style>
+
+  <script type="py" config='{"packages":[]}'>
+from pyscript import document
+from pyodide.ffi.wrappers import add_event_listener
+import sys
+from io import StringIO
+
+def handle_click(event):
+    el = event.target
+    if el.tagName != "BUTTON":
+        el = el.closest("button")
+    if not el:
+        return
+
+    action = el.getAttribute("data-action")
+    if not action:
+        return
+
+    code_id = el.getAttribute("data-code")
+    out_id = el.getAttribute("data-out")
+    fb_id = el.getAttribute("data-fb")
+
+    if not code_id:
+        return
+
+    code_el = document.getElementById(code_id)
+    out_el = document.getElementById(out_id) if out_id else None
+    fb_el = document.getElementById(fb_id) if fb_id else None
+
+    code_val = code_el.value
+
+    if out_el:
+        out_el.innerText = "Running..."
+    if fb_el:
+        fb_el.classList.add("hidden")
+
+    capture = StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = capture
+
+    try:
+        scope = {}
+        exec(code_val, scope)
+        result = capture.getvalue().strip()
+
+        if out_el:
+            out_el.innerText = result if result else "[No Output]"
+
+        if action == "check":
+            expected = el.getAttribute("data-expect") or ""
+            must_have = [s.strip() for s in expected.split("||") if s.strip()]
+
+            passed = True
+            reasons = []
+            lower_res = (result or "").lower()
+
+            for token in must_have:
+                if token.lower() not in lower_res:
+                    passed = False
+                    reasons.append(f"Output tidak mengandung: '{token}'")
+
+            if fb_el:
+                if passed:
+                    fb_el.innerHTML = "<span class='text-green-700 font-bold'>✓ Mantap!</span> Kerangka programmu sudah sesuai."
+                    fb_el.className = "mt-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm block"
+                else:
+                    fb_el.innerHTML = "<span class='text-red-600 font-bold'>× Coba lagi:</span> " + " ".join(reasons)
+                    fb_el.className = "mt-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm block"
+
+    except Exception as e:
+        if out_el:
+            out_el.innerText = f"Error: {e}"
+        if fb_el:
+            fb_el.innerHTML = f"<span class='text-red-600 font-bold'>× Error:</span> {e}"
+            fb_el.className = "mt-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm block"
+    finally:
+        sys.stdout = old_stdout
+
+add_event_listener(document.body, "click", handle_click)
+  </script>
+</head>
+<body class="text-slate-800 font-sans selection:bg-brand-500 selection:text-white">
+
+  <div id="accessOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm px-4">
+    <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-blue-100">
+      <div class="text-4xl mb-3">🔐</div>
+      <h2 class="text-2xl font-extrabold text-brand-600 mb-2">Kode Akses Sesi 42</h2>
+      <p class="text-slate-600 mb-4">Masukkan kode kelas untuk membuka materi Use Case Diagram & Program Flow.</p>
+      <input id="accessCodeInput" type="text" placeholder="Kode..."
+        class="w-full p-3 rounded-2xl border border-slate-300 focus:border-brand-500 outline-none text-center font-mono text-lg uppercase mb-3">
+      <button id="accessBtn" class="w-full py-3 bg-brand-600 text-white rounded-2xl font-bold hover:bg-brand-500 transition">Buka Materi</button>
+      <p id="accessError" class="text-red-500 text-sm mt-3 hidden">Kode salah. Coba lagi ya.</p>
+      <p class="text-[11px] text-slate-400 mt-4">Gunakan huruf kapital.</p>
+    </div>
+  </div>
+
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="bg-brand-600 text-white w-10 h-10 rounded-2xl grid place-items-center font-extrabold shadow-lg shadow-blue-200">42</div>
+        <div class="min-w-0">
+          <div class="font-bold text-sm text-slate-900 tracking-tight truncate">Use Case Diagram & Program Flow</div>
+          <div class="text-[10px] text-slate-500 font-semibold uppercase tracking-[.18em]">Blueprint • UCD • Flow • Skeleton Code</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="slideIndicator" class="text-xs font-mono text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">1/14</span>
+        <button id="btnPrev" class="w-9 h-9 rounded-xl border border-slate-200 flex items-center justify-center hover:bg-slate-50 transition">←</button>
+        <button id="btnNext" class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center hover:bg-brand-500 text-white shadow-md transition">→</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8 pb-20">
+    <div class="fixed top-[60px] left-0 w-full h-1 bg-slate-100 z-20">
+      <div id="bar" class="h-full bg-brand-500 transition-all duration-300" style="width:7%"></div>
+    </div>
+
+    <section class="slide active">
+      <div class="py-16 md:py-20 text-center">
+        <div class="text-6xl md:text-7xl mb-6 animate-float-soft">🏗️📘💻</div>
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-sm font-bold mb-6">Sesi 42 • 60 Menit</div>
+        <h1 class="text-4xl md:text-6xl font-black text-slate-900 leading-tight mb-5">
+          Use Case Diagram &<br><span class="text-brand-600">Program Flow</span>
+        </h1>
+        <p class="max-w-3xl mx-auto text-lg md:text-xl text-slate-600 leading-relaxed">
+          Hari ini kita belajar membuat <b>blueprint aplikasi</b> sebelum coding:
+          memahami fitur dari sudut pandang pengguna, lalu menerjemahkannya menjadi alur program dan kerangka kode Python.
+        </p>
+        <div class="mt-8 flex justify-center gap-3 flex-wrap">
+          <span class="px-4 py-2 bg-cyanish-50 text-cyan-700 rounded-full text-sm font-bold">Actor</span>
+          <span class="px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-bold">Use Case</span>
+          <span class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm font-bold">Program Flow</span>
+          <span class="px-4 py-2 bg-amber-50 text-amber-700 rounded-full text-sm font-bold">Skeleton Code</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5 text-slate-900">Pembuka: Analogi Arsitek 🏗️</h2>
+      <div class="grid md:grid-cols-2 gap-6 items-start">
+        <div class="glass p-6 rounded-3xl border border-white shadow-soft">
+          <p class="text-slate-600 leading-relaxed mb-4">
+            Seorang arsitek tidak langsung menumpuk batu bata. Ia membuat
+            <b>cetak biru (blueprint)</b> terlebih dahulu supaya tahu bentuk rumah,
+            ruangan, dan alurnya.
+          </p>
+          <div class="bg-slate-900 text-slate-100 rounded-2xl p-5 text-sm leading-7 font-mono">
+            Rumah → butuh blueprint<br>
+            Aplikasi → butuh perencanaan<br>
+            Coding → lebih cepat kalau strukturnya jelas
+          </div>
+          <div class="mt-4 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-700 text-sm">
+            Jadi, programmer juga tidak langsung coding. Mereka merancang fitur dan alur dulu.
+          </div>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Tujuan pembelajaran ✅</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Membuat Use Case Diagram dasar</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Memahami Sequential, Conditional, dan Iterative Flow</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Memetakan interaksi pengguna ke fungsi Python</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Menyusun skeleton code dari perencanaan</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Apa itu Use Case Diagram? 🧠</h2>
+      <div class="grid md:grid-cols-[1.2fr_.8fr] gap-6 items-center">
+        <div class="bg-white p-7 rounded-3xl border border-slate-200 shadow-sm">
+          <p class="text-lg text-slate-700 leading-relaxed mb-4">
+            <b>Use Case Diagram (UCD)</b> adalah alat visual untuk menggambarkan
+            fungsi sistem, interaksi antara pengguna dan sistem, serta batas sistem.
+          </p>
+          <div class="p-4 rounded-2xl bg-blue-50 border border-blue-100 text-blue-900 text-sm font-semibold">
+            Pertanyaan utamanya: <b>“Apa yang dapat dilakukan pengguna dengan sistem ini?”</b>
+          </div>
+        </div>
+        <div class="bg-slate-900 text-slate-100 rounded-3xl p-6 shadow-xl">
+          <div class="text-slate-400 uppercase tracking-[.2em] text-xs mb-4">Kegunaan UCD</div>
+          <ol class="space-y-3 text-base font-semibold">
+            <li>1. Menggambarkan fungsionalitas sistem</li>
+            <li>2. Menunjukkan interaksi pengguna</li>
+            <li>3. Menentukan batas sistem</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Komponen Use Case Diagram 🔍</h2>
+      <div class="grid md:grid-cols-2 gap-5">
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">🧍</div>
+          <div class="font-extrabold mb-1">Actor</div>
+          <p class="text-sm text-slate-600">Pihak luar yang berinteraksi dengan sistem. Contoh: Pengguna, Administrator.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">⭕</div>
+          <div class="font-extrabold mb-1">Use Case</div>
+          <p class="text-sm text-slate-600">Fungsi atau tindakan yang dilakukan sistem sebagai respons interaksi aktor.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">⬜</div>
+          <div class="font-extrabold mb-1">System Boundary</div>
+          <p class="text-sm text-slate-600">Batas sistem yang memuat seluruh use case di dalam aplikasi.</p>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">↔️</div>
+          <div class="font-extrabold mb-1">Relationship</div>
+          <p class="text-sm text-slate-600">Hubungan antara aktor dengan use case atau antar use case.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Contoh Use Case Diagram Sederhana 📘</h2>
+      <div class="grid md:grid-cols-[.8fr_1.2fr] gap-6 items-start">
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Studi kasus</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>Actor:</b> User</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>System:</b> Aplikasi Keuangan</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>Use Case 1:</b> Mencatat Transaksi</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>Use Case 2:</b> Melihat Laporan</div>
+          </div>
+        </div>
+        <div class="ucd-box p-6 rounded-3xl shadow-sm">
+          <div class="grid grid-cols-[110px_1fr] gap-4 items-center">
+            <div class="text-center">
+              <div class="text-6xl">🧍</div>
+              <div class="font-bold mt-2">User</div>
+            </div>
+            <div class="border-2 border-slate-300 rounded-3xl p-6 bg-slate-50">
+              <div class="text-center font-extrabold text-slate-700 mb-5">Aplikasi Keuangan</div>
+              <div class="grid gap-4 max-w-md mx-auto">
+                <div class="oval">Mencatat Transaksi</div>
+                <div class="oval">Melihat Laporan</div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-4 text-sm text-slate-500">
+            Dari diagram ini, kita langsung tahu siapa penggunanya dan fitur utama apa yang tersedia.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Contoh UCD Aplikasi Financial Literacy 💸</h2>
+      <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div class="grid grid-cols-2 bg-slate-100 font-bold text-slate-800 text-sm md:text-base">
+          <div class="p-4 border-r border-slate-200">Aktor</div>
+          <div class="p-4">Use Case (Fungsionalitas)</div>
+        </div>
+        <div class="grid grid-cols-2 text-sm md:text-base">
+          <div class="p-4 border-t border-r border-slate-200 font-semibold">Pengguna</div>
+          <div class="p-4 border-t border-slate-200">
+            Wajib: Login, Logout.<br>
+            Fungsional: Mencatat Pemasukan/Pengeluaran, Melihat Saldo, Menyusun Anggaran.
+          </div>
+
+          <div class="p-4 border-t border-r border-slate-200 font-semibold">Administrator</div>
+          <div class="p-4 border-t border-slate-200">
+            Wajib: Login, Logout.<br>
+            Fungsional: Mengelola Data Pengguna, Memeriksa Laporan Keseluruhan.
+          </div>
+        </div>
+      </div>
+      <div class="mt-5 p-4 bg-slate-900 text-slate-100 rounded-2xl text-sm">
+        Saat fitur makin banyak, UCD membantu kita melihat struktur aplikasi dengan lebih jelas.
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Program Flow: Alur Program 🔄</h2>
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="stage-card bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">1️⃣</div>
+          <div class="font-extrabold mb-1">Sequential</div>
+          <p class="text-sm text-slate-600">Jalan lurus dari input ke proses lalu ke output.</p>
+        </div>
+        <div class="stage-card bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">2️⃣</div>
+          <div class="font-extrabold mb-1">Conditional</div>
+          <p class="text-sm text-slate-600">Program memilih jalur berdasarkan kondisi.</p>
+        </div>
+        <div class="stage-card bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <div class="text-3xl mb-3">3️⃣</div>
+          <div class="font-extrabold mb-1">Iterative</div>
+          <p class="text-sm text-slate-600">Program mengulang proses dengan loop.</p>
+        </div>
+      </div>
+      <div class="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl text-sm text-amber-800">
+        Setelah kita tahu <b>fitur apa</b> yang ada di aplikasi, kita perlu menentukan <b>bagaimana alurnya dijalankan oleh kode</b>.
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-4">Sequential Flow: Jalan Lurus ▶️</h2>
+      <p class="text-slate-600 mb-5">Instruksi dijalankan satu per satu dari atas ke bawah.</p>
+      <div class="editor-container">
+        <div class="editor-header"><span>sequential_flow.py</span><span class="text-slate-500">Jalankan contoh</span></div>
+        <textarea id="code_seq" class="editor-textarea">pemasukan = 5000000
+pengeluaran = 3500000
+saldo_saat_ini = pemasukan - pengeluaran
+
+print("Pemasukan:", pemasukan)
+print("Pengeluaran:", pengeluaran)
+print("Saldo Saat Ini:", saldo_saat_ini)</textarea>
+        <div class="flex gap-2 p-3 bg-slate-900 border-t border-slate-800">
+          <button data-action="run" data-code="code_seq" data-out="out_seq" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition">▶ Jalankan</button>
+        </div>
+        <div id="out_seq" class="output-area"></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-4">Conditional Flow: Percabangan 🌿</h2>
+      <p class="text-slate-600 mb-5">Program memeriksa kondisi, lalu memilih jalur yang sesuai.</p>
+      <div class="editor-container">
+        <div class="editor-header"><span>conditional_flow.py</span><span class="text-slate-500">Jalankan contoh</span></div>
+        <textarea id="code_cond" class="editor-textarea">pemasukan = 5000000
+pengeluaran = 5500000
+saldo_akhir = pemasukan - pengeluaran
+
+print("Saldo Akhir:", saldo_akhir)
+
+if saldo_akhir > 0:
+    print("Selamat! Keuangan Anda surplus.")
+elif saldo_akhir == 0:
+    print("Perhatian! Keuangan Anda impas.")
+else:
+    print("Awas! Keuangan Anda defisit.")</textarea>
+        <div class="flex gap-2 p-3 bg-slate-900 border-t border-slate-800">
+          <button data-action="run" data-code="code_cond" data-out="out_cond" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition">▶ Jalankan</button>
+        </div>
+        <div id="out_cond" class="output-area"></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-4">Iterative Flow: Perulangan 🔁</h2>
+      <p class="text-slate-600 mb-5">Kode yang sama dijalankan berulang kali untuk setiap data atau selama kondisi tertentu terpenuhi.</p>
+      <div class="editor-container">
+        <div class="editor-header"><span>iterative_flow.py</span><span class="text-slate-500">Jalankan contoh</span></div>
+        <textarea id="code_iter" class="editor-textarea">daftar_transaksi = [
+    {"deskripsi": "Makan Siang", "jumlah": 50000},
+    {"deskripsi": "Bensin", "jumlah": 100000},
+    {"deskripsi": "Kopi", "jumlah": 35000}
+]
+
+total_pengeluaran = 0
+
+for transaksi in daftar_transaksi:
+    print("-", transaksi["deskripsi"], ":", transaksi["jumlah"])
+    total_pengeluaran += transaksi["jumlah"]
+
+print("Total Pengeluaran:", total_pengeluaran)</textarea>
+        <div class="flex gap-2 p-3 bg-slate-900 border-t border-slate-800">
+          <button data-action="run" data-code="code_iter" data-out="out_iter" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition">▶ Jalankan</button>
+        </div>
+        <div id="out_iter" class="output-area"></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Mapping Diagram ke Logika 🧩</h2>
+      <div class="grid md:grid-cols-[.9fr_1.1fr] gap-6">
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Use Case: Mencatat Transaksi</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>Sequential:</b> ambil deskripsi, ambil jumlah</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>Conditional:</b> cek apakah jumlah valid</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100"><b>Iterative:</b> ulangi jika user ingin menambah transaksi lagi</div>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Pertanyaan diskusi</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">Saat user klik <b>Mencatat Transaksi</b>, data apa yang perlu diinput?</div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">Kapan program perlu memakai <b>if</b>?</div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">Kapan program perlu memakai <b>loop</b>?</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Dari Use Case ke Fungsi Python 🧠</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Contoh pemetaan</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200"><b>Mencatat Transaksi</b> → <code>def catat_transaksi():</code></div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200"><b>Melihat Laporan</b> → <code>def lihat_laporan():</code></div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200"><b>Menyusun Anggaran</b> → <code>def susun_anggaran():</code></div>
+          </div>
+        </div>
+        <div class="bg-slate-900 text-slate-100 p-6 rounded-3xl shadow-xl">
+          <h3 class="font-extrabold mb-3">Kenapa penting?</h3>
+          <div class="space-y-3 text-sm text-slate-200">
+            <div>• Kode jadi lebih rapi</div>
+            <div>• Setiap fitur punya fungsi sendiri</div>
+            <div>• Menu utama jadi mudah dibaca</div>
+            <div>• Pengembangan aplikasi jadi lebih terstruktur</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-4">Proyek: Membangun Skeleton Code 💻</h2>
+      <p class="text-slate-600 mb-5">
+        Lengkapi fungsi kosong, lalu buat menu utama dengan <b>while True</b> dan <b>if-elif-else</b>.
+      </p>
+
+      <div class="editor-container">
+        <div class="editor-header"><span>skeleton_code.py</span><span class="text-slate-500">Lengkapi TODO lalu cek</span></div>
+        <textarea id="code_project" class="editor-textarea text-area-tall"># PROYEK MINI: Skeleton Code Aplikasi Keuangan
+
+def catat_transaksi():
+    # TODO
+    print("Catat Transaksi")
+
+def lihat_laporan():
+    # TODO
+    print("Lihat Laporan")
+
+def menu_demo(pilihan_list):
+    index = 0
+
+    while True:
+        print("1. Catat Transaksi")
+        print("2. Lihat Laporan")
+        print("3. Keluar")
+
+        pilihan = pilihan_list[index]
+        print("Pilih menu:", pilihan)
+
+        # TODO:
+        # pakai if-elif-else untuk navigasi
+        # jika "1" -> catat_transaksi()
+        # jika "2" -> lihat_laporan()
+        # jika "3" -> print("Program selesai.") lalu break
+        # selain itu -> print("Pilihan tidak valid.")
+
+        index += 1
+
+        if index >= len(pilihan_list):
+            break
+
+menu_demo(["1", "2", "3"])</textarea>
+        <div class="flex gap-2 p-3 bg-slate-900 border-t border-slate-800 flex-wrap">
+          <button
+            data-action="check"
+            data-code="code_project"
+            data-out="out_project"
+            data-fb="fb_project"
+            data-expect="1. catat transaksi||2. lihat laporan||3. keluar||catat transaksi||lihat laporan||program selesai"
+            class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold transition">✓ Cek & Jalankan</button>
+
+          <button class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs transition"
+            onclick="document.getElementById('code_project').value = `# PROYEK MINI: Skeleton Code Aplikasi Keuangan
+
+def catat_transaksi():
+    print(\"Catat Transaksi\")
+
+def lihat_laporan():
+    print(\"Lihat Laporan\")
+
+def menu_demo(pilihan_list):
+    index = 0
+
+    while True:
+        print(\"1. Catat Transaksi\")
+        print(\"2. Lihat Laporan\")
+        print(\"3. Keluar\")
+
+        pilihan = pilihan_list[index]
+        print(\"Pilih menu:\", pilihan)
+
+        if pilihan == \"1\":
+            catat_transaksi()
+        elif pilihan == \"2\":
+            lihat_laporan()
+        elif pilihan == \"3\":
+            print(\"Program selesai\")
+            break
+        else:
+            print(\"Pilihan tidak valid.\")
+
+        index += 1
+
+        if index >= len(pilihan_list):
+            break
+
+menu_demo([\"1\", \"2\", \"3\"])`">Lihat Contoh Jawaban</button>
+        </div>
+        <div id="out_project" class="output-area"></div>
+        <div id="fb_project"></div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Latihan Mandiri ✍️</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Tugas siswa</h3>
+          <p class="text-sm text-slate-700 leading-relaxed">
+            Buatlah <b>pseudocode</b> dari Use Case <b>Menyusun Anggaran</b>.
+            Gunakan kombinasi dari ketiga jenis Program Flow:
+            <b>Sequential</b>, <b>Conditional</b>, dan <b>Iterative</b>.
+          </p>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Petunjuk</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="bg-white p-4 rounded-2xl border border-brand-100">Sequential: input target anggaran, input kategori</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100">Conditional: cek apakah total anggaran masuk akal</div>
+            <div class="bg-white p-4 rounded-2xl border border-brand-100">Iterative: ulangi untuk beberapa kategori anggaran</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Kesimpulan Sesi 42 🧾</h2>
+      <div class="bg-slate-900 text-slate-100 rounded-3xl p-7 shadow-xl">
+        <p class="text-lg leading-relaxed">
+          Perencanaan yang matang membuat proses coding menjadi lebih cepat dan terstruktur.
+          UCD membantu kita melihat fitur dari sudut pandang pengguna,
+          sedangkan Program Flow membantu kita menentukan bagaimana kode akan berjalan.
+        </p>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6 mt-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Yang perlu diingat</h3>
+          <ul class="list-disc ml-5 text-sm text-slate-700 space-y-2">
+            <li>UCD adalah blueprint aplikasi</li>
+            <li>Actor, Use Case, dan System Boundary adalah komponen utama</li>
+            <li>Flow dasar: Sequential, Conditional, Iterative</li>
+            <li>Use case bisa diterjemahkan menjadi fungsi Python</li>
+          </ul>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Recap sesi</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">✅ Mengenal Use Case Diagram</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">✅ Membedakan jenis alur program</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">✅ Mapping fitur ke fungsi</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">✅ Menyusun skeleton code</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide">
+      <h2 class="text-3xl font-extrabold mb-5">Checkout Quiz & Penutup ✅</h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+          <h3 class="font-extrabold mb-3">Checkpoint</h3>
+          <ul class="list-disc ml-5 text-sm text-slate-700 space-y-2">
+            <li>Apa fungsi utama Use Case Diagram?</li>
+            <li>Apa perbedaan sequential dan conditional flow?</li>
+            <li>Kapan kita menggunakan iterative flow?</li>
+            <li>Bagaimana use case diterjemahkan menjadi fungsi Python?</li>
+          </ul>
+        </div>
+        <div class="bg-brand-50 p-6 rounded-3xl border border-brand-100">
+          <h3 class="font-extrabold text-brand-900 mb-3">Penutup</h3>
+          <div class="space-y-3 text-sm text-slate-700">
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Rencana yang jelas membuat coding lebih mudah</div>
+            <div class="p-3 bg-white rounded-2xl border border-brand-100">Blueprint membantu kita tidak bingung saat mulai membuat program</div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 p-4 bg-slate-900 text-slate-100 rounded-2xl text-sm">
+        Penutup: <b>Perencanaan yang matang membuat proses coding menjadi lebih cepat dan terstruktur.</b>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const overlay = document.getElementById('accessOverlay');
+    const input = document.getElementById('accessCodeInput');
+    const btn = document.getElementById('accessBtn');
+    const error = document.getElementById('accessError');
+    const CODE = 'RGMDSHS25';
+
+    function checkCode() {
+      if (input.value.toUpperCase().trim() === CODE) {
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 300);
+      } else {
+        error.classList.remove('hidden');
+      }
+    }
+
+    if (btn) btn.addEventListener('click', checkCode);
+    if (input) input.addEventListener('keypress', (e) => e.key === 'Enter' && checkCode());
+
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('.slide');
+    const progressBar = document.getElementById('bar');
+    const slideIndicator = document.getElementById('slideIndicator');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+
+    function updateSlide() {
+      slides.forEach((s, i) => s.classList.toggle('active', i === currentSlide));
+      const progress = ((currentSlide + 1) / slides.length) * 100;
+      progressBar.style.width = `${progress}%`;
+      slideIndicator.innerText = `${currentSlide + 1}/${slides.length}`;
+
+      btnPrev.disabled = currentSlide === 0;
+      btnPrev.style.opacity = currentSlide === 0 ? '.45' : '1';
+      btnNext.disabled = currentSlide === slides.length - 1;
+      btnNext.style.opacity = currentSlide === slides.length - 1 ? '.45' : '1';
+
+      window.scrollTo(0, 0);
+    }
+
+    btnPrev.addEventListener('click', () => {
+      if (currentSlide > 0) {
+        currentSlide--;
+        updateSlide();
+      }
+    });
+
+    btnNext.addEventListener('click', () => {
+      if (currentSlide < slides.length - 1) {
+        currentSlide++;
+        updateSlide();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (overlay && getComputedStyle(overlay).display !== 'none') return;
+      if (e.key === 'ArrowRight' && !btnNext.disabled) btnNext.click();
+      if (e.key === 'ArrowLeft' && !btnPrev.disabled) btnPrev.click();
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>
