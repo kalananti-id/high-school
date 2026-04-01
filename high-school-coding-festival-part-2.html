@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="id">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>UOB MDS – High School – Coding Festival Stage 1 (Part 2)</title>
+    <style>
+        :root {
+            --bg1: #F7FAFF;
+            --bg2: #F3F6FF;
+            --card: #FFFFFF;
+            --ink: #0F172A;
+            --muted: #475569;
+            --line: rgba(226, 232, 240, .95);
+            --brand: #4F46E5;
+            --brand2: #06B6D4;
+            --ok: #16A34A;
+            --bad: #DC2626;
+            --warn: #F59E0B;
+            --radius: 22px;
+            --shadow: 0 18px 40px rgba(15, 23, 42, .08);
+            --shadow2: 0 10px 22px rgba(15, 23, 42, .06);
+            --focus: 0 0 0 4px rgba(79, 70, 229, .18);
+            --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: var(--sans);
+            color: var(--ink);
+            background:
+                radial-gradient(1200px 520px at 10% 0%, rgba(6, 182, 212, .18), transparent 60%),
+                radial-gradient(1200px 520px at 90% 0%, rgba(79, 70, 229, .16), transparent 55%),
+                linear-gradient(180deg, var(--bg1), var(--bg2) 45%, var(--bg1));
+            min-height: 100vh;
+        }
+
+        .app {
+            width: min(1100px, 96vw);
+            margin: 18px auto 26px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, .72);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow2);
+            flex-wrap: wrap;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(79, 70, 229, .18), rgba(6, 182, 212, .20));
+            border: 1px solid rgba(226, 232, 240, .9);
+            display: grid;
+            place-items: center;
+            font-weight: 1000;
+            color: rgba(79, 70, 229, 1);
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.15;
+            letter-spacing: .2px;
+        }
+
+        .brand .sub {
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: 1px solid rgba(226, 232, 240, .95);
+            background: rgba(255, 255, 255, .9);
+            padding: 10px 12px;
+            border-radius: 16px;
+            font-weight: 1000;
+            cursor: pointer;
+            box-shadow: 0 8px 16px rgba(15, 23, 42, .06);
+            transition: transform .06s ease, box-shadow .12s ease, background .12s ease;
+            user-select: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0px);
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, rgba(79, 70, 229, .12), rgba(6, 182, 212, .14));
+            border-color: rgba(79, 70, 229, .18);
+        }
+
+        .btn.ghost {
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .btn:focus {
+            outline: none;
+            box-shadow: var(--focus);
+        }
+
+        .progressWrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 260px;
+            justify-content: flex-end;
+        }
+
+        .progress {
+            width: 180px;
+            height: 10px;
+            background: rgba(226, 232, 240, .9);
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid rgba(226, 232, 240, .95);
+        }
+
+        .bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, rgba(79, 70, 229, .85), rgba(6, 182, 212, .85));
+            border-radius: 999px;
+            transition: width .25s ease;
+        }
+
+        .count {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 900;
+        }
+
+        .stage {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: rgba(255, 255, 255, .60);
+            box-shadow: var(--shadow);
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: calc(100vh - 145px);
+        }
+
+        .slide {
+            flex: 1;
+            background: rgba(255, 255, 255, .68);
+            border: 1px solid rgba(229, 234, 245, .95);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow2);
+            padding: 20px;
+            overflow: hidden;
+            backdrop-filter: blur(8px);
+        }
+
+        .slideInner {
+            max-width: 980px;
+            margin: 0 auto;
+            max-height: calc(100vh - 190px);
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .slideInner::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .slideInner::-webkit-scrollbar-thumb {
+            background: rgba(96, 112, 153, .25);
+            border-radius: 999px;
+            border: 3px solid rgba(255, 255, 255, .9);
+        }
+
+        .slideInner::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        h2 {
+            margin: 6px 0 10px;
+            font-size: 30px;
+            letter-spacing: -.3px;
+        }
+
+        h3 {
+            margin: 0 0 8px;
+            font-size: 18px;
+        }
+
+        p {
+            margin: 0 0 10px;
+            color: var(--muted);
+            font-weight: 800;
+            line-height: 1.55;
+        }
+
+        .kicker {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 1000;
+            font-size: 12px;
+            letter-spacing: .2px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(79, 70, 229, .16);
+            background: rgba(79, 70, 229, .06);
+            color: rgba(55, 65, 81, .95);
+        }
+
+        .grid {
+            display: grid;
+            gap: 14px;
+        }
+
+        .cols2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .cols3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, .92);
+            border: 1px solid rgba(226, 232, 240, .95);
+            border-radius: 22px;
+            padding: 14px;
+            box-shadow: 0 10px 18px rgba(15, 23, 42, .06);
+        }
+
+        ul.list {
+            margin: 8px 0 0 18px;
+            color: var(--muted);
+            font-weight: 850;
+            line-height: 1.55;
+        }
+
+        .choices {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .choice {
+            border: 1px solid rgba(226, 232, 240, .95);
+            border-radius: 18px;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, .96);
+            font-weight: 950;
+            color: rgba(30, 41, 59, .96);
+            cursor: pointer;
+            user-select: none;
+            transition: transform .06s ease, border-color .12s ease, background .12s ease;
+        }
+
+        .choice:hover {
+            transform: translateY(-1px);
+        }
+
+        .choice.active {
+            border-color: rgba(79, 70, 229, .35);
+            background: rgba(79, 70, 229, .06);
+        }
+
+        .choice.ok {
+            border-color: rgba(22, 163, 74, .35);
+            background: rgba(22, 163, 74, .08);
+        }
+
+        .choice.bad {
+            border-color: rgba(220, 38, 38, .35);
+            background: rgba(220, 38, 38, .08);
+        }
+
+        .feedback {
+            display: none;
+            margin-top: 10px;
+            border-radius: 18px;
+            padding: 12px 14px;
+            border: 1px solid rgba(226, 232, 240, .95);
+            background: rgba(255, 255, 255, .92);
+            color: var(--muted);
+            font-weight: 900;
+            line-height: 1.5;
+        }
+
+        .feedback.show {
+            display: block;
+        }
+
+        .fbOk {
+            border-color: rgba(22, 163, 74, .35);
+            background: rgba(22, 163, 74, .08);
+            color: rgba(15, 23, 42, .92);
+        }
+
+        .fbBad {
+            border-color: rgba(220, 38, 38, .35);
+            background: rgba(220, 38, 38, .08);
+            color: rgba(15, 23, 42, .92);
+        }
+
+        .input {
+            width: 100%;
+            border: 1px solid rgba(226, 232, 240, .95);
+            background: rgba(255, 255, 255, .96);
+            border-radius: 16px;
+            padding: 12px 14px;
+            font-weight: 950;
+            color: rgba(30, 41, 59, .96);
+            resize: vertical;
+            min-height: 56px;
+        }
+
+        .checklist {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkItem {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(226, 232, 240, .95);
+            background: rgba(255, 255, 255, .96);
+            cursor: pointer;
+            user-select: none;
+            transition: transform .06s ease, border-color .12s ease, background .12s ease;
+            font-weight: 950;
+            color: rgba(30, 41, 59, .96);
+        }
+
+        .checkItem:hover {
+            transform: translateY(-1px);
+        }
+
+        .checkItem.done {
+            border-color: rgba(79, 70, 229, .30);
+            background: rgba(79, 70, 229, .06);
+        }
+
+        .checkBox {
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            border: 1.5px solid rgba(148, 163, 184, .8);
+            display: grid;
+            place-items: center;
+            font-size: 14px;
+            font-weight: 1000;
+            color: transparent;
+            background: #fff;
+            flex: 0 0 auto;
+        }
+
+        .checkItem.done .checkBox {
+            background: linear-gradient(135deg, rgba(79, 70, 229, .9), rgba(6, 182, 212, .85));
+            border-color: transparent;
+            color: white;
+        }
+
+        .meterWrap {
+            margin-top: 12px;
+        }
+
+        .meter {
+            width: 100%;
+            height: 12px;
+            background: rgba(226, 232, 240, .9);
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid rgba(226, 232, 240, .95);
+        }
+
+        .meterBar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, rgba(79, 70, 229, .85), rgba(6, 182, 212, .85));
+            border-radius: 999px;
+            transition: width .25s ease;
+        }
+
+        .meterText {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 900;
+        }
+
+        .codeBox {
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            background: rgba(15, 23, 42, .96);
+            color: #E2E8F0;
+            padding: 14px;
+            border-radius: 18px;
+            overflow: auto;
+        }
+
+        .stepCard {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .stepNum {
+            width: 38px;
+            height: 38px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            font-weight: 1000;
+            background: linear-gradient(135deg, rgba(79, 70, 229, .16), rgba(6, 182, 212, .16));
+            border: 1px solid rgba(79, 70, 229, .18);
+            color: rgba(79, 70, 229, 1);
+            flex: 0 0 auto;
+        }
+
+        @media (max-width: 860px) {
+            .cols2,
+            .cols3 {
+                grid-template-columns: 1fr;
+            }
+
+            .progressWrap {
+                min-width: unset;
+            }
+
+            .progress {
+                width: 130px;
+            }
+
+            h2 {
+                font-size: 26px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <div class="topbar">
+            <div class="brand">
+                <div class="logo">HS</div>
+                <div>
+                    <h1>High School</h1>
+                    <div class="sub">Coding Festival – Stage 1 (Part 2)</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn ghost" id="btnHome" title="Kembali ke awal">🏠 Awal</button>
+                <button class="btn" id="btnPrev" title="Sebelumnya (←)">←</button>
+                <button class="btn primary" id="btnNext" title="Berikutnya (→)">→</button>
+            </div>
+
+            <div class="progressWrap">
+                <div class="progress" aria-label="Progress">
+                    <div class="bar" id="bar"></div>
+                </div>
+                <div class="count" id="count">1/1</div>
+            </div>
+        </div>
+
+        <div class="stage">
+            <div class="slide" role="region" aria-label="Slide">
+                <div class="slideInner" id="content"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const slides = [
+            {
+                title: "Pembuka",
+                html: `
+                <div class="kicker">Part 2 • Planning, Coding, Testing, Pitching</div>
+                <h2>🛠️ Saatnya Mengubah Ide Menjadi Program</h2>
+                <p>Di Part 2, kamu akan fokus pada bagaimana cara merancang alur program, menyusun kode dengan rapi, melakukan testing, dan menyiapkan presentasi proyekmu.</p>
+
+                <div class="card">
+                    <ul class="list">
+                        <li>Merancang alur program</li>
+                        <li>Menentukan input, process, dan output</li>
+                        <li>Mengecek apakah program berjalan dengan benar</li>
+                        <li>Menjelaskan proyek secara meyakinkan</li>
+                    </ul>
+                </div>
+                `
+            },
+
+            {
+                title: "Flow Program",
+                html: `
+                <h2>🔁 Sebelum Coding, Pahami Dulu Alurnya</h2>
+                <p>Program yang rapi biasanya dimulai dari alur yang jelas.</p>
+
+                <div class="grid cols3">
+                    <div class="card">
+                        <h3>Input</h3>
+                        <p>Data apa yang akan dimasukkan user?</p>
+                    </div>
+                    <div class="card">
+                        <h3>Process</h3>
+                        <p>Bagaimana program mengolah data itu?</p>
+                    </div>
+                    <div class="card">
+                        <h3>Output</h3>
+                        <p>Apa hasil yang akan ditampilkan?</p>
+                    </div>
+                </div>
+                `
+            },
+
+            {
+                title: "Choose Flow",
+                html: `
+                <h2>🧩 Alur Mana yang Lebih Tepat?</h2>
+
+                <div class="choices" data-quiz="flow">
+                    <div class="choice" data-answer="wrong">Output ditampilkan dulu, lalu user baru input data</div>
+                    <div class="choice" data-answer="right">User input data, program memproses, lalu hasil ditampilkan</div>
+                    <div class="choice" data-answer="wrong">Program langsung selesai tanpa proses</div>
+                </div>
+
+                <div class="feedback" data-quiz-feedback="flow"></div>
+                `
+            },
+
+            {
+                title: "Example Breakdown",
+                html: `
+                <h2>💡 Contoh Breakdown Proyek</h2>
+                <p>Misalnya kamu membuat proyek <b>Expense Tracker</b>.</p>
+
+                <div class="grid cols3">
+                    <div class="card">
+                        <h3>Input</h3>
+                        <ul class="list">
+                            <li>Pemasukan</li>
+                            <li>Pengeluaran</li>
+                            <li>Kategori</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Process</h3>
+                        <ul class="list">
+                            <li>Menjumlahkan data</li>
+                            <li>Menghitung saldo</li>
+                            <li>Membandingkan kategori</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Output</h3>
+                        <ul class="list">
+                            <li>Total saldo</li>
+                            <li>Pengeluaran terbesar</li>
+                            <li>Insight sederhana</li>
+                        </ul>
+                    </div>
+                </div>
+                `
+            },
+
+            {
+                title: "Core Logic",
+                html: `
+                <h2>🧠 Logic Inti Proyek</h2>
+                <p>Setiap proyek harus punya “mesin utama” yang membuat programmu berguna.</p>
+
+                <div class="choices" data-multi="corelogic">
+                    <div class="choice" data-correct="true">Ada perhitungan yang relevan</div>
+                    <div class="choice" data-correct="true">Ada keputusan / analisis berdasarkan data</div>
+                    <div class="choice" data-correct="true">Output membantu user memahami kondisi keuangannya</div>
+                    <div class="choice" data-correct="false">Program hanya mencetak kalimat motivasi</div>
+                </div>
+
+                <button class="btn primary" id="checkCore">Cek</button>
+                <div class="feedback" id="coreFb"></div>
+                `
+            },
+
+            {
+                title: "Pseudo Code",
+                html: `
+                <h2>✍️ Tulis Dulu Pseudocode</h2>
+                <p>Sebelum coding, kamu bisa menulis langkah program dalam bahasa sederhana.</p>
+
+                <div class="codeBox">1. Minta user memasukkan pemasukan
+2. Minta user memasukkan pengeluaran
+3. Hitung saldo = pemasukan - pengeluaran
+4. Jika saldo positif, tampilkan kondisi aman
+5. Jika saldo kecil, tampilkan peringatan
+6. Jika saldo negatif, tampilkan saran untuk mengurangi pengeluaran</div>
+
+                <div class="card" style="margin-top:12px">
+                    <p style="margin:0"><b>Pseudocode membantu kamu berpikir runtut</b> sebelum menulis syntax Python.</p>
+                </div>
+                `
+            },
+
+            {
+                title: "Code Structure",
+                html: `
+                <h2>🏗️ Struktur Kode yang Rapi</h2>
+
+                <div class="grid cols2">
+                    <div class="card stepCard">
+                        <div class="stepNum">1</div>
+                        <div>
+                            <h3>Input</h3>
+                            <p>Ambil data dari user dengan jelas.</p>
+                        </div>
+                    </div>
+                    <div class="card stepCard">
+                        <div class="stepNum">2</div>
+                        <div>
+                            <h3>Variable</h3>
+                            <p>Simpan data ke variabel yang mudah dipahami.</p>
+                        </div>
+                    </div>
+                    <div class="card stepCard">
+                        <div class="stepNum">3</div>
+                        <div>
+                            <h3>Process</h3>
+                            <p>Lakukan perhitungan atau analisis utama.</p>
+                        </div>
+                    </div>
+                    <div class="card stepCard">
+                        <div class="stepNum">4</div>
+                        <div>
+                            <h3>Output</h3>
+                            <p>Tampilkan hasil dengan rapi dan informatif.</p>
+                        </div>
+                    </div>
+                </div>
+                `
+            },
+
+            {
+                title: "What Makes Code Better",
+                html: `
+                <h2>✨ Kode yang Lebih Baik Itu Seperti Apa?</h2>
+
+                <div class="choices" data-quiz="codequality">
+                    <div class="choice" data-answer="wrong">Variabel acak dan hasil sulit dibaca</div>
+                    <div class="choice" data-answer="right">Variabel jelas, proses runtut, output mudah dipahami</div>
+                    <div class="choice" data-answer="wrong">Kode panjang meski sebenarnya bisa dibuat sederhana</div>
+                </div>
+
+                <div class="feedback" data-quiz-feedback="codequality"></div>
+                `
+            },
+
+            {
+                title: "Testing",
+                html: `
+                <h2>🧪 Testing Itu Penting</h2>
+                <p>Jangan hanya menjalankan program sekali. Coba dengan beberapa kondisi input.</p>
+
+                <div class="checklist" data-checklist="testing">
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Sudah mencoba input normal</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Sudah mencoba input besar / kecil</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Sudah mengecek apakah hasil hitung benar</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Sudah membaca ulang output program</div></div>
+                </div>
+
+                <div class="meterWrap">
+                    <div class="meter"><div class="meterBar" id="testingMeter"></div></div>
+                    <div class="meterText" id="testingMeterText">0 dari 4 langkah testing selesai</div>
+                </div>
+                `
+            },
+
+            {
+                title: "Bug Check",
+                html: `
+                <h2>🐞 Kalau Ada Error, Apa yang Dilakukan?</h2>
+
+                <div class="choices" data-quiz="bug">
+                    <div class="choice" data-answer="wrong">Langsung menyerah dan ganti ide proyek</div>
+                    <div class="choice" data-answer="right">Cek input, variabel, proses, lalu jalankan ulang</div>
+                    <div class="choice" data-answer="wrong">Biarkan saja selama tampilannya bagus</div>
+                </div>
+
+                <div class="feedback" data-quiz-feedback="bug"></div>
+                `
+            },
+
+            {
+                title: "Improve Output",
+                html: `
+                <h2>📣 Output Jangan Sekadar Angka</h2>
+                <p>Output yang baik bukan cuma menampilkan hasil hitungan, tapi juga membantu user memahami artinya.</p>
+
+                <div class="grid cols2">
+                    <div class="card">
+                        <h3>Kurang kuat</h3>
+                        <div class="codeBox">Saldo: 25000</div>
+                    </div>
+                    <div class="card">
+                        <h3>Lebih kuat</h3>
+                        <div class="codeBox">Saldo kamu saat ini Rp25.000.
+Kondisimu masih aman, tetapi pengeluaran minggu ini perlu dijaga agar target tabungan tetap tercapai.</div>
+                    </div>
+                </div>
+                `
+            },
+
+            {
+                title: "Presentation Focus",
+                html: `
+                <h2>🎤 Saat Presentasi, Jelaskan Ini</h2>
+
+                <div class="grid cols2">
+                    <div class="card">
+                        <h3>Isi presentasi</h3>
+                        <ul class="list">
+                            <li>Masalah yang dipilih</li>
+                            <li>Alasan memilih masalah</li>
+                            <li>Cara kerja program</li>
+                            <li>Manfaat program</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Yang harus terlihat</h3>
+                        <ul class="list">
+                            <li>Kamu paham logika programmu</li>
+                            <li>Programmu benar-benar berfungsi</li>
+                            <li>Solusimu relevan dengan financial literacy</li>
+                        </ul>
+                    </div>
+                </div>
+                `
+            },
+
+            {
+                title: "Pitch Practice",
+                html: `
+                <h2>🗣️ Coba Susun Penjelasanmu</h2>
+                <p>Isi bagian ini sebagai latihan sebelum presentasi.</p>
+
+                <div class="grid">
+                    <textarea class="input" placeholder="Masalah: masalah apa yang ingin kamu selesaikan?"></textarea>
+                    <textarea class="input" placeholder="Cara kerja: bagaimana input, process, dan output dalam programmu?"></textarea>
+                    <textarea class="input" placeholder="Keunggulan: apa yang membuat programmu berguna?"></textarea>
+                    <textarea class="input" placeholder="Impact: perubahan atau manfaat apa yang bisa diberikan programmu?"></textarea>
+                </div>
+                `
+            },
+
+            {
+                title: "Final Checklist",
+                html: `
+                <h2>✅ Final Checklist Sebelum Submit</h2>
+
+                <div class="checklist" data-checklist="final">
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Masalah dan solusi sudah jelas</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Program berjalan dengan baik</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Output mudah dipahami</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Sudah testing beberapa kali</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Sudah siap menjelaskan proyek</div></div>
+                </div>
+
+                <div class="meterWrap">
+                    <div class="meter"><div class="meterBar" id="finalMeter"></div></div>
+                    <div class="meterText" id="finalMeterText">0 dari 5 komponen siap</div>
+                </div>
+                `
+            },
+
+            {
+                title: "Penutup",
+                html: `
+                <h2>🔥 You’re Ready to Build and Present</h2>
+
+                <div class="card">
+                    <ul class="list">
+                        <li>Kamu sudah memahami alur program</li>
+                        <li>Kamu tahu cara membuat output yang lebih bermakna</li>
+                        <li>Kamu siap coding, testing, dan pitching</li>
+                    </ul>
+                </div>
+
+                <button class="btn primary" data-goto="0">Restart</button>
+                `
+            }
+        ];
+
+        let idx = 0;
+        const content = document.getElementById("content");
+        const bar = document.getElementById("bar");
+        const count = document.getElementById("count");
+        const btnPrev = document.getElementById("btnPrev");
+        const btnNext = document.getElementById("btnNext");
+        const btnHome = document.getElementById("btnHome");
+
+        function clamp(n, a, b) {
+            return Math.max(a, Math.min(b, n));
+        }
+
+        function showFeedback(el, html, type) {
+            if (!el) return;
+            el.classList.add("show");
+            el.classList.remove("fbOk", "fbBad");
+            if (type === "ok") el.classList.add("fbOk");
+            if (type === "bad") el.classList.add("fbBad");
+            el.innerHTML = html;
+        }
+
+        function getQuizMsg(id, ok) {
+            const msgs = {
+                flow: {
+                    ok: "✅ Betul! Program yang runtut dimulai dari input, lalu diproses, lalu hasilnya ditampilkan.",
+                    bad: "⚠️ Coba lagi. Ingat urutannya: input → process → output."
+                },
+                codequality: {
+                    ok: "✅ Tepat! Kode yang baik membuat program lebih mudah dibaca, dicek, dan dijelaskan.",
+                    bad: "⚠️ Belum tepat. Kode yang baik seharusnya runtut, jelas, dan memudahkan pembaca memahami prosesnya."
+                },
+                bug: {
+                    ok: "✅ Benar! Saat ada error, cek bagian input, variabel, proses, lalu tes kembali.",
+                    bad: "⚠️ Belum tepat. Error adalah bagian dari proses belajar coding, jadi perlu dicek dan diperbaiki."
+                }
+            };
+            const m = msgs[id];
+            if (!m) return ok ? "✅ Benar!" : "⚠️ Coba lagi.";
+            return ok ? m.ok : m.bad;
+        }
+
+        function wireQuiz(group) {
+            const id = group.getAttribute("data-quiz");
+            const fb = content.querySelector(`[data-quiz-feedback="${id}"]`);
+            const items = [...group.querySelectorAll(".choice")];
+
+            items.forEach(ch => {
+                ch.addEventListener("click", () => {
+                    items.forEach(x => x.classList.remove("active", "ok", "bad"));
+                    ch.classList.add("active");
+                    const isRight = ch.getAttribute("data-answer") === "right";
+                    ch.classList.add(isRight ? "ok" : "bad");
+                    showFeedback(fb, getQuizMsg(id, isRight), isRight ? "ok" : "bad");
+                });
+            });
+        }
+
+        function wireChecklist(group) {
+            const items = [...group.querySelectorAll(".checkItem")];
+            const parentId = group.getAttribute("data-checklist");
+
+            let meterId = "";
+            let textId = "";
+
+            if (parentId === "testing") {
+                meterId = "testingMeter";
+                textId = "testingMeterText";
+            } else if (parentId === "final") {
+                meterId = "finalMeter";
+                textId = "finalMeterText";
+            }
+
+            const meterBar = content.querySelector(`#${meterId}`);
+            const meterText = content.querySelector(`#${textId}`);
+
+            const refresh = () => {
+                const done = items.filter(item => item.classList.contains("done")).length;
+                const total = items.length;
+                const pct = total ? (done / total) * 100 : 0;
+
+                if (meterBar) meterBar.style.width = `${pct}%`;
+                if (meterText) {
+                    if (parentId === "testing") {
+                        meterText.textContent = `${done} dari ${total} langkah testing selesai`;
+                    } else if (parentId === "final") {
+                        meterText.textContent = `${done} dari ${total} komponen siap`;
+                    }
+                }
+            };
+
+            items.forEach(item => {
+                item.addEventListener("click", () => {
+                    item.classList.toggle("done");
+                    refresh();
+                });
+            });
+
+            refresh();
+        }
+
+        function wireMulti(group) {
+            const id = group.getAttribute("data-multi");
+            const items = [...group.querySelectorAll(".choice")];
+
+            items.forEach(item => {
+                item.addEventListener("click", () => {
+                    item.classList.toggle("active");
+                });
+            });
+
+            if (id === "corelogic") {
+                const btnCheck = content.querySelector("#checkCore");
+                const fb = content.querySelector("#coreFb");
+
+                if (btnCheck) {
+                    btnCheck.addEventListener("click", () => {
+                        let allCorrect = true;
+                        let selectedAny = false;
+
+                        items.forEach(item => {
+                            const isActive = item.classList.contains("active");
+                            const isCorrect = item.getAttribute("data-correct") === "true";
+
+                            item.classList.remove("ok", "bad");
+
+                            if (isActive) {
+                                selectedAny = true;
+                                item.classList.add(isCorrect ? "ok" : "bad");
+                            }
+
+                            if ((isCorrect && !isActive) || (!isCorrect && isActive)) {
+                                allCorrect = false;
+                            }
+                        });
+
+                        if (!selectedAny) {
+                            showFeedback(fb, "⚠️ Pilih dulu jawaban yang menurutmu benar.", "bad");
+                            return;
+                        }
+
+                        if (allCorrect) {
+                            showFeedback(fb, "✅ Tepat! Logic inti proyek harus benar-benar membantu user, bukan hanya menampilkan sesuatu tanpa proses yang bermakna.", "ok");
+                        } else {
+                            showFeedback(fb, "⚠️ Masih belum tepat. Coba fokus pada hal yang membuat programmu benar-benar berguna: ada hitungan, analisis, dan insight.", "bad");
+                        }
+                    });
+                }
+            }
+        }
+
+        function render() {
+            const s = slides[idx];
+            content.innerHTML = s.html;
+
+            const pct = ((idx + 1) / slides.length) * 100;
+            bar.style.width = pct + "%";
+            count.textContent = `${idx + 1}/${slides.length}`;
+
+            content.querySelectorAll("[data-quiz]").forEach(wireQuiz);
+            content.querySelectorAll("[data-checklist]").forEach(wireChecklist);
+            content.querySelectorAll("[data-multi]").forEach(wireMulti);
+
+            content.querySelectorAll("[data-goto]").forEach(b => {
+                b.addEventListener("click", () => {
+                    const to = Number(b.getAttribute("data-goto"));
+                    idx = clamp(to, 0, slides.length - 1);
+                    render();
+                    content.scrollTop = 0;
+                });
+            });
+        }
+
+        function go(d) {
+            idx = clamp(idx + d, 0, slides.length - 1);
+            render();
+            content.scrollTop = 0;
+        }
+
+        btnPrev.addEventListener("click", () => go(-1));
+        btnNext.addEventListener("click", () => go(1));
+        btnHome.addEventListener("click", () => {
+            idx = 0;
+            render();
+            content.scrollTop = 0;
+        });
+
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "ArrowLeft") go(-1);
+            if (e.key === "ArrowRight") go(1);
+            if (e.key === "Home") {
+                idx = 0;
+                render();
+                content.scrollTop = 0;
+            }
+        });
+
+        render();
+    </script>
+</body>
+
+</html>
