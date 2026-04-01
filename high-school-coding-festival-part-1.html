@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>UOB MDS – Lower Primary – Coding Festival Stage 1</title>
+    <title>UOB MDS – High School – Coding Festival Stage 1</title>
     <style>
         :root {
             --bg1: #F7FAFF;
@@ -27,7 +27,7 @@
         }
 
         * {
-            box-sizing: border-box
+            box-sizing: border-box;
         }
 
         body {
@@ -60,6 +60,7 @@
             background: rgba(255, 255, 255, .72);
             backdrop-filter: blur(10px);
             box-shadow: var(--shadow2);
+            flex-wrap: wrap;
         }
 
         .brand {
@@ -114,11 +115,11 @@
         }
 
         .btn:hover {
-            transform: translateY(-1px)
+            transform: translateY(-1px);
         }
 
         .btn:active {
-            transform: translateY(0px)
+            transform: translateY(0px);
         }
 
         .btn.primary {
@@ -128,7 +129,7 @@
 
         .btn.ghost {
             background: transparent;
-            box-shadow: none
+            box-shadow: none;
         }
 
         .btn:focus {
@@ -216,19 +217,19 @@
         h2 {
             margin: 6px 0 10px;
             font-size: 30px;
-            letter-spacing: -.3px
+            letter-spacing: -.3px;
         }
 
         h3 {
             margin: 0 0 8px;
-            font-size: 18px
+            font-size: 18px;
         }
 
         p {
             margin: 0 0 10px;
             color: var(--muted);
             font-weight: 800;
-            line-height: 1.55
+            line-height: 1.55;
         }
 
         .kicker {
@@ -247,35 +248,15 @@
 
         .grid {
             display: grid;
-            gap: 14px
+            gap: 14px;
         }
 
         .cols2 {
-            grid-template-columns: 1fr 1fr
+            grid-template-columns: 1fr 1fr;
         }
 
         .cols3 {
-            grid-template-columns: repeat(3, 1fr)
-        }
-
-        @media (max-width: 860px) {
-
-            .cols2,
-            .cols3 {
-                grid-template-columns: 1fr
-            }
-
-            .progressWrap {
-                min-width: unset
-            }
-
-            .progress {
-                width: 130px
-            }
-
-            h2 {
-                font-size: 26px
-            }
+            grid-template-columns: repeat(3, 1fr);
         }
 
         .card {
@@ -290,7 +271,7 @@
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
-            align-items: center
+            align-items: center;
         }
 
         .tag {
@@ -309,13 +290,13 @@
             margin: 8px 0 0 18px;
             color: var(--muted);
             font-weight: 850;
-            line-height: 1.55
+            line-height: 1.55;
         }
 
         .choices {
             display: grid;
             gap: 10px;
-            margin-top: 10px
+            margin-top: 10px;
         }
 
         .choice {
@@ -331,22 +312,22 @@
         }
 
         .choice:hover {
-            transform: translateY(-1px)
+            transform: translateY(-1px);
         }
 
         .choice.active {
             border-color: rgba(79, 70, 229, .35);
-            background: rgba(79, 70, 229, .06)
+            background: rgba(79, 70, 229, .06);
         }
 
         .choice.ok {
             border-color: rgba(22, 163, 74, .35);
-            background: rgba(22, 163, 74, .08)
+            background: rgba(22, 163, 74, .08);
         }
 
         .choice.bad {
             border-color: rgba(220, 38, 38, .35);
-            background: rgba(220, 38, 38, .08)
+            background: rgba(220, 38, 38, .08);
         }
 
         .feedback {
@@ -362,19 +343,19 @@
         }
 
         .feedback.show {
-            display: block
+            display: block;
         }
 
         .fbOk {
             border-color: rgba(22, 163, 74, .35);
             background: rgba(22, 163, 74, .08);
-            color: rgba(15, 23, 42, .92)
+            color: rgba(15, 23, 42, .92);
         }
 
         .fbBad {
             border-color: rgba(220, 38, 38, .35);
             background: rgba(220, 38, 38, .08);
-            color: rgba(15, 23, 42, .92)
+            color: rgba(15, 23, 42, .92);
         }
 
         .input {
@@ -385,6 +366,8 @@
             padding: 12px 14px;
             font-weight: 950;
             color: rgba(30, 41, 59, .96);
+            resize: vertical;
+            min-height: 54px;
         }
 
         .emojiBig {
@@ -431,12 +414,6 @@
             gap: 14px;
         }
 
-        @media (max-width: 860px) {
-            .twoBig {
-                grid-template-columns: 1fr;
-            }
-        }
-
         .bigNum {
             width: 42px;
             height: 42px;
@@ -449,6 +426,143 @@
             color: rgba(79, 70, 229, 1);
             flex: 0 0 auto;
         }
+
+        .checklist {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkItem {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 18px;
+            border: 1px solid rgba(226, 232, 240, .95);
+            background: rgba(255, 255, 255, .96);
+            cursor: pointer;
+            user-select: none;
+            transition: transform .06s ease, border-color .12s ease, background .12s ease;
+            font-weight: 950;
+            color: rgba(30, 41, 59, .96);
+        }
+
+        .checkItem:hover {
+            transform: translateY(-1px);
+        }
+
+        .checkItem.done {
+            border-color: rgba(79, 70, 229, .30);
+            background: rgba(79, 70, 229, .06);
+        }
+
+        .checkBox {
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            border: 1.5px solid rgba(148, 163, 184, .8);
+            display: grid;
+            place-items: center;
+            font-size: 14px;
+            font-weight: 1000;
+            color: transparent;
+            background: #fff;
+            flex: 0 0 auto;
+        }
+
+        .checkItem.done .checkBox {
+            background: linear-gradient(135deg, rgba(79, 70, 229, .9), rgba(6, 182, 212, .85));
+            border-color: transparent;
+            color: white;
+        }
+
+        .meterWrap {
+            margin-top: 12px;
+        }
+
+        .meter {
+            width: 100%;
+            height: 12px;
+            background: rgba(226, 232, 240, .9);
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid rgba(226, 232, 240, .95);
+        }
+
+        .meterBar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, rgba(79, 70, 229, .85), rgba(6, 182, 212, .85));
+            border-radius: 999px;
+            transition: width .25s ease;
+        }
+
+        .meterText {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--muted);
+            font-weight: 900;
+        }
+
+        .ideaTags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .ideaTag {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(226, 232, 240, .95);
+            background: rgba(255, 255, 255, .96);
+            font-weight: 950;
+            color: rgba(30, 41, 59, .96);
+            cursor: pointer;
+            transition: transform .06s ease, border-color .12s ease, background .12s ease;
+            user-select: none;
+        }
+
+        .ideaTag:hover {
+            transform: translateY(-1px);
+        }
+
+        .ideaTag.active {
+            border-color: rgba(79, 70, 229, .35);
+            background: rgba(79, 70, 229, .08);
+        }
+
+        .resultBox {
+            margin-top: 14px;
+            border-radius: 18px;
+            padding: 14px;
+            border: 1px solid rgba(226, 232, 240, .95);
+            background: rgba(255, 255, 255, .92);
+            color: var(--muted);
+            font-weight: 900;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 860px) {
+            .cols2,
+            .cols3,
+            .twoBig {
+                grid-template-columns: 1fr;
+            }
+
+            .progressWrap {
+                min-width: unset;
+            }
+
+            .progress {
+                width: 130px;
+            }
+
+            h2 {
+                font-size: 26px;
+            }
+        }
     </style>
 </head>
 
@@ -459,7 +573,7 @@
             <h2>🔐 Kode Akses</h2>
             <p>Masukkan kode untuk memulai sesi.</p>
             <input id="accessInput" class="input" placeholder="MASUKKAN KODE" autocomplete="off"
-                style="text-align:center;font-weight:900;letter-spacing:2px" />
+                style="text-align:center;font-weight:900;letter-spacing:2px;min-height:auto" />
             <button class="btn primary" id="accessBtn" style="margin-top:12px">Masuk</button>
             <div class="feedback" id="accessFb" style="margin-top:10px"></div>
             <div class="card" style="margin-top:10px;background:rgba(79,70,229,.05)">
@@ -471,9 +585,9 @@
     <div class="app">
         <div class="topbar">
             <div class="brand">
-                <div class="logo">LP</div>
+                <div class="logo">HS</div>
                 <div>
-                    <h1>Lower Primary</h1>
+                    <h1>High School</h1>
                     <div class="sub">Coding Festival – Stage 1</div>
                 </div>
             </div>
@@ -502,270 +616,311 @@
     <script>
         const slides = [
 
-{
-title: "Pembuka",
-html: `
-<h2>🚀 Coding Festival: Build Real Solutions</h2>
-<p>Kali ini kamu tidak hanya membuat project...</p>
+            {
+                title: "Pembuka",
+                html: `
+                <div class="kicker">Stage 1 • High School • Python in Google Colab</div>
+                <h2>🚀 Coding Festival: Build Real Solutions with Python</h2>
+                <p>Kali ini kamu tidak hanya membuat program biasa. Kamu akan membuat solusi nyata dengan <b>Python di Google Colab</b> menggunakan konsep yang sudah dipelajari sebelumnya.</p>
 
-<div class="card" style="margin-top:12px;text-align:center">
-<div class="emojiBig">💡📊📱</div>
-<p style="margin-top:10px"><b>Kamu akan menyelesaikan masalah nyata dengan teknologi</b></p>
-</div>
-`
-},
+                <div class="card" style="margin-top:12px;text-align:center">
+                    <div class="emojiBig">💡💻📊</div>
+                    <p style="margin-top:10px"><b>Bukan mobile app atau website — fokus kita ada pada logika, proses, dan insight.</b></p>
+                </div>
+                `
+            },
 
-{
-title: "Hook",
-html: `
-<h2>Masalah Itu Nyata</h2>
-<p>Menurut kamu, mana yang paling sering terjadi?</p>
+            {
+                title: "Hook",
+                html: `
+                <h2>Masalah Itu Nyata</h2>
+                <p>Menurut kamu, masalah mana yang paling sering terjadi dalam kehidupan sehari-hari?</p>
 
-<div class="choices" data-choice-simple="hook">
-<div class="choice">Uang habis tanpa sadar</div>
-<div class="choice">Sulit menabung</div>
-<div class="choice">Tidak punya catatan keuangan</div>
-</div>
+                <div class="choices" data-choice-simple="hook">
+                    <div class="choice">Uang habis tanpa sadar</div>
+                    <div class="choice">Sulit menabung secara konsisten</div>
+                    <div class="choice">Tidak punya catatan pemasukan dan pengeluaran</div>
+                </div>
 
-<div class="feedback" id="hookFb"></div>
-`
-},
+                <div class="feedback" id="hookFb"></div>
+                `
+            },
 
-{
-title: "Apa itu Coding Festival",
-html: `
-<h2>Coding Festival = Problem Solving</h2>
+            {
+                title: "Apa itu Coding Festival",
+                html: `
+                <h2>Coding Festival = Problem Solving with Code</h2>
 
-<div class="card">
-<ul class="list">
-<li>Mulai dari masalah nyata</li>
-<li>Membangun solusi berbasis teknologi</li>
-<li>Menyampaikan solusi dengan jelas</li>
-</ul>
-</div>
-`
-},
+                <div class="card">
+                    <ul class="list">
+                        <li>Mulai dari masalah nyata</li>
+                        <li>Membuat solusi dengan Python di Google Colab</li>
+                        <li>Menggunakan konsep coding yang sudah dipelajari</li>
+                        <li>Menyampaikan cara kerja program dengan jelas</li>
+                    </ul>
+                </div>
+                `
+            },
 
-{
-title: "Stage 1",
-html: `
-<h2>🎯 Stage 1: Build & Validate</h2>
+            {
+                title: "Stage 1",
+                html: `
+                <h2>🎯 Stage 1: Build & Validate</h2>
+                <p>Di tahap awal ini, kamu akan membangun fondasi proyekmu.</p>
 
-<div class="checklist" data-checklist="stage1">
-<div class="checkItem"><div class="checkBox">✓</div><div>Identify problem</div></div>
-<div class="checkItem"><div class="checkBox">✓</div><div>Design solution</div></div>
-<div class="checkItem"><div class="checkBox">✓</div><div>Develop logic & features</div></div>
-<div class="checkItem"><div class="checkBox">✓</div><div>Prepare pitching</div></div>
-</div>
+                <div class="checklist" data-checklist="stage1">
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Menentukan masalah yang ingin diselesaikan</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Merancang solusi program</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Menyusun logic Python</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Menyiapkan penjelasan proyek</div></div>
+                </div>
 
-<div class="meterWrap">
-<div class="meter"><div class="meterBar" id="stage1Meter"></div></div>
-<div class="meterText" id="stage1MeterText">0 dari 4</div>
-</div>
-`
-},
+                <div class="meterWrap">
+                    <div class="meter"><div class="meterBar" id="stage1Meter"></div></div>
+                    <div class="meterText" id="stage1MeterText">0 dari 4 langkah dipahami</div>
+                </div>
+                `
+            },
 
-{
-title: "Tema",
-html: `
-<h2>💰 Financial Literacy (Real Problem)</h2>
+            {
+                title: "Tema",
+                html: `
+                <h2>💰 Financial Literacy</h2>
+                <p>Pilih salah satu masalah finansial yang ingin kamu jadikan inspirasi proyek.</p>
 
-<div class="ideaTags" data-select-group="tema">
-<div class="ideaTag">Overspending</div>
-<div class="ideaTag">No financial tracking</div>
-<div class="ideaTag">Poor saving habits</div>
-<div class="ideaTag">No budgeting system</div>
-</div>
+                <div class="ideaTags" data-select-group="tema">
+                    <div class="ideaTag">Pengeluaran berlebihan</div>
+                    <div class="ideaTag">Tidak mencatat keuangan</div>
+                    <div class="ideaTag">Sulit menabung</div>
+                    <div class="ideaTag">Tidak punya budgeting</div>
+                </div>
 
-<div class="resultBox" id="temaResult">Pilih problem yang ingin kamu selesaikan.</div>
-`
-},
+                <div class="resultBox" id="temaResult">Pilih satu problem untuk melihat arah proyek yang bisa dibuat.</div>
+                `
+            },
 
-{
-title: "Project Direction",
-html: `
-<h2>📱 Bentuk Proyek SMA</h2>
+            {
+                title: "Project Direction",
+                html: `
+                <h2>💻 Bentuk Proyek SMA</h2>
 
-<div class="card">
-<ul class="list">
-<li>Aplikasi (mobile/web)</li>
-<li>Tool untuk membantu keputusan finansial</li>
-<li>Sistem sederhana berbasis data</li>
-</ul>
-</div>
-`
-},
+                <div class="card">
+                    <ul class="list">
+                        <li>Proyek dibuat di <b>Google Colab</b></li>
+                        <li>Menggunakan <b>Python</b> dan konsep yang sudah dipelajari sebelumnya</li>
+                        <li>Fokus pada <b>input → process → output</b></li>
+                        <li>Hasil akhirnya berupa program yang membantu menyelesaikan masalah finansial sederhana</li>
+                    </ul>
+                </div>
 
-{
-title: "System Thinking",
-html: `
-<h2>🧠 System Thinking</h2>
+                <div class="card" style="margin-top:12px;background:rgba(79,70,229,.05)">
+                    <p style="margin:0"><b>Catatan:</b> siswa belum membuat mobile app atau web app, jadi yang dinilai adalah kekuatan logika program dan kejelasan solusi.</p>
+                </div>
+                `
+            },
 
-<div class="card">
-<ul class="list">
-<li><b>Input</b> → data user</li>
-<li><b>Process</b> → logic / calculation</li>
-<li><b>Output</b> → insight / result</li>
-</ul>
-</div>
-`
-},
+            {
+                title: "System Thinking",
+                html: `
+                <h2>🧠 System Thinking</h2>
+                <p>Program yang baik tidak hanya menerima input, tapi juga mengolahnya dan menghasilkan output yang bermakna.</p>
 
-{
-title: "Logic Check",
-html: `
-<h2>🔀 Logic yang Benar?</h2>
+                <div class="grid cols3">
+                    <div class="card">
+                        <h3>Input</h3>
+                        <p>Data dari user, misalnya pemasukan, pengeluaran, atau target tabungan.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Process</h3>
+                        <p>Perhitungan, percabangan, perulangan, atau pengelompokan data.</p>
+                    </div>
+                    <div class="card">
+                        <h3>Output</h3>
+                        <p>Hasil akhir, ringkasan, insight, atau rekomendasi sederhana.</p>
+                    </div>
+                </div>
+                `
+            },
 
-<div class="choices" data-quiz="logic">
-<div class="choice" data-answer="wrong">App hanya menampilkan UI</div>
-<div class="choice" data-answer="right">App mengolah data dan menghasilkan insight</div>
-<div class="choice" data-answer="wrong">Semua input menghasilkan output yang sama</div>
-</div>
+            {
+                title: "Logic Check",
+                html: `
+                <h2>🔀 Logic yang Benar?</h2>
 
-<div class="feedback" data-quiz-feedback="logic"></div>
-`
-},
+                <div class="choices" data-quiz="logic">
+                    <div class="choice" data-answer="wrong">Program hanya menampilkan teks tanpa proses</div>
+                    <div class="choice" data-answer="right">Program mengolah data lalu menghasilkan insight</div>
+                    <div class="choice" data-answer="wrong">Semua input menghasilkan output yang sama</div>
+                </div>
 
-{
-title: "Good Project",
-html: `
-<h2>✅ Ciri Project Kuat</h2>
+                <div class="feedback" data-quiz-feedback="logic"></div>
+                `
+            },
 
-<div class="choices" data-multi="good">
-<div class="choice" data-correct="true">Problem jelas</div>
-<div class="choice" data-correct="true">Ada logic / process</div>
-<div class="choice" data-correct="true">Memberi insight</div>
-<div class="choice" data-correct="false">Hanya UI bagus</div>
-</div>
+            {
+                title: "Good Project",
+                html: `
+                <h2>✅ Ciri Project Kuat</h2>
+                <p>Pilih semua hal yang menunjukkan proyek kamu punya kualitas yang baik.</p>
 
-<button class="btn primary" id="checkGood">Cek</button>
-<div class="feedback" id="goodFb"></div>
-`
-},
+                <div class="choices" data-multi="good">
+                    <div class="choice" data-correct="true">Problem yang dipilih jelas</div>
+                    <div class="choice" data-correct="true">Ada logic Python yang benar-benar bekerja</div>
+                    <div class="choice" data-correct="true">Output memberi insight atau informasi berguna</div>
+                    <div class="choice" data-correct="false">Tampilan menarik saja sudah cukup</div>
+                </div>
 
-{
-title: "Example",
-html: `
-<h2>💡 Example: Expense Tracker</h2>
+                <button class="btn primary" id="checkGood">Cek</button>
+                <div class="feedback" id="goodFb"></div>
+                `
+            },
 
-<div class="card">
-<ul class="list">
-<li>User input income & expense</li>
-<li>System stores data</li>
-<li>System calculates balance</li>
-<li>Shows financial insight</li>
-</ul>
-</div>
-`
-},
+            {
+                title: "Example",
+                html: `
+                <h2>💡 Example: Expense Tracker in Colab</h2>
 
-{
-title: "Feature Expansion",
-html: `
-<h2>⚙️ Advanced Features</h2>
+                <div class="card">
+                    <ul class="list">
+                        <li>User memasukkan data pemasukan dan pengeluaran</li>
+                        <li>Program menyimpan atau memproses data tersebut</li>
+                        <li>Program menghitung total saldo</li>
+                        <li>Program menampilkan insight kondisi keuangan</li>
+                    </ul>
+                </div>
 
-<div class="card">
-<ul class="list">
-<li>Spending analysis</li>
-<li>Category tracking</li>
-<li>Saving goals</li>
-<li>Prediction (optional)</li>
-</ul>
-</div>
-`
-},
+                <div class="card" style="margin-top:12px">
+                    <p style="margin:0"><b>Contoh output:</b> “Pengeluaranmu lebih besar pada kategori makan” atau “Kamu masih perlu menabung Rp50.000 lagi untuk mencapai target.”</p>
+                </div>
+                `
+            },
 
-{
-title: "Pitching",
-html: `
-<h2>🗣️ Pitch Like a Startup</h2>
+            {
+                title: "Feature Expansion",
+                html: `
+                <h2>⚙️ Pengembangan Fitur</h2>
 
-<div class="card">
-<ul class="list">
-<li>Problem</li>
-<li>Solution</li>
-<li>How it works</li>
-<li>Impact</li>
-</ul>
-</div>
-`
-},
+                <div class="card">
+                    <ul class="list">
+                        <li>Kategori pengeluaran</li>
+                        <li>Analisis pengeluaran terbesar</li>
+                        <li>Target menabung</li>
+                        <li>Rekomendasi sederhana berdasarkan data</li>
+                        <li>Ringkasan keuangan mingguan / bulanan</li>
+                    </ul>
+                </div>
+                `
+            },
 
-{
-title: "Pitch Draft",
-html: `
-<h2>🎤 Draft Pitch</h2>
+            {
+                title: "Pitching",
+                html: `
+                <h2>🗣️ Pitch Your Project</h2>
 
-<textarea class="input" placeholder="Problem"></textarea>
-<textarea class="input" placeholder="Solution"></textarea>
-<textarea class="input" placeholder="How it works"></textarea>
-<textarea class="input" placeholder="Impact"></textarea>
-`
-},
+                <div class="grid cols2">
+                    <div class="card">
+                        <h3>Yang perlu dijelaskan</h3>
+                        <ul class="list">
+                            <li>Problem</li>
+                            <li>Solution</li>
+                            <li>How it works</li>
+                            <li>Impact</li>
+                        </ul>
+                    </div>
+                    <div class="card">
+                        <h3>Fokus utama</h3>
+                        <ul class="list">
+                            <li>Kenapa problem ini penting?</li>
+                            <li>Bagaimana programmu bekerja?</li>
+                            <li>Apa manfaatnya untuk pengguna?</li>
+                        </ul>
+                    </div>
+                </div>
+                `
+            },
 
-{
-title: "Submission",
-html: `
-<h2>📦 Submission</h2>
+            {
+                title: "Pitch Draft",
+                html: `
+                <h2>🎤 Draft Pitch</h2>
+                <p>Isi draft singkat ini untuk membantu kamu menyiapkan penjelasan proyek.</p>
 
-<div class="checklist" data-checklist="submit">
-<div class="checkItem"><div class="checkBox">✓</div><div>Project link</div></div>
-<div class="checkItem"><div class="checkBox">✓</div><div>Demo video</div></div>
-<div class="checkItem"><div class="checkBox">✓</div><div>Description</div></div>
-<div class="checkItem"><div class="checkBox">✓</div><div>Pitch deck</div></div>
-</div>
+                <div class="grid">
+                    <textarea class="input" placeholder="Problem: masalah apa yang ingin kamu selesaikan?"></textarea>
+                    <textarea class="input" placeholder="Solution: program apa yang kamu buat?"></textarea>
+                    <textarea class="input" placeholder="How it works: input, process, dan output programmu seperti apa?"></textarea>
+                    <textarea class="input" placeholder="Impact: manfaat apa yang diberikan programmu?"></textarea>
+                </div>
+                `
+            },
 
-<div class="meterWrap">
-<div class="meter"><div class="meterBar" id="submitMeter"></div></div>
-<div class="meterText" id="submitMeterText">0 dari 4</div>
-</div>
-`
-},
+            {
+                title: "Submission",
+                html: `
+                <h2>📦 Submission</h2>
+                <p>Pastikan semua komponen berikut sudah siap sebelum dikumpulkan.</p>
 
-{
-title: "Validation",
-html: `
-<h2>🧪 Before Submit</h2>
+                <div class="checklist" data-checklist="submit">
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Link Google Colab</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Video demo menjalankan program</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Deskripsi proyek</div></div>
+                    <div class="checkItem"><div class="checkBox">✓</div><div>Pitch deck / presentasi singkat</div></div>
+                </div>
 
-<div class="choices" data-quiz="check">
-<div class="choice" data-answer="wrong">UI bagus sudah cukup</div>
-<div class="choice" data-answer="right">App bekerja dan punya logic jelas</div>
-<div class="choice" data-answer="wrong">Tidak perlu testing</div>
-</div>
+                <div class="meterWrap">
+                    <div class="meter"><div class="meterBar" id="submitMeter"></div></div>
+                    <div class="meterText" id="submitMeterText">0 dari 4 komponen siap</div>
+                </div>
+                `
+            },
 
-<div class="feedback" data-quiz-feedback="check"></div>
-`
-},
+            {
+                title: "Validation",
+                html: `
+                <h2>🧪 Before Submit</h2>
 
-{
-title: "Brainstorm",
-html: `
-<h2>💡 Your Idea</h2>
+                <div class="choices" data-quiz="check">
+                    <div class="choice" data-answer="wrong">Yang penting desain slide bagus</div>
+                    <div class="choice" data-answer="right">Program berjalan dan punya logic yang jelas</div>
+                    <div class="choice" data-answer="wrong">Tidak perlu testing kalau kode pernah jalan sekali</div>
+                </div>
 
-<textarea class="input" placeholder="Problem"></textarea>
-<textarea class="input" placeholder="Input & Process"></textarea>
-<textarea class="input" placeholder="Output & Insight"></textarea>
-`
-},
+                <div class="feedback" data-quiz-feedback="check"></div>
+                `
+            },
 
-{
-title: "Penutup",
-html: `
-<h2>🔥 You’re Ready</h2>
+            {
+                title: "Brainstorm",
+                html: `
+                <h2>💡 Your Idea</h2>
+                <p>Gunakan bagian ini untuk mulai merancang ide proyekmu.</p>
 
-<div class="card">
-<ul class="list">
-<li>You think like a problem solver</li>
-<li>You build real solution</li>
-<li>You are ready for Coding Festival</li>
-</ul>
-</div>
+                <div class="grid">
+                    <textarea class="input" placeholder="Problem: masalah finansial apa yang ingin kamu angkat?"></textarea>
+                    <textarea class="input" placeholder="Input & Process: data apa yang dimasukkan user dan bagaimana program memprosesnya?"></textarea>
+                    <textarea class="input" placeholder="Output & Insight: hasil apa yang akan ditampilkan program?"></textarea>
+                </div>
+                `
+            },
 
-<button class="btn primary" data-goto="0">Restart</button>
-`
-}
+            {
+                title: "Penutup",
+                html: `
+                <h2>🔥 You’re Ready</h2>
 
-];
+                <div class="card">
+                    <ul class="list">
+                        <li>Kamu berpikir seperti problem solver</li>
+                        <li>Kamu membangun solusi dengan Python</li>
+                        <li>Kamu siap untuk Coding Festival</li>
+                    </ul>
+                </div>
+
+                <button class="btn primary" data-goto="0">Restart</button>
+                `
+            }
+
+        ];
 
         let idx = 0;
         const content = document.getElementById("content");
@@ -775,17 +930,24 @@ html: `
         const btnNext = document.getElementById("btnNext");
         const btnHome = document.getElementById("btnHome");
 
-        function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
-
         const ACCESS_CODE = "RGMDSHS25";
         const gate = document.getElementById("accessGate");
         const input = document.getElementById("accessInput");
         const btn = document.getElementById("accessBtn");
         const fb = document.getElementById("accessFb");
 
-        input.addEventListener("input", () => { input.value = input.value.toUpperCase(); });
+        function clamp(n, a, b) {
+            return Math.max(a, Math.min(b, n));
+        }
+
+        input.addEventListener("input", () => {
+            input.value = input.value.toUpperCase();
+        });
+
         btn.addEventListener("click", checkAccess);
-        input.addEventListener("keydown", (e) => { if (e.key === "Enter") checkAccess(); });
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") checkAccess();
+        });
 
         function checkAccess() {
             if (input.value.trim() === ACCESS_CODE) {
@@ -796,19 +958,24 @@ html: `
             }
         }
 
+        function showFeedback(el, html, type) {
+            if (!el) return;
+            el.classList.add("show");
+            el.classList.remove("fbOk", "fbBad");
+            if (type === "ok") el.classList.add("fbOk");
+            if (type === "bad") el.classList.add("fbBad");
+            el.innerHTML = html;
+        }
+
         function getQuizMsg(id, ok) {
             const msgs = {
-                problem: {
-                    ok: "✅ Betul! Problem yang baik harus nyata dan masih berhubungan dengan pengelolaan uang.",
-                    bad: "⚠️ Coba lagi. Untuk SMP, problem sebaiknya masih terkait tabungan, pengeluaran, atau kebiasaan finansial."
-                },
                 logic: {
-                    ok: "✅ Betul! Aplikasi biasanya menerima input, memproses data, lalu menampilkan hasil.",
-                    bad: "⚠️ Belum tepat. Coba pilih jawaban yang menunjukkan ada proses atau logic di dalam aplikasi."
+                    ok: "✅ Betul! Program yang baik tidak hanya menampilkan teks, tetapi juga memproses data dan menghasilkan output yang bermakna.",
+                    bad: "⚠️ Belum tepat. Coba pilih jawaban yang menunjukkan ada proses atau logic di dalam program."
                 },
                 check: {
-                    ok: "✅ Benar! Sebelum submit, proyek harus bisa dibuka, berjalan, dan mudah dipahami.",
-                    bad: "⚠️ Belum tepat. Submission yang baik bukan hanya desain, tapi juga fungsi dan akses link."
+                    ok: "✅ Benar! Sebelum submit, program harus bisa dijalankan dan alurnya mudah dipahami.",
+                    bad: "⚠️ Belum tepat. Submission yang baik bukan hanya tampilan, tetapi juga fungsi dan kejelasan logika."
                 }
             };
             const m = msgs[id];
@@ -816,20 +983,11 @@ html: `
             return ok ? m.ok : m.bad;
         }
 
-        function showFeedback(el, html, type) {
-            if (!el) return;
-            el.classList.add("show");
-            el.style.display = "block";
-            el.classList.remove("fbOk", "fbBad");
-            if (type === "ok") el.classList.add("fbOk");
-            if (type === "bad") el.classList.add("fbBad");
-            el.innerHTML = html;
-        }
-
         function wireQuiz(group) {
             const id = group.getAttribute("data-quiz");
             const fb = content.querySelector(`[data-quiz-feedback="${id}"]`);
             const items = [...group.querySelectorAll(".choice")];
+
             items.forEach(ch => {
                 ch.addEventListener("click", () => {
                     items.forEach(x => x.classList.remove("active", "ok", "bad"));
@@ -841,18 +999,157 @@ html: `
             });
         }
 
+        function wireSimpleChoice(group) {
+            const id = group.getAttribute("data-choice-simple");
+            const items = [...group.querySelectorAll(".choice")];
+            const fb = content.querySelector(`#${id}Fb`);
+
+            items.forEach(ch => {
+                ch.addEventListener("click", () => {
+                    items.forEach(x => x.classList.remove("active"));
+                    ch.classList.add("active");
+                    showFeedback(
+                        fb,
+                        `💡 Betul, <b>${ch.textContent}</b> bisa jadi titik awal proyekmu. Sekarang pikirkan: data apa yang dibutuhkan, bagaimana program memprosesnya, dan insight apa yang ingin ditampilkan.`,
+                        "ok"
+                    );
+                });
+            });
+        }
+
+        function wireChecklist(group) {
+            const items = [...group.querySelectorAll(".checkItem")];
+            const parentId = group.getAttribute("data-checklist");
+
+            let meterId = "";
+            let textId = "";
+
+            if (parentId === "stage1") {
+                meterId = "stage1Meter";
+                textId = "stage1MeterText";
+            } else if (parentId === "submit") {
+                meterId = "submitMeter";
+                textId = "submitMeterText";
+            }
+
+            const meterBar = content.querySelector(`#${meterId}`);
+            const meterText = content.querySelector(`#${textId}`);
+
+            const refresh = () => {
+                const done = items.filter(item => item.classList.contains("done")).length;
+                const total = items.length;
+                const pct = total ? (done / total) * 100 : 0;
+
+                if (meterBar) meterBar.style.width = `${pct}%`;
+                if (meterText) {
+                    if (parentId === "stage1") {
+                        meterText.textContent = `${done} dari ${total} langkah dipahami`;
+                    } else if (parentId === "submit") {
+                        meterText.textContent = `${done} dari ${total} komponen siap`;
+                    } else {
+                        meterText.textContent = `${done} dari ${total}`;
+                    }
+                }
+            };
+
+            items.forEach(item => {
+                item.addEventListener("click", () => {
+                    item.classList.toggle("done");
+                    refresh();
+                });
+            });
+
+            refresh();
+        }
+
+        function wireSelectGroup(group) {
+            const id = group.getAttribute("data-select-group");
+            const items = [...group.querySelectorAll(".ideaTag")];
+            const resultBox = content.querySelector(`#${id}Result`);
+
+            const mapping = {
+                "Pengeluaran berlebihan": "Arah proyek: program yang membantu pengguna melihat kebiasaan belanja dan total pengeluaran.",
+                "Tidak mencatat keuangan": "Arah proyek: program pencatat pemasukan dan pengeluaran dengan ringkasan otomatis.",
+                "Sulit menabung": "Arah proyek: program target tabungan yang menghitung progres dan sisa target.",
+                "Tidak punya budgeting": "Arah proyek: program pembagian anggaran sederhana berdasarkan kategori kebutuhan."
+            };
+
+            items.forEach(item => {
+                item.addEventListener("click", () => {
+                    items.forEach(x => x.classList.remove("active"));
+                    item.classList.add("active");
+                    resultBox.innerHTML = `<b>${item.textContent}</b><br>${mapping[item.textContent] || "Gunakan masalah ini sebagai dasar ide proyekmu."}`;
+                });
+            });
+        }
+
+        function wireMulti(group) {
+            const id = group.getAttribute("data-multi");
+            const items = [...group.querySelectorAll(".choice")];
+
+            items.forEach(item => {
+                item.addEventListener("click", () => {
+                    item.classList.toggle("active");
+                });
+            });
+
+            if (id === "good") {
+                const btnCheck = content.querySelector("#checkGood");
+                const fb = content.querySelector("#goodFb");
+
+                if (btnCheck) {
+                    btnCheck.addEventListener("click", () => {
+                        let allCorrect = true;
+                        let selectedAny = false;
+
+                        items.forEach(item => {
+                            const isActive = item.classList.contains("active");
+                            const isCorrect = item.getAttribute("data-correct") === "true";
+
+                            item.classList.remove("ok", "bad");
+
+                            if (isActive) {
+                                selectedAny = true;
+                                item.classList.add(isCorrect ? "ok" : "bad");
+                            }
+
+                            if ((isCorrect && !isActive) || (!isCorrect && isActive)) {
+                                allCorrect = false;
+                            }
+                        });
+
+                        if (!selectedAny) {
+                            showFeedback(fb, "⚠️ Pilih dulu jawaban yang menurutmu benar.", "bad");
+                            return;
+                        }
+
+                        if (allCorrect) {
+                            showFeedback(fb, "✅ Tepat! Proyek yang kuat punya problem yang jelas, logic Python yang bekerja, dan output yang memberi insight.", "ok");
+                        } else {
+                            showFeedback(fb, "⚠️ Masih belum tepat. Coba ingat: proyek yang bagus tidak cukup hanya tampak menarik, tapi harus benar-benar memproses data dan menghasilkan manfaat.", "bad");
+                        }
+                    });
+                }
+            }
+        }
+
         function render() {
             const s = slides[idx];
             content.innerHTML = s.html;
+
             const pct = ((idx + 1) / slides.length) * 100;
             bar.style.width = pct + "%";
             count.textContent = `${idx + 1}/${slides.length}`;
 
-            content.querySelectorAll('[data-quiz]').forEach(wireQuiz);
+            content.querySelectorAll("[data-quiz]").forEach(wireQuiz);
+            content.querySelectorAll("[data-choice-simple]").forEach(wireSimpleChoice);
+            content.querySelectorAll("[data-checklist]").forEach(wireChecklist);
+            content.querySelectorAll("[data-select-group]").forEach(wireSelectGroup);
+            content.querySelectorAll("[data-multi]").forEach(wireMulti);
 
-            content.querySelectorAll('[data-goto]').forEach(b => {
-                b.addEventListener('click', () => {
-                    const to = Number(b.getAttribute('data-goto'));
+            content.querySelectorAll("[data-goto]").forEach(b => {
+                b.addEventListener("click", () => {
+                    const to = Number(b.getAttribute("data-goto"));
                     idx = clamp(to, 0, slides.length - 1);
                     render();
                     content.scrollTop = 0;
