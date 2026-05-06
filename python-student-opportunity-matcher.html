@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python - Student Opportunity Matcher</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --blue: #0056b3;
+      --light-blue: #4a9eff;
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --text: #2c3e50;
+      --muted: #6c757d;
+      --line: #e3e8ef;
+      --green: #4caf50;
+      --orange: #f39c12;
+      --red: #e74c3c;
+      --purple: #8e44ad;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--bg);
+      height: 100vh;
+      overflow: hidden;
+      color: var(--text)
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: #e9ecef;
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 20
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #e74c3c, #3498db);
+      transition: width .3s ease
+    }
+
+    .main-container {
+      display: flex;
+      height: 100vh
+    }
+
+    .slides-panel {
+      width: 50%;
+      background: #f8f9fa;
+      border-right: 2px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      position: relative
+    }
+
+    .explanation-panel {
+      width: 50%;
+      background: #fff;
+      overflow-y: auto;
+      padding: 32px
+    }
+
+    .slide-header {
+      background: #fff;
+      padding: 18px 20px;
+      border-bottom: 2px solid var(--line);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, .04)
+    }
+
+    .slide-header h1 {
+      font-size: 1.35rem;
+      color: var(--text);
+      margin-bottom: 4px
+    }
+
+    .slide-header p {
+      font-size: .92rem;
+      color: var(--muted)
+    }
+
+    .slide-content {
+      flex: 1;
+      padding: 24px 28px 96px;
+      overflow-y: auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      min-height: 0
+    }
+
+    .slide,
+    .explanation {
+      display: none;
+      opacity: 0;
+      transition: opacity .25s ease
+    }
+
+    .slide.active,
+    .explanation.active {
+      display: block;
+      opacity: 1
+    }
+
+    .slide {
+      width: 100%;
+      max-width: 820px
+    }
+
+    .explanation {
+      max-width: 760px;
+      margin: 0 auto
+    }
+
+    .slide h2 {
+      font-size: 2.3rem;
+      color: var(--blue);
+      margin-bottom: 12px
+    }
+
+    .slide h3 {
+      font-size: 2rem;
+      color: var(--blue);
+      margin-bottom: 18px
+    }
+
+    .slide h4,
+    .explanation h4 {
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+      color: var(--text)
+    }
+
+    .slide p,
+    .explanation p {
+      font-size: 1.04rem;
+      line-height: 1.65;
+      color: #495057;
+      margin-bottom: 16px
+    }
+
+    .explanation h3 {
+      font-size: 1.75rem;
+      margin-bottom: 18px;
+      color: var(--text)
+    }
+
+    .visual-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin: 18px 0
+    }
+
+    .visual-card,
+    .metric-box,
+    .info-box,
+    .example-box,
+    .code-block,
+    .data-table-wrap {
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .05)
+    }
+
+    .visual-card {
+      padding: 16px
+    }
+
+    .visual-card h4 {
+      margin-bottom: 6px
+    }
+
+    .visual-card p {
+      margin-bottom: 0;
+      font-size: .95rem;
+      line-height: 1.5
+    }
+
+    .visual-icon {
+      font-size: 2rem;
+      margin-bottom: 10px
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-top: 18px
+    }
+
+    .metric-box {
+      padding: 18px 14px;
+      text-align: center
+    }
+
+    .metric-box strong {
+      display: block;
+      font-size: 1.65rem;
+      color: var(--blue);
+      margin-bottom: 8px
+    }
+
+    .metric-box span {
+      font-size: .95rem;
+      line-height: 1.4;
+      color: #495057;
+      display: block
+    }
+
+    .mini-note {
+      font-size: .92rem !important;
+      color: var(--muted) !important;
+      margin-top: 12px
+    }
+
+    .info-box,
+    .example-box {
+      padding: 18px;
+      margin: 18px 0
+    }
+
+    .info-box {
+      border-left: 5px solid var(--light-blue)
+    }
+
+    .example-box {
+      border-left: 5px solid var(--green);
+      background: #f8fff8
+    }
+
+    .explanation ul,
+    .slide ul {
+      margin-left: 22px;
+      margin-bottom: 8px
+    }
+
+    .explanation li,
+    .slide li {
+      margin-bottom: 8px;
+      line-height: 1.55
+    }
+
+    .code-block {
+      padding: 16px;
+      margin: 16px 0;
+      background: #f8f9fa;
+      overflow: auto
+    }
+
+    .code-block.compact {
+      padding: 12px
+    }
+
+    .code-block pre,
+    .example-box pre {
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: .92rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      color: #2c3e50
+    }
+
+    code {
+      background: #eef3f8;
+      padding: 2px 5px;
+      border-radius: 4px
+    }
+
+    .data-table-wrap {
+      padding: 0;
+      overflow: auto;
+      margin: 18px 0
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 13px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: .94rem;
+      line-height: 1.45
+    }
+
+    .data-table th {
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      position: sticky;
+      top: 0
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 700;
+      color: #fff
+    }
+
+    .healthy {
+      background: var(--green)
+    }
+
+    .moderate {
+      background: var(--purple)
+    }
+
+    .warning {
+      background: var(--orange)
+    }
+
+    .danger {
+      background: var(--red)
+    }
+
+    .muted {
+      background: #7f8c8d
+    }
+
+    .navigation {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 2px solid var(--line);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 -2px 4px rgba(0, 0, 0, .04)
+    }
+
+    .nav-btn {
+      background: var(--light-blue);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: .96rem;
+      font-weight: 700;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      transition: .2s ease
+    }
+
+    .nav-btn:hover {
+      transform: translateY(-1px);
+      background: #357abd
+    }
+
+    .nav-btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none
+    }
+
+    .slide-indicator {
+      font-size: .92rem;
+      color: var(--muted);
+      font-weight: 700
+    }
+
+    .floating-element {
+      position: absolute;
+      opacity: .08;
+      pointer-events: none;
+      font-size: 2rem;
+      animation: float 6s ease-in-out infinite
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0) rotate(0)
+      }
+
+      33% {
+        transform: translateY(-14px) rotate(4deg)
+      }
+
+      66% {
+        transform: translateY(8px) rotate(-3deg)
+      }
+    }
+
+    .interactive-sorter {
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      margin: 18px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .08)
+    }
+
+    .slider-row {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 12px
+    }
+
+    .slider-row label {
+      font-weight: 700;
+      color: var(--text)
+    }
+
+    .slider-row input {
+      width: 100%
+    }
+
+    .ranking-preview {
+      margin-top: 18px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      padding: 14px;
+      border: 1px solid var(--line)
+    }
+
+    .ranking-preview li {
+      margin: 6px 0;
+      font-size: 1rem
+    }
+
+    .python-playground {
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+      margin: 18px 0
+    }
+
+    .playground-toolbar {
+      background: #f8f9fa;
+      border-bottom: 2px solid var(--line);
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .run-btn,
+    .reset-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700
+    }
+
+    .run-btn {
+      background: var(--light-blue);
+      color: #fff
+    }
+
+    .reset-btn {
+      background: #e9ecef;
+      color: var(--text)
+    }
+
+    #baseCodeEditor {
+      width: 100%;
+      min-height: 320px;
+      border: none;
+      resize: vertical;
+      padding: 16px;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: .92rem;
+      line-height: 1.5;
+      outline: none;
+      background: #fbfbfb;
+      color: var(--text)
+    }
+
+    .output-box {
+      border-top: 2px solid var(--line);
+      padding: 12px 14px;
+      background: #f8f9fa
+    }
+
+    .output-box pre {
+      margin-top: 8px;
+      white-space: pre-wrap;
+      font-family: 'Courier New', Consolas, monospace;
+      font-size: .92rem;
+      line-height: 1.45
+    }
+
+    @media (max-width:960px) {
+      .main-container {
+        flex-direction: column
+      }
+
+      .slides-panel,
+      .explanation-panel {
+        width: 100%;
+        height: 50%
+      }
+
+      .slide-content {
+        padding: 20px 20px 90px
+      }
+
+      .explanation-panel {
+        padding: 24px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="main-container">
+    <div class="slides-panel">
+      <div class="slide-header">
+        <h1>Student Opportunity Matcher</h1>
+        <p>Python Class</p>
+      </div>
+      <div class="slide-content">
+        <div class="floating-element" style="top:10%;left:8%">🎯</div>
+        <div class="floating-element" style="top:18%;right:12%">📊</div>
+        <div class="floating-element" style="bottom:24%;left:18%">🏫</div>
+        <div class="floating-element" style="bottom:12%;right:18%">🚀</div>
+
+        <section class="slide active" id="slide-1">
+          <h2>Student Opportunity Matcher</h2>
+          <h3>Python Pop-up Class</h3>
+          <p>Hari ini kamu akan membuat program Python yang membantu membaca data siswa dan mencocokkan mereka dengan
+            peluang yang sesuai.</p>
+          <h4>Apa yang akan kamu buat?</h4>
+          <div class="metrics">
+            <div class="metric-box"><strong>📊</strong><span>Mengurutkan data siswa berdasarkan skor</span></div>
+            <div class="metric-box"><strong>🎯</strong><span>Memberi kategori rekomendasi</span></div>
+            <div class="metric-box"><strong>🔍</strong><span>Mencari data siswa tertentu</span></div>
+            <div class="metric-box"><strong>🚀</strong><span>Menambahkan satu fitur upgrade</span></div>
+          </div>
+        </section>
+
+        <section class="slide" id="slide-2">
+          <h3>Kenapa kita bikin ini?</h3>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🏫</div>
+              <h4>Dekat dengan dunia sekolah</h4>
+              <p>Data siswa sering dipakai untuk melihat progress, kebutuhan bantuan, atau peluang pengembangan.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">📊</div>
+              <h4>Data jadi lebih rapi</h4>
+              <p>Program bisa membantu mengurutkan data yang awalnya acak menjadi ranking yang mudah dibaca.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🧠</div>
+              <h4>Melatih logika data</h4>
+              <p>Kamu akan belajar bagaimana data bisa diproses menjadi informasi yang berguna.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🚀</div>
+              <h4>Bisa jadi mini system</h4>
+              <p>Dari ranking sederhana, program bisa dikembangkan menjadi matcher, search tool, atau recommendation
+                system.</p>
+            </div>
+          </div>
+          <p class="mini-note">Big idea: coding bisa membantu kita membaca data dan membuat keputusan dengan lebih
+            cepat.</p>
+        </section>
+
+        <section class="slide" id="slide-3">
+          <h3>Skill yang akan kamu pakai</h3>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">📦</div>
+              <h4>List</h4>
+              <p>Menyimpan banyak data siswa dalam satu variable.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🗂️</div>
+              <h4>Dictionary</h4>
+              <p>Menyimpan informasi tiap siswa, seperti <strong>name</strong> dan <strong>score</strong>.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🔃</div>
+              <h4>Sorting</h4>
+              <p>Mengurutkan data siswa dari skor tertinggi ke terendah.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🔁</div>
+              <h4>Loop</h4>
+              <p>Menampilkan setiap data siswa satu per satu.</p>
+            </div>
+          </div>
+          <p class="mini-note">Target akhir: programmu bisa membaca data siswa, mengurutkan skor, lalu menampilkan hasil
+            yang mudah dipahami.</p>
+        </section>
+
+        <section class="slide" id="slide-4">
+          <h3>Data apa yang dibutuhkan?</h3>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">👤</div>
+              <h4>Name</h4>
+              <p>Nama siswa yang akan ditampilkan di ranking.</p>
+              <p><strong>Contoh:</strong> Alya</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">⭐</div>
+              <h4>Score</h4>
+              <p>Skor yang digunakan untuk mengurutkan siswa.</p>
+              <p><strong>Contoh:</strong> 82</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">📋</div>
+              <h4>Student Data</h4>
+              <p>Gabungan nama dan skor untuk beberapa siswa.</p>
+              <p><strong>Contoh:</strong> list of dictionaries</p>
+            </div>
+          </div>
+          <p class="mini-note">Program akan memakai data ini untuk membuat ranking dan rekomendasi.</p>
+        </section>
+
+        <section class="slide" id="slide-5">
+          <h3>Kenalan dengan list dan dictionary</h3>
+          <p>Kita akan menyimpan beberapa data siswa dalam satu list. Setiap siswa disimpan sebagai dictionary.</p>
+          <div class="code-block">
+            <pre>students = [
+    {"name": "Alya", "score": 82},
+    {"name": "Bima", "score": 75},
+    {"name": "Citra", "score": 91},
+    {"name": "Darren", "score": 68},
+    {"name": "Eka", "score": 88}
+]</pre>
+          </div>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">[]</div>
+              <h4>List</h4>
+              <p>Menyimpan banyak siswa dalam satu variable.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">{}</div>
+              <h4>Dictionary</h4>
+              <p>Menyimpan detail satu siswa: name dan score.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" id="slide-6">
+          <h3>Dari data acak ke ranking</h3>
+          <p>Data awal belum tentu urut. Dengan sorting, kita bisa mengubah data acak menjadi ranking berdasarkan skor.
+          </p>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Data awal</th>
+                  <th>Score</th>
+                  <th>Setelah sorting</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Alya</td>
+                  <td>82</td>
+                  <td>Citra</td>
+                  <td>91</td>
+                </tr>
+                <tr>
+                  <td>Bima</td>
+                  <td>75</td>
+                  <td>Eka</td>
+                  <td>88</td>
+                </tr>
+                <tr>
+                  <td>Citra</td>
+                  <td>91</td>
+                  <td>Alya</td>
+                  <td>82</td>
+                </tr>
+                <tr>
+                  <td>Darren</td>
+                  <td>68</td>
+                  <td>Bima</td>
+                  <td>75</td>
+                </tr>
+                <tr>
+                  <td>Eka</td>
+                  <td>88</td>
+                  <td>Darren</td>
+                  <td>68</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="mini-note">Sorting membantu kita melihat urutan data dari skor tertinggi ke terendah.</p>
+        </section>
+
+        <section class="slide" id="slide-7">
+          <h3>Mainkan data siswa</h3>
+          <p>Sebelum masuk ke Python, coba lihat bagaimana perubahan skor memengaruhi ranking.</p>
+          <div class="interactive-sorter">
+            <div class="slider-row"><label>Alya <span id="scoreAlya">82</span></label><input type="range" min="0"
+                max="100" value="82" id="sliderAlya" oninput="updateStudentRanking()"></div>
+            <div class="slider-row"><label>Bima <span id="scoreBima">75</span></label><input type="range" min="0"
+                max="100" value="75" id="sliderBima" oninput="updateStudentRanking()"></div>
+            <div class="slider-row"><label>Citra <span id="scoreCitra">91</span></label><input type="range" min="0"
+                max="100" value="91" id="sliderCitra" oninput="updateStudentRanking()"></div>
+            <div class="slider-row"><label>Darren <span id="scoreDarren">68</span></label><input type="range" min="0"
+                max="100" value="68" id="sliderDarren" oninput="updateStudentRanking()"></div>
+            <div class="slider-row"><label>Eka <span id="scoreEka">88</span></label><input type="range" min="0"
+                max="100" value="88" id="sliderEka" oninput="updateStudentRanking()"></div>
+            <div class="ranking-preview">
+              <h4>Ranking Preview</h4>
+              <ol id="rankingList"></ol>
+            </div>
+          </div>
+          <p class="mini-note">Ubah skor siswa, lalu lihat bagaimana ranking berubah secara otomatis.</p>
+        </section>
+
+        <section class="slide" id="slide-8">
+          <h3>Bagaimana program memberi rekomendasi?</h3>
+          <p>Setelah ranking dibuat, kita bisa menambahkan kategori berdasarkan skor.</p>
+          <div class="data-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Score</th>
+                  <th>Category</th>
+                  <th>Artinya</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>≥ 85</td>
+                  <td><span class="pill healthy">Competition Ready</span></td>
+                  <td>Siswa siap untuk peluang atau tantangan tingkat lanjut.</td>
+                </tr>
+                <tr>
+                  <td>70–84</td>
+                  <td><span class="pill moderate">Mentoring Candidate</span></td>
+                  <td>Siswa cukup baik dan bisa berkembang dengan mentoring.</td>
+                </tr>
+                <tr>
+                  <td>&lt; 70</td>
+                  <td><span class="pill warning">Needs Support</span></td>
+                  <td>Siswa membutuhkan pendampingan tambahan.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="mini-note">Ranking menunjukkan urutan. Category membantu memberi tindak lanjut.</p>
+        </section>
+
+        <section class="slide" id="slide-9">
+          <h3>Coba jalankan base program</h3>
+          <p>Sekarang kita ubah proses ranking menjadi kode Python.</p>
+          <div class="python-playground">
+            <div class="playground-toolbar">
+              <strong>Student Opportunity Matcher - Base Code</strong>
+              <div>
+                <button class="run-btn" onclick="runBaseCode()">▶ Run code</button>
+                <button class="reset-btn" onclick="resetBaseCode()">↺ Reset</button>
+              </div>
+            </div>
+            <textarea id="baseCodeEditor" spellcheck="false">students = [
+    {"name": "Alya", "score": 82},
+    {"name": "Bima", "score": 75},
+    {"name": "Citra", "score": 91},
+    {"name": "Darren", "score": 68},
+    {"name": "Eka", "score": 88}
+]
+
+sorted_students = sorted(students, key=lambda student: student["score"], reverse=True)
+
+print("=== Student Ranking ===")
+for student in sorted_students:
+    print(student["name"], "-", student["score"])</textarea>
+            <div class="output-box"><strong>Output:</strong>
+              <pre id="baseCodeOutput">Klik “Run code” untuk melihat hasilnya.</pre>
+            </div>
+          </div>
+          <p class="mini-note">Tantangan cepat: ubah skor salah satu siswa, lalu lihat apakah ranking berubah.</p>
+        </section>
+
+        <section class="slide" id="slide-10">
+          <h3>Test your program</h3>
+          <p>Program yang bagus bukan hanya bisa jalan, tapi juga tetap benar saat data berubah.</p>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">⬆️</div>
+              <h4>Naikkan skor</h4>
+              <p>Ubah skor Bima menjadi 95. Apakah Bima naik ke ranking pertama?</p>
+              <div class="code-block compact">
+                <pre>{"name": "Bima", "score": 95}</pre>
+              </div>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">➕</div>
+              <h4>Tambah siswa</h4>
+              <p>Tambahkan siswa baru dan lihat apakah program tetap bisa mengurutkan.</p>
+              <div class="code-block compact">
+                <pre>{"name": "Fira", "score": 86}</pre>
+              </div>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🔁</div>
+              <h4>Jalankan ulang</h4>
+              <p>Setelah data diubah, run code lagi dan cek output-nya.</p>
+            </div>
+          </div>
+          <p class="mini-note">Testing membantu kamu memastikan sorting bekerja sesuai data terbaru.</p>
+        </section>
+
+        <section class="slide" id="slide-11">
+          <h3>Pilih upgrade programmu</h3>
+          <p>Base program sudah bisa membuat ranking. Sekarang pilih satu upgrade agar programmu lebih berguna.</p>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🎯</div>
+              <h4>Category Matcher</h4>
+              <p>Memberikan kategori rekomendasi berdasarkan skor siswa.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🔍</div>
+              <h4>Student Search</h4>
+              <p>Mencari data siswa tertentu berdasarkan nama.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🏆</div>
+              <h4>Top 3 Recommendation</h4>
+              <p>Menampilkan tiga siswa dengan skor tertinggi secara otomatis.</p>
+            </div>
+          </div>
+          <p class="mini-note">Kamu tidak perlu membuat semuanya. Pilih satu upgrade yang paling ingin kamu coba.</p>
+        </section>
+
+        <section class="slide" id="slide-12">
+          <h3>Upgrade 1: Category Matcher</h3>
+          <p>Buat programmu memberi kategori rekomendasi berdasarkan skor siswa.</p>
+          <div class="code-block">
+            <pre>for student in sorted_students:
+    score = student["score"]
+
+    if score >= 85:
+        category = "Competition Ready"
+    elif score >= 70:
+        category = "Mentoring Candidate"
+    else:
+        category = "Needs Support"
+
+    print(student["name"], "-", score, "-", category)</pre>
+          </div>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🏆</div>
+              <h4>Competition Ready</h4>
+              <p>Skor 85 ke atas.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🤝</div>
+              <h4>Mentoring Candidate</h4>
+              <p>Skor 70 sampai 84.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🧩</div>
+              <h4>Needs Support</h4>
+              <p>Skor di bawah 70.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" id="slide-13">
+          <h3>Upgrade 2: Student Search</h3>
+          <p>Buat programmu bisa mencari data siswa tertentu berdasarkan nama.</p>
+          <div class="code-block">
+            <pre>search_name = "Eka"
+found = False
+
+for student in sorted_students:
+    if student["name"].lower() == search_name.lower():
+        print("Student found:")
+        print("Name:", student["name"])
+        print("Score:", student["score"])
+        found = True
+
+if not found:
+    print("Student not found.")</pre>
+          </div>
+          <p class="mini-note">Search berguna saat data siswa semakin banyak dan kita ingin menemukan satu data dengan
+            cepat.</p>
+        </section>
+
+        <section class="slide" id="slide-14">
+          <h3>Upgrade 3: Top 3 Recommendation</h3>
+          <p>Buat programmu menampilkan tiga siswa dengan skor tertinggi secara otomatis.</p>
+          <div class="code-block">
+            <pre>top_students = sorted_students[:3]
+
+print("=== Top 3 Recommended Students ===")
+for student in top_students:
+    print(student["name"], "-", student["score"], "- Recommended for advanced opportunity")</pre>
+          </div>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🥇</div>
+              <h4>Rank 1</h4>
+              <p>Siswa dengan skor tertinggi.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🥈</div>
+              <h4>Rank 2</h4>
+              <p>Siswa dengan skor tertinggi kedua.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🥉</div>
+              <h4>Rank 3</h4>
+              <p>Siswa dengan skor tertinggi ketiga.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" id="slide-15">
+          <h3>Saatnya upgrade programmu 🚀</h3>
+          <p>Pilih satu upgrade yang ingin kamu buat, lalu tambahkan ke base program.</p>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🎯</div>
+              <h4>Category Matcher</h4>
+              <p>Cocok kalau kamu ingin membuat program yang memberi rekomendasi.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🔍</div>
+              <h4>Student Search</h4>
+              <p>Cocok kalau kamu ingin membuat fitur pencarian data.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🏆</div>
+              <h4>Top 3 Recommendation</h4>
+              <p>Cocok kalau kamu ingin menampilkan prioritas siswa secara cepat.</p>
+            </div>
+          </div>
+          <div class="example-box">
+            <h4>Target selesai</h4>
+            <ul>
+              <li>Program bisa dijalankan tanpa error.</li>
+              <li>Output terlihat jelas.</li>
+              <li>Kamu bisa menjelaskan fitur yang kamu tambahkan.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="slide" id="slide-16">
+          <h3>Guide presentasi singkat 🎤</h3>
+          <p>Saat mempresentasikan programmu, fokus pada data, fitur, dan cara program bekerja.</p>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">1️⃣</div>
+              <h4>Problem</h4>
+              <p>Program ini membantu user membaca data siswa dengan lebih cepat.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">2️⃣</div>
+              <h4>Data</h4>
+              <p>Program memakai nama siswa dan skor sebagai data utama.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">3️⃣</div>
+              <h4>Logic</h4>
+              <p>Program mengurutkan data berdasarkan skor menggunakan sorting.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">4️⃣</div>
+              <h4>Upgrade</h4>
+              <p>Jelaskan fitur tambahan yang kamu pilih dan kenapa fitur itu berguna.</p>
+            </div>
+          </div>
+          <div class="example-box">
+            <h4>Template presentasi</h4>
+            <p>“Program saya bernama <strong>Student Opportunity Matcher</strong>. Program ini membantu user membaca
+              data siswa berdasarkan nama dan skor. Program mengurutkan siswa dari skor tertinggi ke terendah. Saya
+              menambahkan fitur <strong>...</strong> agar program lebih berguna karena <strong>...</strong>.”</p>
+          </div>
+        </section>
+
+        <section class="slide" id="slide-17">
+          <h3>Wrap up: apa yang sudah kamu buat?</h3>
+          <p>Hari ini kamu sudah membuat mini program Python yang membantu membaca dan mengolah data siswa.</p>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">📥</div>
+              <h4>Input</h4>
+              <p>Program membaca data siswa berupa name dan score.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">⚙️</div>
+              <h4>Process</h4>
+              <p>Program mengurutkan data berdasarkan skor.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">📤</div>
+              <h4>Output</h4>
+              <p>Program menampilkan ranking atau rekomendasi.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🚀</div>
+              <h4>Upgrade</h4>
+              <p>Kamu menambahkan fitur agar program lebih berguna.</p>
+            </div>
+          </div>
+          <p class="mini-note">Coding bukan hanya tentang menulis baris kode, tapi membuat data menjadi informasi yang
+            mudah dipahami.</p>
+        </section>
+      </div>
+      <div class="navigation">
+        <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+        <div class="slide-indicator"><span id="currentSlide">1</span> / <span id="totalSlides">17</span></div>
+        <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+      </div>
+    </div>
+
+    <div class="explanation-panel">
+      <section class="explanation active" id="explanation-1">
+        <h3>Selamat datang di Student Opportunity Matcher 🎯</h3>
+        <p>Di sesi ini, kamu akan membuat mini program Python yang membantu sekolah membaca data siswa dengan lebih
+          cepat.</p>
+        <div class="info-box">
+          <h4>Apa yang akan dibuat?</h4>
+          <p>Program ini akan membaca data siswa, mengurutkan skor dari yang tertinggi, lalu membantu menentukan
+            rekomendasi sederhana.</p>
+          <ul>
+            <li>Menggunakan data siswa yang berisi nama dan skor.</li>
+            <li>Mengurutkan siswa berdasarkan skor.</li>
+            <li>Menampilkan ranking dengan output yang mudah dibaca.</li>
+            <li>Menambahkan fitur upgrade agar program lebih berguna.</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Contoh hasil akhir</h4>
+          <pre>=== Student Ranking ===
+Citra - 91
+Eka - 88
+Alya - 82
+Bima - 75
+Darren - 68</pre>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-2">
+        <h3>Coding untuk membaca data</h3>
+        <p>Kadang data mentah sulit dipahami kalau masih acak. Dengan program, kita bisa mengolah data agar lebih mudah
+          dibaca.</p>
+        <div class="info-box">
+          <h4>Dari data ke insight</h4>
+          <ul>
+            <li>Data siswa bisa diurutkan berdasarkan skor.</li>
+            <li>Ranking membantu kita melihat siapa yang berada di posisi atas.</li>
+            <li>Kategori membantu memberi rekomendasi tindak lanjut.</li>
+            <li>Search membantu menemukan data siswa tertentu dengan cepat.</li>
+          </ul>
+        </div>
+        <p>Jadi, kamu tidak hanya menulis kode. Kamu sedang membuat alat kecil untuk membantu membaca informasi.</p>
+      </section>
+
+      <section class="explanation" id="explanation-3">
+        <h3>Cara membaca kode data</h3>
+        <p>Saat melihat kode yang berisi banyak data, jangan langsung panik. Baca strukturnya pelan-pelan.</p>
+        <div class="info-box">
+          <h4>Strategi membaca kode</h4>
+          <ul>
+            <li><strong>List</strong> biasanya ditandai dengan tanda kurung siku <code>[]</code>.</li>
+            <li><strong>Dictionary</strong> biasanya ditandai dengan kurung kurawal <code>{}</code>.</li>
+            <li><strong>Key</strong> adalah nama data, seperti <code>"name"</code> atau <code>"score"</code>.</li>
+            <li><strong>Value</strong> adalah isi datanya, seperti <code>"Alya"</code> atau <code>82</code>.</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Mindset saat coding</h4>
+          <ul>
+            <li>Data apa yang disimpan?</li>
+            <li>Bagian mana yang menjadi dasar sorting?</li>
+            <li>Output apa yang ingin ditampilkan?</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-4">
+        <h3>Mulai dari data sederhana</h3>
+        <p>Setiap program pengolahan data membutuhkan data awal. Di Student Opportunity Matcher, kita mulai dari dua
+          data sederhana: nama siswa dan skor siswa.</p>
+        <div class="example-box">
+          <h4>Contoh data satu siswa</h4>
+          <pre>{"name": "Alya", "score": 82}</pre>
+        </div>
+        <div class="info-box">
+          <h4>Kenapa pakai name dan score?</h4>
+          <ul>
+            <li><code>name</code> membantu kita mengenali siswa.</li>
+            <li><code>score</code> menjadi dasar untuk mengurutkan data.</li>
+            <li>Dengan dua data ini, kita sudah bisa membuat ranking sederhana.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-5">
+        <h3>Membaca struktur data</h3>
+        <p>Struktur data ini terlihat panjang, tapi sebenarnya polanya berulang.</p>
+        <div class="info-box">
+          <h4>Cara membacanya</h4>
+          <ul>
+            <li><code>students</code> adalah list.</li>
+            <li>Di dalam list, ada beberapa dictionary.</li>
+            <li>Setiap dictionary mewakili satu siswa.</li>
+            <li>Setiap siswa punya <code>name</code> dan <code>score</code>.</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Contoh satu item</h4>
+          <pre>{"name": "Citra", "score": 91}</pre>
+          <p>Artinya: nama siswa adalah Citra, dan skornya 91.</p>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-6">
+        <h3>Apa itu sorting?</h3>
+        <p>Sorting adalah proses mengurutkan data berdasarkan aturan tertentu. Dalam proyek ini, aturan sorting-nya
+          adalah skor siswa.</p>
+        <div class="info-box">
+          <h4>Yang perlu dipahami</h4>
+          <ul>
+            <li>Data awal bisa acak.</li>
+            <li>Program mengambil skor dari setiap siswa.</li>
+            <li>Skor tertinggi akan ditempatkan di atas.</li>
+            <li>Hasil akhirnya menjadi ranking yang lebih mudah dibaca.</li>
+          </ul>
+        </div>
+        <p>Setelah data terurut, kita bisa lebih mudah membuat rekomendasi atau mengambil beberapa siswa teratas.</p>
+      </section>
+
+      <section class="explanation" id="explanation-7">
+        <h3>Mainkan skornya</h3>
+        <p>Sebelum masuk ke Python, kita coba dulu hubungan antara skor dan ranking secara visual. Gunakan slider untuk
+          melihat bagaimana perubahan skor bisa memengaruhi urutan siswa.</p>
+        <div class="info-box">
+          <h4>Yang perlu kamu amati</h4>
+          <ul>
+            <li>Kalau skor Bima naik, apakah posisinya berubah?</li>
+            <li>Siapa yang berada di ranking pertama?</li>
+            <li>Apa yang terjadi kalau dua siswa punya skor yang mirip?</li>
+            <li>Kenapa sorting membantu kita membaca data lebih cepat?</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Cara eksplorasi</h4>
+          <p>Mulai dari skor default, lalu ubah satu skor saja. Bandingkan ranking sebelum dan sesudah. Setelah kamu
+            paham polanya, kita akan menerjemahkan proses yang sama ke Python.</p>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-8">
+        <h3>Dari skor menjadi kategori</h3>
+        <p>Sorting membantu kita mengurutkan siswa. Conditional logic membantu kita memberi kategori berdasarkan skor.
+        </p>
+        <div class="info-box">
+          <h4>Cara berpikirnya</h4>
+          <ul>
+            <li>Jika skor tinggi, siswa bisa masuk kategori <strong>Competition Ready</strong>.</li>
+            <li>Jika skor cukup, siswa bisa masuk kategori <strong>Mentoring Candidate</strong>.</li>
+            <li>Jika skor masih rendah, siswa bisa masuk kategori <strong>Needs Support</strong>.</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Contoh logic kecil</h4>
+          <pre>if score >= 85:
+    category = "Competition Ready"
+elif score >= 70:
+    category = "Mentoring Candidate"
+else:
+    category = "Needs Support"</pre>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-9">
+        <h3>Saatnya eksperimen dengan Python</h3>
+        <p>Di slide sebelumnya, kamu melihat ranking berubah secara visual. Sekarang, kita menggunakan Python untuk
+          melakukan hal yang sama.</p>
+        <div class="info-box">
+          <h4>Yang perlu dicoba</h4>
+          <ul>
+            <li>Ubah skor Bima menjadi <code>95</code>. Apa yang terjadi?</li>
+            <li>Ubah skor Darren menjadi <code>85</code>. Apakah posisinya naik?</li>
+            <li>Tambahkan satu siswa baru ke dalam data.</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Bagian kode paling penting</h4>
+          <pre>sorted_students = sorted(students, key=lambda student: student["score"], reverse=True)</pre>
+          <p>Baris ini mengurutkan siswa berdasarkan skor dari tertinggi ke terendah.</p>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-10">
+        <h3>Kenapa perlu testing?</h3>
+        <p>Output pertama yang muncul belum cukup untuk membuktikan bahwa program sudah benar. Kita perlu mencoba
+          beberapa perubahan data.</p>
+        <div class="info-box">
+          <h4>Checklist testing</h4>
+          <ul>
+            <li>Apakah ranking berubah saat skor berubah?</li>
+            <li>Apakah siswa dengan skor tertinggi muncul di atas?</li>
+            <li>Apakah program tetap berjalan saat data baru ditambahkan?</li>
+            <li>Apakah output mudah dibaca?</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Kalau hasilnya error?</h4>
+          <ul>
+            <li>Cek koma antar dictionary.</li>
+            <li>Cek tanda kurung <code>[]</code> dan <code>{}</code>.</li>
+            <li>Cek nama key: harus sama, misalnya <code>"score"</code>.</li>
+            <li>Cek indentation pada loop.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-11">
+        <h3>Dari ranking ke mini system</h3>
+        <p>Upgrade membuat programmu terasa lebih lengkap. Kamu bisa memilih upgrade sesuai kemampuan dan ide yang ingin
+          ditunjukkan.</p>
+        <div class="info-box">
+          <h4>Cara memilih upgrade</h4>
+          <ul>
+            <li><strong>Category Matcher:</strong> cocok kalau kamu ingin memberi rekomendasi dari skor.</li>
+            <li><strong>Student Search:</strong> cocok kalau kamu ingin membuat fitur pencarian.</li>
+            <li><strong>Top 3 Recommendation:</strong> cocok kalau kamu ingin menampilkan prioritas dengan cepat.</li>
+          </ul>
+        </div>
+        <p>Upgrade yang bagus bukan yang paling panjang kodenya, tapi yang membuat program lebih mudah dipahami atau
+          lebih berguna.</p>
+      </section>
+
+      <section class="explanation" id="explanation-12">
+        <h3>Ranking + kategori</h3>
+        <p>Category Matcher membuat program tidak hanya mengurutkan data, tapi juga memberi rekomendasi sederhana.</p>
+        <div class="info-box">
+          <h4>Kenapa ini berguna?</h4>
+          <ul>
+            <li>Ranking menunjukkan urutan siswa.</li>
+            <li>Kategori membantu memberi tindak lanjut.</li>
+            <li>Program bisa membantu user membaca data lebih cepat.</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Contoh output</h4>
+          <pre>Citra - 91 - Competition Ready
+Eka - 88 - Competition Ready
+Alya - 82 - Mentoring Candidate
+Bima - 75 - Mentoring Candidate
+Darren - 68 - Needs Support</pre>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-13">
+        <h3>Mencari data tertentu</h3>
+        <p>Student Search membuat program lebih interaktif. User bisa mencari siswa tertentu tanpa membaca seluruh
+          ranking.</p>
+        <div class="info-box">
+          <h4>Bagian penting</h4>
+          <ul>
+            <li><code>search_name</code> menyimpan nama yang ingin dicari.</li>
+            <li><code>found</code> membantu mengecek apakah siswa ditemukan.</li>
+            <li><code>lower()</code> membuat pencarian tidak sensitif huruf besar dan kecil.</li>
+            <li><code>if not found</code> menampilkan pesan jika siswa tidak ada.</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Challenge kecil</h4>
+          <p>Ganti <code>search_name</code> menjadi nama lain. Apa yang terjadi jika nama tersebut tidak ada di data?
+          </p>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-14">
+        <h3>Mengambil data teratas</h3>
+        <p>Setelah data sudah diurutkan, kita bisa mengambil tiga data pertama sebagai Top 3.</p>
+        <div class="info-box">
+          <h4>Bagian penting</h4>
+          <ul>
+            <li><code>sorted_students</code> sudah berisi data yang terurut.</li>
+            <li><code>[:3]</code> mengambil tiga data pertama dari list.</li>
+            <li>Loop digunakan untuk menampilkan setiap siswa di Top 3.</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Contoh output</h4>
+          <pre>=== Top 3 Recommended Students ===
+Citra - 91 - Recommended for advanced opportunity
+Eka - 88 - Recommended for advanced opportunity
+Alya - 82 - Recommended for advanced opportunity</pre>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-15">
+        <h3>Checklist sebelum selesai</h3>
+        <p>Sebelum lanjut ke presentasi singkat, pastikan programmu sudah berjalan dan output-nya masuk akal.</p>
+        <div class="info-box">
+          <h4>Cek programmu</h4>
+          <ul>
+            <li>Apakah tidak ada error saat dijalankan?</li>
+            <li>Apakah ranking siswa muncul?</li>
+            <li>Apakah upgrade yang kamu pilih sudah terlihat di output?</li>
+            <li>Apakah kamu sudah mencoba minimal dua perubahan data?</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Siapkan 3 kalimat</h4>
+          <ul>
+            <li>Fitur yang saya tambahkan adalah...</li>
+            <li>Fitur ini berguna karena...</li>
+            <li>Bagian kode yang paling penting adalah...</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-16">
+        <h3>Pertanyaan seputar program</h3>
+        <p>Gunakan pertanyaan ini untuk latihan menjelaskan programmu.</p>
+        <div class="info-box">
+          <h4>Pertanyaan dasar</h4>
+          <ul>
+            <li>Apa tujuan dari Student Opportunity Matcher?</li>
+            <li>Data apa saja yang dibutuhkan program?</li>
+            <li>Apa arti <code>name</code> dan <code>score</code>?</li>
+            <li>Apa output utama dari program ini?</li>
+          </ul>
+        </div>
+        <div class="info-box">
+          <h4>Pertanyaan logic</h4>
+          <ul>
+            <li>Kenapa data perlu diurutkan?</li>
+            <li>Bagian kode mana yang menentukan ranking?</li>
+            <li>Kenapa kita memakai <code>reverse=True</code>?</li>
+            <li>Apa fungsi dari loop dalam program ini?</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Pertanyaan upgrade</h4>
+          <ul>
+            <li>Upgrade apa yang kamu pilih?</li>
+            <li>Kenapa kamu memilih upgrade itu?</li>
+            <li>Bagaimana upgrade itu membuat program lebih berguna?</li>
+            <li>Kalau program ini dikembangkan lagi, fitur apa yang ingin kamu tambahkan?</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-17">
+        <h3>Refleksi singkat</h3>
+        <p>Sebelum selesai, pikirkan bagaimana programmu bekerja dan bagaimana program ini bisa dikembangkan.</p>
+        <div class="info-box">
+          <h4>Jawab dalam hati atau diskusikan</h4>
+          <ul>
+            <li>Bagian mana dari program yang paling penting?</li>
+            <li>Data apa yang paling memengaruhi ranking?</li>
+            <li>Upgrade apa yang kamu pilih, dan kenapa?</li>
+            <li>Bagaimana program ini bisa membantu sekolah atau guru?</li>
+          </ul>
+        </div>
+        <div class="example-box">
+          <h4>Ide pengembangan</h4>
+          <ul>
+            <li>Menambahkan lebih banyak data siswa.</li>
+            <li>Menambahkan kategori berdasarkan lebih dari satu nilai.</li>
+            <li>Membuat dashboard visual sederhana.</li>
+            <li>Mengubah data menjadi rekomendasi otomatis.</li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    let currentSlideIndex = 1;
+    const totalSlides = 17;
+    let pyodideReady = null;
+    const defaultBaseCode = `students = [
+    {"name": "Alya", "score": 82},
+    {"name": "Bima", "score": 75},
+    {"name": "Citra", "score": 91},
+    {"name": "Darren", "score": 68},
+    {"name": "Eka", "score": 88}
+]
+
+sorted_students = sorted(students, key=lambda student: student["score"], reverse=True)
+
+print("=== Student Ranking ===")
+for student in sorted_students:
+    print(student["name"], "-", student["score"])`;
+
+    function updateProgressBar() {
+      document.getElementById('progressFill').style.width = ((currentSlideIndex / totalSlides) * 100) + '%';
+    }
+
+    function showSlide(index) {
+      document.querySelectorAll('.slide').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.explanation').forEach(el => el.classList.remove('active'));
+      const slide = document.getElementById(`slide-${index}`);
+      const explanation = document.getElementById(`explanation-${index}`);
+      if (slide) slide.classList.add('active');
+      if (explanation) explanation.classList.add('active');
+      document.querySelector('.slide-content').scrollTop = 0;
+      document.querySelector('.explanation-panel').scrollTop = 0;
+      document.getElementById('currentSlide').textContent = index;
+      document.getElementById('totalSlides').textContent = totalSlides;
+      document.getElementById('prevBtn').disabled = index === 1;
+      document.getElementById('nextBtn').disabled = index === totalSlides;
+      updateProgressBar();
+      if (index === 7) updateStudentRanking();
+    }
+
+    function changeSlide(direction) {
+      currentSlideIndex += direction;
+      if (currentSlideIndex < 1) currentSlideIndex = 1;
+      if (currentSlideIndex > totalSlides) currentSlideIndex = totalSlides;
+      showSlide(currentSlideIndex);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') changeSlide(1);
+      if (e.key === 'ArrowLeft') changeSlide(-1);
+    });
+
+    function updateStudentRanking() {
+      const students = [
+        { name: 'Alya', score: Number(document.getElementById('sliderAlya').value), labelId: 'scoreAlya' },
+        { name: 'Bima', score: Number(document.getElementById('sliderBima').value), labelId: 'scoreBima' },
+        { name: 'Citra', score: Number(document.getElementById('sliderCitra').value), labelId: 'scoreCitra' },
+        { name: 'Darren', score: Number(document.getElementById('sliderDarren').value), labelId: 'scoreDarren' },
+        { name: 'Eka', score: Number(document.getElementById('sliderEka').value), labelId: 'scoreEka' }
+      ];
+      students.forEach(student => {
+        document.getElementById(student.labelId).textContent = student.score;
+      });
+      const sorted = [...students].sort((a, b) => b.score - a.score);
+      const rankingList = document.getElementById('rankingList');
+      rankingList.innerHTML = '';
+      sorted.forEach(student => {
+        const li = document.createElement('li');
+        li.textContent = `${student.name} - ${student.score}`;
+        rankingList.appendChild(li);
+      });
+    }
+
+    async function getPyodideInstance() {
+      if (!pyodideReady) {
+        pyodideReady = loadPyodide();
+      }
+      return pyodideReady;
+    }
+
+    async function runBaseCode() {
+      const output = document.getElementById('baseCodeOutput');
+      const editor = document.getElementById('baseCodeEditor');
+      output.textContent = 'Running...';
+      try {
+        const pyodide = await getPyodideInstance();
+        pyodide.runPython(`
+import sys
+from io import StringIO
+sys.stdout = StringIO()
+`);
+        await pyodide.runPythonAsync(editor.value);
+        const result = pyodide.runPython('sys.stdout.getvalue()');
+        output.textContent = result || '(No output)';
+      } catch (error) {
+        output.textContent = 'Error:\n' + error.message;
+      }
+    }
+
+    function resetBaseCode() {
+      document.getElementById('baseCodeEditor').value = defaultBaseCode;
+      document.getElementById('baseCodeOutput').textContent = 'Klik “Run code” untuk melihat hasilnya.';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      showSlide(1);
+      gsap.fromTo('.slides-panel', { x: -50, opacity: 0 }, { x: 0, opacity: 1, duration: .6, ease: 'power2.out' });
+      gsap.fromTo('.explanation-panel', { x: 50, opacity: 0 }, { x: 0, opacity: 1, duration: .6, ease: 'power2.out', delay: .15 });
+    });
+  </script>
+</body>
+
+</html>
