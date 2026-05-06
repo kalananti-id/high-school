@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python - Smart Money Advisor</title>
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💸%3C/text%3E%3C/svg%3E">
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      color: #2c3e50;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: #e9ecef;
+      z-index: 999;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #f39c12, #3498db);
+      transition: width 0.25s ease;
+    }
+
+    .main-container {
+      display: flex;
+      height: 100vh;
+    }
+
+    .slides-panel {
+      width: 50%;
+      background: #f8f9fa;
+      border-right: 2px solid #e9ecef;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .slide-header {
+      background: #fff;
+      padding: 20px;
+      border-bottom: 2px solid #e9ecef;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .slide-header h1 {
+      font-size: 1.45rem;
+      margin-bottom: 4px;
+    }
+
+    .slide-header p {
+      color: #6c757d;
+      font-size: 0.95rem;
+    }
+
+    .slide-content {
+      flex: 1;
+      padding: 24px 32px 96px;
+      overflow-y: auto;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 820px;
+    }
+
+    .slide.active {
+      display: block;
+    }
+
+    .slide h2 {
+      font-size: 2.35rem;
+      color: #0056b3;
+      margin-bottom: 18px;
+    }
+
+    .slide h3 {
+      font-size: 1.7rem;
+      color: #e67e22;
+      margin-bottom: 16px;
+    }
+
+    .slide p,
+    .slide li {
+      font-size: 1.12rem;
+      line-height: 1.65;
+      color: #495057;
+    }
+
+    .slide ul {
+      margin-left: 22px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .visual-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 18px;
+      margin: 22px 0;
+    }
+
+    .visual-card {
+      background: #fff;
+      border: 2px solid #dee2e6;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .visual-card h4 {
+      font-size: 1.02rem;
+      margin-bottom: 8px;
+      color: #0056b3;
+    }
+
+    .visual-icon {
+      font-size: 2.3rem;
+      margin-bottom: 8px;
+    }
+
+    .code-block {
+      background: #f8f9fa;
+      border: 2px solid #dee2e6;
+      border-radius: 10px;
+      padding: 18px;
+      overflow-x: auto;
+      margin: 18px 0;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      line-height: 1.45;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      color: #343a40;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 18px 0;
+      border: 2px solid #dee2e6;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e9ecef;
+      text-align: left;
+      font-size: 0.98rem;
+    }
+
+    .data-table th {
+      background: #0056b3;
+      color: #fff;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.86rem;
+      font-weight: 700;
+    }
+
+    .healthy {
+      background: #d1f5dd;
+      color: #0f6d33;
+    }
+
+    .moderate {
+      background: #fff4cc;
+      color: #8a6d00;
+    }
+
+    .warning {
+      background: #ffe0cc;
+      color: #a04400;
+    }
+
+    .risk {
+      background: #ffd6d6;
+      color: #a61b1b;
+    }
+
+    .muted {
+      background: #eceff1;
+      color: #455a64;
+    }
+
+    .navigation {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      padding: 12px 18px;
+      border-top: 2px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.04);
+    }
+
+    .nav-btn {
+      border: none;
+      background: #4a9eff;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background: #357abd;
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .slide-indicator {
+      color: #6c757d;
+      font-weight: 600;
+    }
+
+    .explanation-panel {
+      width: 50%;
+      background: #fff;
+      overflow-y: auto;
+      padding: 36px 38px;
+    }
+
+    .explanation {
+      display: none;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .explanation.active {
+      display: block;
+    }
+
+    .explanation h3 {
+      font-size: 1.8rem;
+      margin-bottom: 16px;
+      color: #2c3e50;
+    }
+
+    .explanation h4 {
+      margin: 22px 0 10px;
+      color: #34495e;
+      font-size: 1.18rem;
+    }
+
+    .explanation p,
+    .explanation li {
+      font-size: 1.08rem;
+      line-height: 1.78;
+      color: #333;
+    }
+
+    .explanation ul {
+      margin-left: 24px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .info-box,
+    .example-box,
+    .warning-box {
+      padding: 18px;
+      border-radius: 8px;
+      margin: 18px 0;
+    }
+
+    .info-box {
+      background: #f8f9fa;
+      border-left: 4px solid #4a9eff;
+    }
+
+    .example-box {
+      background: #eaf7eb;
+      border-left: 4px solid #4caf50;
+    }
+
+    .warning-box {
+      background: #fff4e5;
+      border-left: 4px solid #f39c12;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #0056b3, #4a9eff);
+      color: white;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 12px 28px rgba(0, 86, 179, 0.2);
+    }
+
+    .hero h2,
+    .hero h3,
+    .hero p {
+      color: white;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric-box {
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .metric-box strong {
+      display: block;
+      font-size: 1.4rem;
+    }
+
+    .mini-note {
+      font-size: 0.95rem !important;
+      color: #6c757d !important;
+    }
+
+    .slider-wrap {
+      display: grid;
+      gap: 16px;
+      margin: 18px 0;
+    }
+
+    .slider-row {
+      background: #fff;
+      border: 2px solid #dee2e6;
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .slider-row label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #34495e;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .live-card {
+      background: #fff;
+      border: 2px solid #dee2e6;
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 18px;
+    }
+
+    .status-output {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .scenario-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .scenario-buttons button,
+    .tabs button {
+      border: 1px solid #cfd8dc;
+      background: #fff;
+      padding: 10px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+      color: #34495e;
+    }
+
+    .scenario-buttons button.active,
+    .tabs button.active {
+      background: #0056b3;
+      color: #fff;
+      border-color: #0056b3;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 8px;
+      align-items: start;
+    }
+
+    .timeline .visual-card {
+      padding: 12px 14px;
+    }
+
+    .timeline .visual-card h4 {
+      margin-bottom: 4px;
+      font-size: 0.95rem;
+    }
+
+    .timeline .visual-card p {
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .time-badge {
+      background: #0056b3;
+      color: white;
+      border-radius: 10px;
+      padding: 8px 8px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.86rem;
+    }
+
+    .floating {
+      position: absolute;
+      opacity: 0.08;
+      font-size: 2rem;
+      pointer-events: none;
+    }
+
+    .f1 {
+      top: 14%;
+      left: 8%;
+    }
+
+    .f2 {
+      top: 22%;
+      right: 12%;
+    }
+
+    .f3 {
+      bottom: 21%;
+      left: 16%;
+    }
+
+    .f4 {
+      bottom: 14%;
+      right: 16%;
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .main-container {
+        flex-direction: column;
+      }
+
+      .slides-panel,
+      .explanation-panel {
+        width: 100%;
+        height: 50%;
+      }
+
+      .slide-content {
+        padding: 24px 22px 110px;
+      }
+
+      .explanation-panel {
+        padding: 24px 22px;
+      }
+
+      .slide h2 {
+        font-size: 2rem;
+      }
+    }
+
+    .python-playground {
+      background: #ffffff;
+      border: 2px solid #dee2e6;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      margin: 18px 0;
+    }
+
+    .playground-toolbar {
+      background: #f8f9fa;
+      border-bottom: 2px solid #dee2e6;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .run-btn,
+    .reset-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .run-btn {
+      background: #4a9eff;
+      color: white;
+    }
+
+    .reset-btn {
+      background: #e9ecef;
+      color: #2c3e50;
+    }
+
+    #baseCodeEditor {
+      width: 100%;
+      min-height: 285px;
+      border: none;
+      resize: vertical;
+      padding: 16px;
+      font-family: 'Courier New', Monaco, monospace;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      outline: none;
+      background: #fbfbfb;
+      color: #2c3e50;
+    }
+
+    .output-box {
+      border-top: 2px solid #dee2e6;
+      padding: 12px 14px;
+      background: #f8f9fa;
+    }
+
+    .output-box pre {
+      margin-top: 8px;
+      white-space: pre-wrap;
+      font-family: 'Courier New', Monaco, monospace;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div class="main-container">
+    <div class="slides-panel">
+      <div class="slide-header">
+        <h1>Smart Money Advisor Program</h1>
+        <p>Python Class</p>
+      </div>
+      <div class="slide-content">
+        <div class="floating f1">💸</div>
+        <div class="floating f2">📊</div>
+        <div class="floating f3">🧠</div>
+        <div class="floating f4">💡</div>
+
+        <section class="slide active" id="slide-1">
+          <div class="hero">
+            <h2>Smart Money Advisor</h2>
+            <h3>Python Pop-up Class</h3>
+            <p>Siswa membuat program sederhana untuk mengecek kondisi keuangan bulanan berdasarkan income, expense, dan
+              saving.</p><br>
+            <h4>Apa yang akan kamu buat?</h4>
+            <div class="metrics">
+              <div class="metric-box"><strong>📊</strong><span>Menghitung persentase pengeluaran</span></div>
+              <div class="metric-box"><strong>💰</strong><span>Menghitung persentase tabungan</span></div>
+              <div class="metric-box"><strong>🧠</strong><span>Menentukan status keuangan</span></div>
+              <div class="metric-box"><strong>🚀</strong><span>Menambahkan satu fitur upgrade</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" id="slide-2">
+          <h3>Kenapa kita bikin ini?</h3>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🎒</div>
+              <h4>Dekat dengan kehidupanmu</h4>
+              <p>Kamu bisa pakai contoh uang saku, tabungan, dan pengeluaran sehari-hari.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🧮</div>
+              <h4>Belajar berpikir logis</h4>
+              <p>Kamu akan mengubah aturan keuangan menjadi kondisi <code>if</code>, <code>elif</code>, dan
+                <code>else</code>.
+              </p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">📊</div>
+              <h4>Data jadi keputusan</h4>
+              <p>Programmu akan membaca angka, menghitung persentase, lalu menentukan status keuangan.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🚀</div>
+              <h4>Bisa jadi mini app</h4>
+              <p>Dari program sederhana, kamu bisa mengembangkannya menjadi advisor atau simulator.</p>
+            </div>
+          </div>
+          <p class="mini-note">Big idea: coding bisa membantu kita membuat keputusan yang lebih baik dari data.</p>
+        </section>
+
+        <section class="slide" id="slide-3">
+          <h3>Skill yang akan kamu pakai</h3>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">📦</div>
+              <h4>Variables</h4>
+              <p>Menyimpan data seperti <strong>income</strong>, <strong>expense</strong>, dan <strong>saving</strong>.
+              </p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">📊</div>
+              <h4>Ratio</h4>
+              <p>Menghitung persentase pengeluaran dan tabungan dari pemasukan.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🧠</div>
+              <h4>Decision Logic</h4>
+              <p>Menggunakan <strong>if-elif-else</strong> untuk menentukan status keuangan.</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🚀</div>
+              <h4>Upgrade</h4>
+              <p>Menambahkan fitur agar programmu lebih berguna untuk user.</p>
+            </div>
+          </div>
+          <p class="mini-note">Target akhir: programmu bisa membaca data, menghitung persentase, lalu memberi status
+            keuangan.</p>
+        </section>
+
+        <section class="slide" id="slide-4">
+          <h3>Data apa yang dibutuhkan?</h3>
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">💵</div>
+              <h4>Income</h4>
+              <p>Jumlah uang yang diterima dalam satu bulan.</p>
+              <p><strong>Contoh:</strong> 1000000</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🛒</div>
+              <h4>Expense</h4>
+              <p>Jumlah uang yang digunakan untuk kebutuhan atau keinginan.</p>
+              <p><strong>Contoh:</strong> 750000</p>
+            </div>
+            <div class="visual-card">
+              <div class="visual-icon">🏦</div>
+              <h4>Saving</h4>
+              <p>Jumlah uang yang disimpan atau ditabung.</p>
+              <p><strong>Contoh:</strong> 150000</p>
+            </div>
+          </div>
+          <p class="mini-note">Program akan memakai 3 data ini untuk menghitung kondisi keuangan user.</p>
+        </section>
+
+        <section class="slide" id="slide-5">
+          <h3>Dari nominal ke persentase</h3>
+          <p>
+            Nominal uang bisa berbeda-beda, tapi persentase membantu kita membandingkan kondisi dengan lebih adil.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🛒</div>
+              <h4>Expense Ratio</h4>
+              <p>Berapa persen pemasukan yang digunakan untuk pengeluaran?</p>
+              <div class="code-block compact">
+                <pre>expense_ratio = expense / income</pre>
+              </div>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">🏦</div>
+              <h4>Saving Ratio</h4>
+              <p>Berapa persen pemasukan yang berhasil ditabung?</p>
+              <div class="code-block compact">
+                <pre>saving_ratio = saving / income</pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="example-box">
+            <h4>Contoh</h4>
+            <p>
+              Jika <strong>income = 1000000</strong>, <strong>expense = 750000</strong>, dan <strong>saving =
+                150000</strong>:
+            </p>
+            <ul>
+              <li><strong>Expense Ratio:</strong> 750000 / 1000000 = 0.75 = 75%</li>
+              <li><strong>Saving Ratio:</strong> 150000 / 1000000 = 0.15 = 15%</li>
+            </ul>
+          </div>
+
+          <p class="mini-note">Python menghitung rasio dalam bentuk desimal. Untuk menampilkan persen, kalikan dengan
+            100.</p>
+        </section>
+
+        <section class="slide" id="slide-6">
+          <h3>Bagaimana program menentukan status?</h3>
+          <p>
+            Setelah menghitung persentase, program akan mengecek beberapa kondisi untuk menentukan status keuangan.
+          </p>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Kondisi</th>
+                <th>Status</th>
+                <th>Makna</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>expense ≥ income</td>
+                <td><span class="pill risk">High Risk</span></td>
+                <td>Pengeluaran lebih besar atau sama dengan pemasukan</td>
+              </tr>
+              <tr>
+                <td>expense ratio &gt; 80%</td>
+                <td><span class="pill warning">Warning</span></td>
+                <td>Pengeluaran terlalu tinggi</td>
+              </tr>
+              <tr>
+                <td>saving ≥ 20% dan expense ≤ 70%</td>
+                <td><span class="pill healthy">Healthy</span></td>
+                <td>Kondisi keuangan sehat</td>
+              </tr>
+              <tr>
+                <td>saving ≥ 10%</td>
+                <td><span class="pill moderate">Moderate</span></td>
+                <td>Cukup baik, tapi masih bisa ditingkatkan</td>
+              </tr>
+              <tr>
+                <td>lainnya</td>
+                <td><span class="pill muted">Need Improvement</span></td>
+                <td>Perlu meningkatkan tabungan</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="mini-note">
+            Program membaca kondisi dari atas ke bawah, jadi urutan aturan sangat penting.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-7">
+          <h3>Interactive ratio checker</h3>
+          <p>Geser angka untuk melihat bagaimana output program berubah.</p>
+          <div class="slider-wrap">
+            <div class="slider-row">
+              <label>Income <span id="incomeVal">1000000</span></label>
+              <input id="incomeSlider" type="range" min="500000" max="2000000" step="50000" value="1000000">
+            </div>
+            <div class="slider-row">
+              <label>Expense <span id="expenseVal">750000</span></label>
+              <input id="expenseSlider" type="range" min="0" max="2000000" step="50000" value="750000">
+            </div>
+            <div class="slider-row">
+              <label>Saving <span id="savingVal">150000</span></label>
+              <input id="savingSlider" type="range" min="0" max="1000000" step="50000" value="150000">
+            </div>
+          </div>
+          <div class="live-card">
+            <p><strong>Expense ratio:</strong> <span id="expenseRatioTxt">75%</span></p>
+            <p><strong>Saving ratio:</strong> <span id="savingRatioTxt">15%</span></p>
+            <div class="status-output" style="margin-top: 10px;">
+              <p><strong>Program output:</strong></p>
+              <span class="pill moderate" id="liveStatus">Moderate</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="slide" id="slide-8">
+          <h3>Coba jalankan base program</h3>
+          <p>
+            Sekarang kita gabungkan data, perhitungan ratio, dan decision rules menjadi satu program Python.
+          </p>
+
+          <div class="python-playground">
+            <div class="playground-toolbar">
+              <strong>Smart Money Advisor - Base Code</strong>
+              <div>
+                <button class="run-btn" onclick="runBaseCode()">▶ Run code</button>
+                <button class="reset-btn" onclick="resetBaseCode()">↺ Reset</button>
+              </div>
+            </div>
+
+            <textarea id="baseCodeEditor" spellcheck="false">income = 1000000
+expense = 750000
+saving = 150000
+
+expense_ratio = expense / income
+saving_ratio = saving / income
+
+if expense >= income:
+    status = "High Risk"
+elif expense_ratio > 0.8:
+    status = "Warning"
+elif saving_ratio >= 0.2 and expense_ratio <= 0.7:
+    status = "Healthy"
+elif saving_ratio >= 0.1:
+    status = "Moderate"
+else:
+    status = "Need Improvement"
+
+print("Financial Status:", status)</textarea>
+
+            <div class="output-box">
+              <strong>Output:</strong>
+              <pre id="baseCodeOutput">Klik “Run code” untuk melihat hasilnya.</pre>
+            </div>
+          </div>
+
+          <p class="mini-note">
+            Tantangan cepat: ubah nilai <strong>expense</strong> atau <strong>saving</strong>, lalu lihat apakah
+            statusnya berubah.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-9">
+          <h3>Test your program</h3>
+          <p>
+            Program yang bagus bukan hanya bisa jalan, tapi juga menghasilkan output yang masuk akal saat input berubah.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">⚠️</div>
+              <h4>Warning</h4>
+              <p>Coba buat pengeluaran lebih dari 80% income.</p>
+              <div class="code-block compact">
+                <pre>expense = 900000
+saving = 50000</pre>
+              </div>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">✅</div>
+              <h4>Healthy</h4>
+              <p>Coba buat tabungan minimal 20% dan pengeluaran maksimal 70%.</p>
+              <div class="code-block compact">
+                <pre>expense = 650000
+saving = 250000</pre>
+              </div>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">🚨</div>
+              <h4>High Risk</h4>
+              <p>Coba buat pengeluaran sama dengan atau lebih besar dari income.</p>
+              <div class="code-block compact">
+                <pre>expense = 1000000
+saving = 0</pre>
+              </div>
+            </div>
+          </div>
+
+          <p class="mini-note">
+            Testing membantu kamu memastikan logic program sudah bekerja sesuai aturan.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-10">
+          <h3>Pilih upgrade programmu</h3>
+          <p>
+            Base program sudah bisa menentukan status keuangan. Sekarang pilih satu upgrade agar programmu lebih
+            berguna.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">📋</div>
+              <h4>Detail Checker</h4>
+              <p>Menampilkan laporan lengkap: income, expense, saving, persentase, dan status.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">💡</div>
+              <h4>Advice Generator</h4>
+              <p>Memberikan saran berdasarkan status keuangan user.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">🔄</div>
+              <h4>Scenario Simulator</h4>
+              <p>Membandingkan beberapa skenario pengeluaran dan tabungan.</p>
+            </div>
+          </div>
+
+          <p class="mini-note">
+            Kamu tidak perlu membuat semuanya. Pilih satu upgrade yang paling kamu ingin coba.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-11">
+          <h3>Upgrade 1: Detail Checker</h3>
+          <p>
+            Buat programmu menampilkan laporan yang lebih lengkap, bukan hanya status akhir.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">💵</div>
+              <h4>Data utama</h4>
+              <p>Tampilkan income, expense, dan saving agar user tahu angka yang digunakan.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">📊</div>
+              <h4>Persentase</h4>
+              <p>Tampilkan expense percentage dan saving percentage.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">🧾</div>
+              <h4>Report</h4>
+              <p>Buat output terlihat seperti laporan sederhana yang mudah dibaca.</p>
+            </div>
+          </div>
+
+          <div class="code-block">
+            <pre>print("==== Smart Money Report ====")
+              print("Income:", income)
+              print("Expense:", expense)
+              print("Saving:", saving)
+              print("Expense Percentage:", round(expense_ratio * 100), "%")
+              print("Saving Percentage:", round(saving_ratio * 100), "%")
+              print("Financial Status:", status)</pre>
+          </div>
+
+          <p class="mini-note">
+            Upgrade ini membantu user memahami alasan di balik status keuangannya.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-12">
+          <h3>Upgrade 2: Advice Generator</h3>
+          <p>
+            Buat programmu memberikan saran yang sesuai dengan status keuangan user.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🧠</div>
+              <h4>Status → Advice</h4>
+              <p>Setiap status punya saran yang berbeda.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">💡</div>
+              <h4>Lebih membantu</h4>
+              <p>User tidak hanya tahu kondisinya, tapi juga tahu langkah berikutnya.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">🎯</div>
+              <h4>Target tabungan</h4>
+              <p>Kamu bisa menambahkan target saving ideal, misalnya 20% dari income.</p>
+            </div>
+          </div>
+
+          <div class="code-block">
+            <pre>target_saving = income * 0.2
+saving_gap = target_saving - saving
+
+if expense >= income:
+    advice = "Reduce spending immediately."
+elif expense_ratio > 0.8:
+    advice = "Try to reduce non-essential spending."
+elif saving_ratio >= 0.2 and expense_ratio <= 0.7:
+    advice = "Good job! Your balance is healthy."
+elif saving_ratio >= 0.1:
+    advice = "Try to increase your saving."
+else:
+    advice = "Start by saving a small fixed amount."
+
+print("Advice:", advice)
+print("Recommended Saving Target:", target_saving)</pre>
+          </div>
+
+          <p class="mini-note">
+            Upgrade ini membuat program terasa seperti financial assistant sederhana.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-13">
+          <h3>Upgrade 3: Scenario Simulator</h3>
+          <p>
+            Buat programmu bisa membandingkan beberapa skenario keuangan.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">🔁</div>
+              <h4>Reusable logic</h4>
+              <p>Gunakan function agar logic bisa dipakai berkali-kali.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">🧪</div>
+              <h4>Test skenario</h4>
+              <p>Coba kondisi berbeda: banyak jajan, seimbang, atau lebih hemat.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">📈</div>
+              <h4>Lihat perubahan</h4>
+              <p>Bandingkan bagaimana status berubah saat expense dan saving berubah.</p>
+            </div>
+          </div>
+
+          <div class="code-block">
+            <pre>def check_money(income, expense, saving):
+    expense_ratio = expense / income
+    saving_ratio = saving / income
+
+    if expense >= income:
+        return "High Risk"
+    elif expense_ratio > 0.8:
+        return "Warning"
+    elif saving_ratio >= 0.2 and expense_ratio <= 0.7:
+        return "Healthy"
+    elif saving_ratio >= 0.1:
+        return "Moderate"
+    else:
+        return "Need Improvement"
+
+
+print("Scenario 1 - Banyak jajan:", check_money(1000000, 900000, 50000))
+print("Scenario 2 - Cukup seimbang:", check_money(1000000, 750000, 150000))
+print("Scenario 3 - Lebih hemat:", check_money(1000000, 600000, 250000))</pre>
+          </div>
+
+          <p class="mini-note">
+            Upgrade ini cocok kalau kamu ingin menunjukkan perbandingan sebelum dan sesudah.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-14">
+          <h3>Saatnya upgrade programmu 🚀</h3>
+          <p>
+            Pilih satu upgrade yang ingin kamu buat, lalu tambahkan ke base program.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">📋</div>
+              <h4>Detail Checker</h4>
+              <p>Cocok kalau kamu ingin membuat report yang lebih jelas dan rapi.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">💡</div>
+              <h4>Advice Generator</h4>
+              <p>Cocok kalau kamu ingin program memberi saran untuk user.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">🔄</div>
+              <h4>Scenario Simulator</h4>
+              <p>Cocok kalau kamu ingin membandingkan beberapa skenario.</p>
+            </div>
+          </div>
+
+          <div class="example-box">
+            <h4>Target selesai</h4>
+            <ul>
+              <li>Program bisa dijalankan tanpa error.</li>
+              <li>Output terlihat jelas.</li>
+              <li>Kamu bisa menjelaskan fitur yang kamu tambahkan.</li>
+            </ul>
+          </div>
+
+          <p class="mini-note">
+            Fokus ke satu upgrade dulu. Program sederhana yang berjalan baik lebih penting daripada fitur banyak tapi
+            error.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-15">
+          <h3>Guide presentasi singkat 🎤</h3>
+          <p>
+            Saat mempresentasikan programmu, fokus pada problem, fitur, dan cara program bekerja.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">1️⃣</div>
+              <h4>Problem</h4>
+              <p>Program ini membantu user mengecek kondisi keuangan bulanannya.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">2️⃣</div>
+              <h4>Input</h4>
+              <p>Program memakai income, expense, dan saving sebagai data utama.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">3️⃣</div>
+              <h4>Logic</h4>
+              <p>Program menghitung ratio lalu mengecek kondisi dengan if-elif-else.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">4️⃣</div>
+              <h4>Upgrade</h4>
+              <p>Jelaskan fitur tambahan yang kamu pilih dan kenapa fitur itu berguna.</p>
+            </div>
+          </div>
+
+          <div class="example-box">
+            <h4>Template presentasi</h4>
+            <p>
+              “Program saya bernama <strong>Smart Money Advisor</strong>. Program ini membantu user mengecek kondisi
+              keuangan berdasarkan income, expense, dan saving. Program menghitung persentase pengeluaran dan tabungan,
+              lalu menentukan status menggunakan if-elif-else. Saya menambahkan fitur <strong>...</strong> agar program
+              lebih berguna karena <strong>...</strong>.”
+            </p>
+          </div>
+
+          <p class="mini-note">
+            Presentasi tidak perlu panjang. Yang penting jelas: programmu melakukan apa, logic-nya bagaimana, dan
+            upgrade-mu berguna untuk apa.
+          </p>
+        </section>
+
+        <section class="slide" id="slide-16">
+          <h3>Wrap up: apa yang sudah kamu buat?</h3>
+          <p>
+            Hari ini kamu sudah membuat mini program Python yang membantu user memahami kondisi keuangannya.
+          </p>
+
+          <div class="visual-grid">
+            <div class="visual-card">
+              <div class="visual-icon">📥</div>
+              <h4>Input</h4>
+              <p>Program membaca income, expense, dan saving.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">⚙️</div>
+              <h4>Process</h4>
+              <p>Program menghitung ratio dan mengecek kondisi.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">📤</div>
+              <h4>Output</h4>
+              <p>Program menampilkan status atau rekomendasi keuangan.</p>
+            </div>
+
+            <div class="visual-card">
+              <div class="visual-icon">🚀</div>
+              <h4>Upgrade</h4>
+              <p>Kamu menambahkan fitur agar program lebih berguna.</p>
+            </div>
+          </div>
+
+          <p class="mini-note">
+            Coding bukan hanya tentang menulis baris kode, tapi membuat logic yang bisa membantu mengambil keputusan.
+          </p>
+        </section>
+
+      </div>
+      <div class="navigation">
+        <button class="nav-btn" id="prevBtn">← Previous</button>
+        <div class="slide-indicator"><span id="currentSlide">1</span> / <span id="totalSlides">10</span></div>
+        <button class="nav-btn" id="nextBtn">Next →</button>
+      </div>
+    </div>
+
+    <div class="explanation-panel">
+
+      <section class="explanation active" id="explanation-1">
+        <h3>Selamat datang di Smart Money Advisor 💸</h3>
+        <p>
+          Hari ini kamu akan membuat mini program Python yang membantu user memahami kondisi keuangan bulanannya.
+        </p>
+
+        <div class="info-box">
+          <h4>Apa yang akan kamu buat?</h4>
+          <ul>
+            <li><strong>Financial checker</strong> yang membaca pemasukan, pengeluaran, dan tabungan.</li>
+            <li><strong>Percentage calculator</strong> yang menghitung persentase pengeluaran dan tabungan.</li>
+            <li><strong>Decision maker</strong> yang menentukan status keuangan menggunakan <code>if-elif-else</code>.
+            </li>
+            <li><strong>Mini upgrade</strong> agar program bisa memberi laporan, saran, atau simulasi.</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Output yang ingin dicapai</h4>
+          <pre>Financial Status: Moderate</pre>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-2">
+        <h3>Coding untuk keputusan sehari-hari</h3>
+        <p>
+          Banyak keputusan bisa dibuat lebih jelas kalau kita punya data. Dalam proyek ini, datanya sederhana:
+          berapa pemasukanmu, berapa pengeluaranmu, dan berapa yang kamu tabung.
+        </p>
+
+        <div class="info-box">
+          <h4>Dari data ke keputusan</h4>
+          <ul>
+            <li>Kalau pengeluaran terlalu besar, program memberi status <strong>Warning</strong>.</li>
+            <li>Kalau tabungan cukup baik, program bisa memberi status <strong>Healthy</strong> atau
+              <strong>Moderate</strong>.
+            </li>
+            <li>Kalau pengeluaran melebihi pemasukan, program memberi status <strong>High Risk</strong>.</li>
+          </ul>
+        </div>
+
+        <p>
+          Jadi, kamu tidak hanya menulis kode. Kamu sedang membuat aturan agar komputer bisa membantu user memahami
+          situasinya.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-3">
+        <h3>Cara membaca program Python</h3>
+        <p>
+          Saat melihat kode Python, jangan langsung panik melihat banyak baris. Baca programnya seperti membaca
+          instruksi dari atas ke bawah.
+        </p>
+
+        <div class="info-box">
+          <h4>Strategi membaca kode</h4>
+          <ul>
+            <li><strong>Baris awal</strong> biasanya berisi data yang digunakan program.</li>
+            <li><strong>Baris tengah</strong> biasanya berisi proses perhitungan atau pengecekan kondisi.</li>
+            <li><strong>Baris akhir</strong> biasanya menampilkan hasil ke user.</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Mindset saat coding</h4>
+          <p>
+            Kamu tidak harus memahami semua baris sekaligus. Fokus dulu pada pertanyaan:
+          </p>
+          <ul>
+            <li>Data apa yang masuk?</li>
+            <li>Apa yang dihitung?</li>
+            <li>Kondisi apa yang dicek?</li>
+            <li>Output apa yang muncul?</li>
+          </ul>
+        </div>
+
+        <p>
+          Dengan cara ini, program Smart Money Advisor akan lebih mudah dipahami saat kita mulai coding.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-4">
+        <h3>Mulai dari input sederhana</h3>
+        <p>
+          Setiap program biasanya membutuhkan data awal. Di Smart Money Advisor, data awalnya cukup sederhana:
+          berapa uang yang masuk, berapa yang keluar, dan berapa yang berhasil disimpan.
+        </p>
+
+        <div class="info-box">
+          <h4>Contoh situasi</h4>
+          <ul>
+            <li><strong>Income:</strong> kamu menerima Rp1.000.000 dalam satu bulan.</li>
+            <li><strong>Expense:</strong> kamu memakai Rp750.000 untuk makan, transportasi, hiburan, dan kebutuhan lain.
+            </li>
+            <li><strong>Saving:</strong> kamu menabung Rp150.000.</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Di Python, data ini ditulis sebagai variable</h4>
+          <pre>income = 1000000
+expense = 750000
+saving = 150000</pre>
+        </div>
+
+        <p>
+          Setelah data masuk, program bisa mulai menghitung dan menentukan status keuangan.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-5">
+        <h3>Kenapa pakai persentase?</h3>
+        <p>
+          Dua orang bisa punya pemasukan yang berbeda, tapi kita tetap bisa membandingkan kebiasaan keuangan mereka
+          dengan persentase.
+        </p>
+
+        <div class="info-box">
+          <h4>Contoh perbandingan</h4>
+          <ul>
+            <li>User A punya income Rp1.000.000 dan expense Rp750.000 → pengeluaran 75%.</li>
+            <li>User B punya income Rp2.000.000 dan expense Rp1.500.000 → pengeluaran juga 75%.</li>
+          </ul>
+        </div>
+
+        <p>
+          Walaupun nominalnya berbeda, pola pengeluarannya sama: sama-sama memakai 75% dari pemasukan.
+        </p>
+
+        <div class="example-box">
+          <h4>Menampilkan hasil sebagai persen</h4>
+          <pre>print("Expense Percentage:", round(expense_ratio * 100), "%")
+              print("Saving Percentage:", round(saving_ratio * 100), "%")</pre>
+        </div>
+
+        <p>
+          Setelah program tahu persentasenya, kita bisa membuat aturan untuk menentukan status keuangan.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-6">
+        <h3>Decision table → if-elif-else</h3>
+        <p>
+          Decision table membantu kita menulis aturan sebelum masuk ke kode. Setelah aturannya jelas,
+          kita bisa menerjemahkannya menjadi <code>if</code>, <code>elif</code>, dan <code>else</code>.
+        </p>
+
+        <div class="info-box">
+          <h4>Cara Python membaca kondisi</h4>
+          <ul>
+            <li>Python mulai mengecek dari kondisi paling atas.</li>
+            <li>Jika satu kondisi benar, bagian itu dijalankan.</li>
+            <li>Kondisi berikutnya akan dilewati.</li>
+            <li>Kalau tidak ada kondisi yang benar, bagian <code>else</code> akan dijalankan.</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Contoh potongan kode</h4>
+          <pre>if expense &gt;= income:
+                  status = "High Risk"
+              elif expense_ratio &gt; 0.8:
+                  status = "Warning"
+              elif saving_ratio &gt;= 0.2 and expense_ratio &lt;= 0.7:
+                  status = "Healthy"</pre>
+        </div>
+
+        <p>
+          Karena itu, kita biasanya menaruh kondisi yang paling berisiko di bagian atas agar cepat terdeteksi.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-7">
+        <h3>Mainkan angkanya</h3>
+        <p>
+          Sebelum masuk ke Python, kita coba dulu hubungan antara <code>income</code>, <code>expense</code>, dan
+          <code>saving</code>
+          secara visual. Gunakan slider untuk melihat bagaimana perubahan angka bisa memengaruhi kondisi keuangan.
+        </p>
+
+        <div class="info-box">
+          <h4>Yang perlu kamu amati</h4>
+          <ul>
+            <li>Kalau <code>expense</code> naik, apakah kondisi keuangan terlihat lebih berisiko?</li>
+            <li>Kalau <code>saving</code> naik, apakah kondisi keuangan terlihat lebih sehat?</li>
+            <li>Kalau <code>expense</code> sama dengan atau lebih besar dari <code>income</code>, apa yang terjadi?</li>
+            <li>Kalau <code>saving</code> mencapai sekitar 20% dari <code>income</code>, bagaimana statusnya berubah?
+            </li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Cara eksplorasi</h4>
+          <p>
+            Mulai dari angka default, lalu ubah satu slider saja. Bandingkan hasilnya sebelum dan sesudah.
+            Setelah kamu paham polanya, kita akan menerjemahkan aturan yang sama ke dalam kode Python.
+          </p>
+        </div>
+
+        <p>
+          Anggap bagian ini seperti simulasi manual: kamu sedang mencari aturan sebelum menulis programnya.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-8">
+        <h3>Saatnya eksperimen</h3>
+        <p>
+          Program ini belum memakai input dari user secara langsung. Untuk sekarang, kamu bisa mengubah angka pada
+          variable
+          <code>income</code>, <code>expense</code>, dan <code>saving</code>.
+        </p>
+
+        <div class="info-box">
+          <h4>Coba ubah angkanya</h4>
+          <ul>
+            <li>Ubah <code>expense</code> menjadi <code>900000</code>. Apa statusnya?</li>
+            <li>Ubah <code>saving</code> menjadi <code>250000</code>. Apa statusnya?</li>
+            <li>Coba buat kondisi ketika status menjadi <strong>High Risk</strong>.</li>
+            <li>Coba buat kondisi ketika status menjadi <strong>Healthy</strong>.</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Yang perlu kamu perhatikan</h4>
+          <p>
+            Saat angka berubah, <code>expense_ratio</code> dan <code>saving_ratio</code> juga berubah.
+            Karena ratio berubah, kondisi yang terpenuhi bisa ikut berubah.
+          </p>
+        </div>
+
+        <p>
+          Ini adalah cara sederhana untuk melakukan testing: ubah input, jalankan program, lalu cek apakah output masuk
+          akal.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-9">
+        <h3>Kenapa perlu testing?</h3>
+        <p>
+          Saat membuat program, output pertama yang muncul belum tentu membuktikan bahwa program sudah benar.
+          Kita perlu mencoba beberapa kondisi berbeda.
+        </p>
+
+        <div class="info-box">
+          <h4>Checklist testing</h4>
+          <ul>
+            <li>Apakah status berubah saat angka input diubah?</li>
+            <li>Apakah kondisi <strong>High Risk</strong> muncul saat expense ≥ income?</li>
+            <li>Apakah kondisi <strong>Warning</strong> muncul saat expense ratio lebih dari 80%?</li>
+            <li>Apakah kondisi <strong>Healthy</strong> muncul saat saving cukup tinggi dan expense terkendali?</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Kalau hasilnya tidak sesuai?</h4>
+          <ul>
+            <li>Cek apakah nama variable sudah sama.</li>
+            <li>Cek indentation setelah <code>if</code>, <code>elif</code>, dan <code>else</code>.</li>
+            <li>Cek urutan kondisi, karena Python membaca dari atas ke bawah.</li>
+          </ul>
+        </div>
+
+        <p>
+          Testing adalah bagian dari proses coding. Programmer sering menjalankan kode berkali-kali sampai hasilnya
+          benar.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-10">
+        <h3>Dari program dasar ke mini app</h3>
+        <p>
+          Upgrade membuat programmu terasa lebih lengkap. Kamu bisa memilih upgrade yang sesuai dengan kemampuan dan
+          idemu.
+        </p>
+
+        <div class="info-box">
+          <h4>Cara memilih upgrade</h4>
+          <ul>
+            <li><strong>Detail Checker:</strong> cocok kalau kamu ingin output lebih rapi dan mudah dibaca.</li>
+            <li><strong>Advice Generator:</strong> cocok kalau kamu ingin program memberi rekomendasi.</li>
+            <li><strong>Scenario Simulator:</strong> cocok kalau kamu ingin membandingkan beberapa kondisi sekaligus.
+            </li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Ingat targetnya</h4>
+          <p>
+            Upgrade yang bagus bukan yang paling panjang kodenya, tapi yang membuat program lebih mudah dipahami atau
+            lebih berguna untuk user.
+          </p>
+        </div>
+
+        <p>
+          Setelah memilih upgrade, kamu akan menambahkan beberapa baris kode ke base program yang sudah dibuat.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-11">
+        <h3>Membuat output lebih jelas</h3>
+        <p>
+          Base program hanya menampilkan status. Dengan Detail Checker, kamu membuat output yang lebih informatif.
+        </p>
+
+        <div class="info-box">
+          <h4>Kenapa ini berguna?</h4>
+          <ul>
+            <li>User bisa melihat angka yang dipakai program.</li>
+            <li>User bisa tahu berapa persen uangnya digunakan untuk pengeluaran.</li>
+            <li>User bisa tahu berapa persen uangnya berhasil ditabung.</li>
+            <li>Status keuangan jadi lebih mudah dipahami.</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Contoh output</h4>
+          <pre>==== Smart Money Report ====
+              Income: 1000000
+              Expense: 750000
+              Saving: 150000
+              Expense Percentage: 75 %
+              Saving Percentage: 15 %
+              Financial Status: Moderate</pre>
+        </div>
+
+        <p>
+          Setelah menambahkan kode ini, coba ubah nilai <code>expense</code> atau <code>saving</code>, lalu lihat
+          bagaimana report berubah.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-12">
+        <h3>Dari status menjadi saran</h3>
+        <p>
+          Advice Generator membuat program lebih personal. Program tidak berhenti di “status”, tapi memberi arahan
+          sederhana yang bisa dilakukan user.
+        </p>
+
+        <div class="info-box">
+          <h4>Contoh mapping sederhana</h4>
+          <ul>
+            <li><strong>High Risk:</strong> kurangi pengeluaran secepatnya.</li>
+            <li><strong>Warning:</strong> kurangi pengeluaran yang tidak terlalu penting.</li>
+            <li><strong>Healthy:</strong> pertahankan kebiasaan baik.</li>
+            <li><strong>Moderate:</strong> coba tingkatkan jumlah tabungan.</li>
+            <li><strong>Need Improvement:</strong> mulai menabung dari jumlah kecil secara konsisten.</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Challenge kecil</h4>
+          <p>
+            Buat advice versimu sendiri. Gunakan bahasa yang mudah dipahami oleh teman sekelasmu.
+          </p>
+        </div>
+
+        <p>
+          Setelah selesai, coba jalankan program dengan dua kondisi berbeda: satu kondisi sehat dan satu kondisi
+          warning.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-13">
+        <h3>Menggunakan function untuk simulasi</h3>
+        <p>
+          Scenario Simulator membuat programmu bisa mencoba banyak kondisi tanpa menulis ulang logic yang sama.
+        </p>
+
+        <div class="info-box">
+          <h4>Kenapa pakai function?</h4>
+          <ul>
+            <li>Function menyimpan logic utama program dalam satu tempat.</li>
+            <li>Kamu bisa memakai function yang sama untuk input berbeda.</li>
+            <li>Kode jadi lebih rapi, pendek, dan mudah dikembangkan.</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Contoh hasil simulasi</h4>
+          <pre>Scenario 1 - Banyak jajan: Warning
+Scenario 2 - Cukup seimbang: Moderate
+Scenario 3 - Lebih hemat: Healthy</pre>
+        </div>
+
+        <p>
+          Setelah mencoba tiga skenario, pikirkan: perubahan kecil apa yang paling membantu status keuangan menjadi
+          lebih baik?
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-14">
+        <h3>Checklist sebelum selesai</h3>
+        <p>
+          Sebelum lanjut ke presentasi singkat, pastikan programmu sudah bisa dijalankan dan output-nya masuk akal.
+        </p>
+
+        <div class="info-box">
+          <h4>Cek programmu</h4>
+          <ul>
+            <li>Apakah tidak ada error saat dijalankan?</li>
+            <li>Apakah status keuangan muncul?</li>
+            <li>Apakah upgrade yang kamu pilih sudah terlihat di output?</li>
+            <li>Apakah kamu sudah mencoba minimal dua input berbeda?</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Siapkan 3 kalimat</h4>
+          <ul>
+            <li>Fitur yang saya tambahkan adalah...</li>
+            <li>Fitur ini berguna karena...</li>
+            <li>Bagian kode yang paling penting adalah...</li>
+          </ul>
+        </div>
+
+        <p>
+          Kalau masih ada error, baca pesan error pelan-pelan. Biasanya masalahnya ada di typo, indentation, atau nama
+          variable yang tidak sama.
+        </p>
+      </section>
+
+      <section class="explanation" id="explanation-15">
+        <h3>Pertanyaan seputar program</h3>
+        <p>
+          Gunakan pertanyaan ini untuk latihan menjelaskan programmu. Jawaban tidak harus dihafal, tapi kamu perlu
+          memahami logic-nya.
+        </p>
+
+        <div class="info-box">
+          <h4>Pertanyaan dasar</h4>
+          <ul>
+            <li>Apa tujuan dari program Smart Money Advisor?</li>
+            <li>Data apa saja yang dibutuhkan program?</li>
+            <li>Apa arti <code>income</code>, <code>expense</code>, dan <code>saving</code>?</li>
+            <li>Apa output utama dari program ini?</li>
+          </ul>
+        </div>
+
+        <div class="info-box">
+          <h4>Pertanyaan logic</h4>
+          <ul>
+            <li>Kenapa program menghitung <code>expense_ratio</code> dan <code>saving_ratio</code>?</li>
+            <li>Kenapa kita memakai persentase, bukan hanya nominal uang?</li>
+            <li>Bagian kode mana yang menentukan status keuangan?</li>
+            <li>Apa yang terjadi kalau <code>expense</code> lebih besar atau sama dengan <code>income</code>?</li>
+            <li>Kenapa urutan kondisi dalam <code>if-elif-else</code> penting?</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Pertanyaan upgrade</h4>
+          <ul>
+            <li>Upgrade apa yang kamu pilih?</li>
+            <li>Kenapa kamu memilih upgrade itu?</li>
+            <li>Bagaimana upgrade itu membuat program lebih berguna?</li>
+            <li>Kalau program ini dikembangkan lagi, fitur apa yang ingin kamu tambahkan?</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="explanation" id="explanation-16">
+        <h3>Refleksi singkat</h3>
+        <p>
+          Sebelum selesai, pikirkan bagaimana programmu bekerja dan bagaimana program ini bisa dikembangkan.
+        </p>
+
+        <div class="info-box">
+          <h4>Jawab dalam hati atau diskusikan</h4>
+          <ul>
+            <li>Bagian mana dari program yang paling penting?</li>
+            <li>Input apa yang paling memengaruhi status keuangan?</li>
+            <li>Apa upgrade yang kamu pilih, dan kenapa?</li>
+            <li>Kalau program ini jadi aplikasi nyata, fitur apa yang perlu ditambahkan?</li>
+          </ul>
+        </div>
+
+        <div class="example-box">
+          <h4>Ide pengembangan</h4>
+          <ul>
+            <li>Input kategori pengeluaran seperti makanan, transportasi, hiburan, dan tabungan.</li>
+            <li>Grafik sederhana untuk melihat pengeluaran bulanan.</li>
+            <li>Rekomendasi otomatis untuk mengurangi pengeluaran tertentu.</li>
+            <li>Target saving yang bisa diatur oleh user.</li>
+          </ul>
+        </div>
+
+        <p>
+          Program sederhana hari ini bisa menjadi langkah awal untuk membuat budgeting app versi kamu sendiri.
+        </p>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    const totalSlides = 16;
+    let currentSlide = 1;
+
+    function showSlide(n) {
+      currentSlide = Math.min(Math.max(1, n), totalSlides);
+      document.querySelectorAll('.slide').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.explanation').forEach(el => el.classList.remove('active'));
+      document.getElementById(`slide-${currentSlide}`).classList.add('active');
+      document.getElementById(`explanation-${currentSlide}`).classList.add('active');
+      document.getElementById('currentSlide').textContent = currentSlide;
+      document.getElementById('totalSlides').textContent = totalSlides;
+      document.getElementById('prevBtn').disabled = currentSlide === 1;
+      document.getElementById('nextBtn').disabled = currentSlide === totalSlides;
+      document.getElementById('progressFill').style.width = `${(currentSlide / totalSlides) * 100}%`;
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', () => showSlide(currentSlide - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => showSlide(currentSlide + 1));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+      if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+    });
+
+    const scenarios = {
+      balanced: { label: 'Balanced', text: 'Income 1.000.000 · Expense 750.000 · Saving 150.000', status: 'Moderate', cls: 'moderate' },
+      healthy: { label: 'Healthy case', text: 'Income 1.000.000 · Expense 650.000 · Saving 250.000', status: 'Healthy', cls: 'healthy' },
+      warning: { label: 'Warning case', text: 'Income 1.000.000 · Expense 900.000 · Saving 50.000', status: 'Warning', cls: 'warning' },
+      risk: { label: 'High Risk case', text: 'Income 1.000.000 · Expense 1000000 · Saving 0', status: 'High Risk', cls: 'risk' }
+    };
+
+    document.querySelectorAll('#scenarioButtons button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#scenarioButtons button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const data = scenarios[btn.dataset.scenario];
+        document.getElementById('scenarioLabel').textContent = data.label;
+        document.getElementById('scenarioText').textContent = data.text;
+        const status = document.getElementById('scenarioStatus');
+        status.textContent = data.status;
+        status.className = `pill ${data.cls}`;
+      });
+    });
+
+    function calcStatus(income, expense, saving) {
+      const expenseRatio = expense / income;
+      const savingRatio = saving / income;
+      if (expense >= income) return { status: 'High Risk', cls: 'risk', expenseRatio, savingRatio };
+      if (expenseRatio > 0.8) return { status: 'Warning', cls: 'warning', expenseRatio, savingRatio };
+      if (savingRatio >= 0.2 && expenseRatio <= 0.7) return { status: 'Healthy', cls: 'healthy', expenseRatio, savingRatio };
+      if (savingRatio >= 0.1) return { status: 'Moderate', cls: 'moderate', expenseRatio, savingRatio };
+      return { status: 'Need Improvement', cls: 'muted', expenseRatio, savingRatio };
+    }
+
+    const incomeSlider = document.getElementById('incomeSlider');
+    const expenseSlider = document.getElementById('expenseSlider');
+    const savingSlider = document.getElementById('savingSlider');
+
+    function updateLiveDemo() {
+      const income = Number(incomeSlider.value);
+      const expense = Number(expenseSlider.value);
+      const saving = Number(savingSlider.value);
+      document.getElementById('incomeVal').textContent = income;
+      document.getElementById('expenseVal').textContent = expense;
+      document.getElementById('savingVal').textContent = saving;
+      const result = calcStatus(income, expense, saving);
+      document.getElementById('expenseRatioTxt').textContent = `${Math.round(result.expenseRatio * 100)}%`;
+      document.getElementById('savingRatioTxt').textContent = `${Math.round(result.savingRatio * 100)}%`;
+      const liveStatus = document.getElementById('liveStatus');
+      liveStatus.textContent = result.status;
+      liveStatus.className = `pill ${result.cls}`;
+    }
+
+    [incomeSlider, expenseSlider, savingSlider].forEach(el => el.addEventListener('input', updateLiveDemo));
+
+    document.querySelectorAll('#upgradeTabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#upgradeTabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    const defaultBaseCode = `income = 1000000
+expense = 750000
+saving = 150000
+
+expense_ratio = expense / income
+saving_ratio = saving / income
+
+if expense >= income:
+    status = "High Risk"
+elif expense_ratio > 0.8:
+    status = "Warning"
+elif saving_ratio >= 0.2 and expense_ratio <= 0.7:
+    status = "Healthy"
+elif saving_ratio >= 0.1:
+    status = "Moderate"
+else:
+    status = "Need Improvement"
+
+print("Financial Status:", status)`;
+
+    async function runBaseCode() {
+      const output = document.getElementById("baseCodeOutput");
+      const editor = document.getElementById("baseCodeEditor");
+
+      output.textContent = "Running...";
+
+      try {
+        if (!window.pyodide) {
+          output.textContent = "Loading Python engine...";
+          window.pyodide = await loadPyodide();
+        }
+
+        window.pyodide.runPython(`
+import sys
+from io import StringIO
+sys.stdout = StringIO()
+`);
+
+        await window.pyodide.runPythonAsync(editor.value);
+
+        const result = window.pyodide.runPython("sys.stdout.getvalue()");
+        output.textContent = result || "(No output)";
+      } catch (error) {
+        output.textContent = "Error:\\n" + error.message;
+      }
+    }
+
+    function resetBaseCode() {
+      document.getElementById("baseCodeEditor").value = defaultBaseCode;
+      document.getElementById("baseCodeOutput").textContent = "Klik “Run code” untuk melihat hasilnya.";
+    }
+
+    showSlide(1);
+    updateLiveDemo();
+  </script>
+</body>
+
+</html>
